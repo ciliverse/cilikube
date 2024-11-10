@@ -78,7 +78,7 @@ createCode()
     <Owl :close-eyes="isFocus" />
     <div class="login-card">
       <div class="title">
-        <img src="@/assets/layouts/logo-text-2.png" />
+        <img src="@/assets/layouts/logo-text-1.png" />
       </div>
       <div class="content">
         <el-form ref="loginFormRef" :model="loginFormData" :rules="loginFormRules" @keyup.enter="handleLogin">
@@ -156,20 +156,21 @@ createCode()
     width: 480px;
     max-width: 90%;
     border-radius: 20px;
-    box-shadow: 0 0 10px #dcdfe6;
+    box-shadow: 0 0 50px #054cf1;
     background-color: var(--el-bg-color);
     overflow: hidden;
     .title {
       display: flex;
       justify-content: center;
-      align-items: center;
-      height: 150px;
+      vertical-align: middle;
+      // align-items: center;
+      height: 120px;
       img {
-        height: 100%;
+        height: 130%;
       }
     }
     .content {
-      padding: 20px 50px 50px 50px;
+      padding: 10px 50px 50px 50px;
       :deep(.el-input-group__append) {
         padding: 0;
         overflow: hidden;

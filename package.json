@@ -1,5 +1,5 @@
 {
-  "name": "kops",
+  "name": "kopsadmin",
   "version": "0.1.0",
   "description": "一个免费开源的中后台管理系统基础解决方案，基于 Vue3、TypeScript、Element Plus、Pinia 和 Vite 等主流技术",
   "author": {
@@ -9,7 +9,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/cilliandevops/kops.git"
+    "url": "https://github.com/cilliandevops/kopsAdmin.git"
   },
   "type": "module",
   "scripts": {
@@ -26,7 +26,7 @@
   },
   "dependencies": {
     "@element-plus/icons-vue": "2.3.1",
-    "auto-changelog": "^2.4.0",
+    "auto-changelog": "^2.5.0",
     "axios": "1.7.3",
     "dayjs": "1.11.12",
     "element-plus": "2.8.0",

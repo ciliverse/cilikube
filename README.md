@@ -1,12 +1,12 @@
 <div align="center">
-  <img alt="Kops Logo" width="120" height="120" src="./src/assets/layouts/logo.png">
-  <h1>Kops</h1>
+  <img alt="Kops Logo" width="500" height="300" src="./src/assets/layouts/logo.png">
+  <h1>kopsAdmin</h1>
   <span>English | <a href="./README.zh-CN.md">中文</a></span>
 </div>
 
-# Kops Introduction
+# kopsAdmin Introduction
 
-Kops is a Kubernetes resource management platform that is suitable for learning web development technologies such as Vue.js and Go. We are looking for like-minded individuals to join us in the development of Kops and expand its services to a wider community of cloud-native enthusiasts. Together, let's make Kops an even more powerful tool for managing Kubernetes!
+kopsAdmin is a Kubernetes resource management platform that is suitable for learning web development technologies such as Vue.js and Go. We are looking for like-minded individuals to join us in the development of Kops and expand its services to a wider community of cloud-native enthusiasts. Together, let's make Kops an even more powerful tool for managing Kubernetes!
 
 ## Document
 
@@ -73,23 +73,9 @@ pnpm lint
 
 ![Alt text](src/assets/kops/dashboard.png)
 
-![Alt text](src/assets/kops/k8s-1.jpg)
+![Alt text](src/assets/kops/k8s-1.png)
 
-![Alt text](src/assets/kops/k8s-2.jpg)
-
-![Alt text](src/assets/kops/k8s-3.png)
-
-![Alt text](src/assets/kops/k8s-4.png)
-
-![Alt text](src/assets/kops/k8s-5.png)
-
-![Alt text](src/assets/kops/k8s-6.png)
-
-![Alt text](src/assets/kops/k8s-7.png)
-
-![Alt text](src/assets/kops/k8s-8.png)
-
-![Alt text](src/assets/kops/k8s-9.png)
+![Alt text](src/assets/kops/k8s-2.png)
 
 ## Git commit specification reference
 

@@ -1,26 +1,26 @@
 <div align="center">
-  <img alt="Kops Logo" width="120" height="120" src="./src/assets/layouts/logo.png">
+  <img alt="Kops Logo" width="500" height="300" src="./src/assets/layouts/logo.png">
   <h1>Kops</h1>
   <span>中文 | <a href="./README.md">English</a></span>
 </div>
 
-# Kops 简介
+# kopsAdmin 简介
 
-## Kops是什么？
+## kopsAdmin是什么？
 
-Kops是一款采用主流技术栈构建的一套精致的开源全栈k8s资源管理平台，致力于简化k8s资源的增删改查以及拓展自定义功能。
+kopsAdmin是一款采用主流技术栈构建的一套精致的开源全栈k8s资源管理平台，致力于简化k8s资源的增删改查以及拓展自定义功能。
 
-## Kops的与其他k8s管理系统区别
+## kopsAdmin的与其他k8s管理系统区别
 
-Kops不追求功能繁多大而全，而是专注于小而美，旨在帮助初学者轻松入门Web开发和k8s的二次开发！
+kopsAdmin不追求功能繁多大而全，而是专注于小而美，旨在帮助初学者轻松入门Web开发和k8s的二次开发！
 
 ## 定位
 
-Kops非常适合想要学习Vue、Gin进行Web开发以及对Kubernetes的进行二次开发的Web开发初学者和云原生技术爱好者。
+kopsAdmin非常适合想要学习Vue、Gin进行Web开发以及对Kubernetes的进行二次开发的Web开发初学者和云原生技术爱好者。
 
 ## 背景
 
-这个项目是我给2023年自己学习web开发的一个交代，学习路上遇到了不少困难，但好在一路上有不少开源社区的朋友的帮助，今年也将k8s主流的四个蓝证书拿到手了。这个项目kops的字母K代表的不单是k8s，同时也是我打开开源世界大门的一把钥匙（key），走进开源世界，不断贡献，留下自己的足迹，帮助到和我一样的学习者。
+这个项目是给自己学习web开发的一个交付，学习路上遇到了不少困难，但好在一路上有不少开源社区的朋友的帮助，今年也将k8s主流的四个蓝证书拿到手了。这个项目kopsAdmin的字母k代表的不单是k8s，同时也是我打开开源世界大门的一把钥匙（key），走进开源世界，不断贡献，留下自己的足迹，帮助到和我一样的学习者。
 
 ## 文档
 
@@ -52,8 +52,8 @@ Kops非常适合想要学习Vue、Gin进行Web开发以及对Kubernetes的进行
 
 ### 环境
 
-- Nodejs 20.15.0 (24年7月最新LTS版本)
-- Go 1.22.5 (24年7月最新版本)
+- Nodejs 20.15.0 (24年11月最新LTS版本)
+- Go 1.23.2 (24年11月最新版本)
 
 #### 前端：采用最新技术栈vue3+ts+elmentplus,依赖均为最新版本
 
@@ -151,23 +151,9 @@ pnpm lint
 
 ![Alt text](src/assets/kops/dashboard.png)
 
-![Alt text](src/assets/kops/k8s-1.jpg)
+![Alt text](src/assets/kops/k8s-1.png)
 
-![Alt text](src/assets/kops/k8s-2.jpg)
-
-![Alt text](src/assets/kops/k8s-3.png)
-
-![Alt text](src/assets/kops/k8s-4.png)
-
-![Alt text](src/assets/kops/k8s-5.png)
-
-![Alt text](src/assets/kops/k8s-6.png)
-
-![Alt text](src/assets/kops/k8s-7.png)
-
-![Alt text](src/assets/kops/k8s-8.png)
-
-![Alt text](src/assets/kops/k8s-9.png)
+![Alt text](src/assets/kops/k8s-2.png)
 
 ## Git 提交规范
 
@@ -201,4 +187,4 @@ pnpm lint
 
 [MIT License](./LICENSE)
 
-Copyright (c) 2023-present [cilliandevops](https://github.com/cilliandevops)
+Copyright (c) 2024-present [cilliandevops](https://github.com/cilliandevops)
