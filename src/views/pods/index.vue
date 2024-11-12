@@ -159,7 +159,7 @@ export default defineComponent({
         const response = await request<Pod[]>({
           url: "/apis/v1/k8s/pods/kube-system",
           method: "get",
-          baseURL: "http://localhost:8080" // 可根据需要调整 baseURL
+          baseURL: "http://192.168.1.200:8080" // 可根据需要调整 baseURL
         })
         console.log("API response:", response)
         podData.value = response
@@ -232,7 +232,7 @@ export default defineComponent({
             url: "/apis/v1/k8s/pods",
             method: "post",
             data: currentPod.value,
-            baseURL: "http://localhost:8080" // 可根据需要调整 baseURL
+            baseURL: "http://192.168.1.200:8080" // 可根据需要调整 baseURL
           })
           ElMessage.success("Pod新增成功")
         } else {
@@ -240,7 +240,7 @@ export default defineComponent({
             url: `/apis/v1/k8s/pods/${currentPod.value.name}`,
             method: "put",
             data: currentPod.value,
-            baseURL: "http://localhost:8080" // 可根据需要调整 baseURL
+            baseURL: "http://192.168.1.200:8080" // 可根据需要调整 baseURL
           })
           ElMessage.success("Pod编辑成功")
         }
@@ -262,7 +262,7 @@ export default defineComponent({
           await request<Pod>({
             url: `/apis/v1/k8s/pods/${pod.name}`,
             method: "delete",
-            baseURL: "http://localhost:8080" // 可根据需要调整 baseURL
+            baseURL: "http://192.168.1.200:8080" // 可根据需要调整 baseURL
           })
           ElMessage.success("Pod删除成功")
           fetchPodData()

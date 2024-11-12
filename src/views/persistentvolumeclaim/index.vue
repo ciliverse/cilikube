@@ -114,7 +114,7 @@ export default defineComponent({
         const response = await request<PersistentVolumeClaim[]>({
           url: "/apis/v1/k8s/persistentvolumeclaims/default",
           method: "get",
-          baseURL: "http://localhost:8080" // 可根据需要调整 baseURL
+          baseURL: "http://192.168.1.200:8080" // 可根据需要调整 baseURL
         })
         console.log("API response:", response)
         pvcData.value = response
@@ -159,7 +159,7 @@ export default defineComponent({
             url: "/apis/v1/k8s/persistentvolumeclaims",
             method: "post",
             data: currentPVC.value,
-            baseURL: "http://localhost:8080" // 可根据需要调整 baseURL
+            baseURL: "http://192.168.1.200:8080" // 可根据需要调整 baseURL
           })
           ElMessage.success("PVC新增成功")
         } else {
@@ -167,7 +167,7 @@ export default defineComponent({
             url: `/apis/v1/k8s/persistentvolumeclaims/${currentPVC.value.metadata.name}`,
             method: "put",
             data: currentPVC.value,
-            baseURL: "http://localhost:8080" // 可根据需要调整 baseURL
+            baseURL: "http://192.168.1.200:8080" // 可根据需要调整 baseURL
           })
           ElMessage.success("PVC编辑成功")
         }
@@ -189,7 +189,7 @@ export default defineComponent({
           await request<PersistentVolumeClaim>({
             url: `/apis/v1/k8s/persistentvolumeclaims/${pvc.metadata.name}`,
             method: "delete",
-            baseURL: "http://localhost:8080" // 可根据需要调整 baseURL
+            baseURL: "http://192.168.1.200:8080" // 可根据需要调整 baseURL
           })
           ElMessage.success("PVC删除成功")
           fetchPVCData()

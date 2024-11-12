@@ -223,7 +223,7 @@ export default defineComponent({
         const response = await request<Deployment[]>({
           url: "/apis/v1/k8s/deployments",
           method: "get",
-          baseURL: "http://localhost:8080" // 可根据需要调整 baseURL
+          baseURL: "http://192.168.1.200:8080" // 可根据需要调整 baseURL
         })
         console.log("API response:", response)
         deploymentData.value = response
@@ -310,7 +310,7 @@ export default defineComponent({
             url: "/apis/v1/k8s/deployments",
             method: "post",
             data: currentDeployment.value,
-            baseURL: "http://localhost:8080" // 可根据需要调整 baseURL
+            baseURL: "http://192.168.1.200:8080" // 可根据需要调整 baseURL
           })
           ElMessage.success("Deployment新增成功")
         } else {
@@ -318,7 +318,7 @@ export default defineComponent({
             url: `/apis/v1/k8s/deployments/${currentDeployment.value.name}`,
             method: "put",
             data: currentDeployment.value,
-            baseURL: "http://localhost:8080" // 可根据需要调整 baseURL
+            baseURL: "http://192.168.1.200:8080" // 可根据需要调整 baseURL
           })
           ElMessage.success("Deployment编辑成功")
         }
@@ -340,7 +340,7 @@ export default defineComponent({
           await request<Deployment>({
             url: `/apis/v1/k8s/deployments/${deployment.name}`,
             method: "delete",
-            baseURL: "http://localhost:8080" // 可根据需要调整 baseURL
+            baseURL: "http://192.168.1.200:8080" // 可根据需要调整 baseURL
           })
           ElMessage.success("Deployment删除成功")
           fetchDeploymentData()

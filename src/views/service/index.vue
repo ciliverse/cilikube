@@ -110,7 +110,7 @@ export default defineComponent({
         const response = await request<Service[]>({
           url: "/apis/v1/k8s/services",
           method: "get",
-          baseURL: "http://localhost:8080" // 可根据需要调整 baseURL
+          baseURL: "http://192.168.1.200:8080" // 可根据需要调整 baseURL
         })
         console.log("API response:", response)
         serviceData.value = response
@@ -148,7 +148,7 @@ export default defineComponent({
             url: "/apis/v1/k8s/services",
             method: "post",
             data: currentService.value,
-            baseURL: "http://localhost:8080" // 可根据需要调整 baseURL
+            baseURL: "http://192.168.1.200:8080" // 可根据需要调整 baseURL
           })
           ElMessage.success("服务新增成功")
         } else {
@@ -156,7 +156,7 @@ export default defineComponent({
             url: `/apis/v1/k8s/services/${currentService.value.name}`,
             method: "put",
             data: currentService.value,
-            baseURL: "http://localhost:8080" // 可根据需要调整 baseURL
+            baseURL: "http://192.168.1.200:8080" // 可根据需要调整 baseURL
           })
           ElMessage.success("服务编辑成功")
         }
@@ -178,7 +178,7 @@ export default defineComponent({
           await request<Service>({
             url: `/apis/v1/k8s/services/${service.name}`,
             method: "delete",
-            baseURL: "http://localhost:8080" // 可根据需要调整 baseURL
+            baseURL: "http://192.168.1.200:8080" // 可根据需要调整 baseURL
           })
           ElMessage.success("服务删除成功")
           fetchServiceData()

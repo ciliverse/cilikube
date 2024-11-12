@@ -87,7 +87,7 @@ export default defineComponent({
         const response = await request<IngressSpec[]>({
           url: "/apis/v1/k8s/ingresses/default",
           method: "get",
-          baseURL: "http://localhost:8080"
+          baseURL: "http://192.168.1.200:8080"
         })
         ingressData.value = response || []
       } catch (error) {
@@ -106,7 +106,7 @@ export default defineComponent({
           url,
           method,
           data: currentIngress.value,
-          baseURL: "http://localhost:8080"
+          baseURL: "http://192.168.1.200:8080"
         })
         fetchIngressData()
         dialogVisible.value = false
@@ -120,7 +120,7 @@ export default defineComponent({
         await request({
           url: `/apis/v1/k8s/ingresses/${name}`,
           method: "delete",
-          baseURL: "http://localhost:8080"
+          baseURL: "http://192.168.1.200:8080"
         })
         fetchIngressData()
       } catch (error) {

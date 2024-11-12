@@ -90,7 +90,7 @@ export default defineComponent({
         const response = await request<Namespace[]>({
           url: "/apis/v1/k8s/namespace",
           method: "get",
-          baseURL: "http://localhost:8080" // 可根据需要调整 baseURL
+          baseURL: "http://192.168.1.200:8080" // 可根据需要调整 baseURL
         })
         namespaceData.value = response
       } catch (error) {

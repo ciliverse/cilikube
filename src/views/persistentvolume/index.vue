@@ -104,7 +104,7 @@ export default defineComponent({
         const response = await request<PersistentVolume[]>({
           url: "/apis/v1/k8s/persistentvolumes/default",
           method: "get",
-          baseURL: "http://localhost:8080" // 可根据需要调整 baseURL
+          baseURL: "http://192.168.1.200:8080" // 可根据需要调整 baseURL
         })
         console.log("API response:", response)
         pvData.value = response
@@ -146,7 +146,7 @@ export default defineComponent({
             url: "/apis/v1/k8s/persistentvolumes",
             method: "post",
             data: currentPV.value,
-            baseURL: "http://localhost:8080" // 可根据需要调整 baseURL
+            baseURL: "http://192.168.1.200:8080" // 可根据需要调整 baseURL
           })
           ElMessage.success("PV新增成功")
         } else {
@@ -154,7 +154,7 @@ export default defineComponent({
             url: `/apis/v1/k8s/persistentvolumes/${currentPV.value.metadata.name}`,
             method: "put",
             data: currentPV.value,
-            baseURL: "http://localhost:8080" // 可根据需要调整 baseURL
+            baseURL: "http://192.168.1.200:8080" // 可根据需要调整 baseURL
           })
           ElMessage.success("PV编辑成功")
         }
@@ -176,7 +176,7 @@ export default defineComponent({
           await request<PersistentVolume>({
             url: `/apis/v1/k8s/persistentvolumes/${pv.metadata.name}`,
             method: "delete",
-            baseURL: "http://localhost:8080" // 可根据需要调整 baseURL
+            baseURL: "http://192.168.1.200:8080" // 可根据需要调整 baseURL
           })
           ElMessage.success("PV删除成功")
           fetchPVData()

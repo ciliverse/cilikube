@@ -215,7 +215,7 @@ export const constantRoutes: RouteRecordRaw[] = [
     },
     children: [
       {
-        path: "https://docs.cillian.website",
+        path: "https://kopsadmin.cillian.website",
         component: () => {},
         name: "Link1",
         meta: {

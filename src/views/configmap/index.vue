@@ -84,9 +84,9 @@ export default defineComponent({
     const fetchConfigMapData = async () => {
       try {
         const response = await request<ConfigMap[]>({
-          url: "/apis/v1/k8s/configmaps/default",
+          url: "/apis/v1/namespaces/default/configmaps",
           method: "get",
-          baseURL: "http://localhost:8080"
+          baseURL: "http://192.168.1.200:8080"
         })
         configMapData.value = response || []
       } catch (error) {
@@ -128,7 +128,7 @@ export default defineComponent({
             url: "/apis/v1/k8s/configmaps",
             method: "post",
             data: currentConfigMap.value,
-            baseURL: "http://localhost:8080"
+            baseURL: "http://192.168.1.200:8080"
           })
           ElMessage.success("ConfigMap新增成功")
         } else {
@@ -136,7 +136,7 @@ export default defineComponent({
             url: `/apis/v1/k8s/configmaps/${currentConfigMap.value.metadata.name}`,
             method: "put",
             data: currentConfigMap.value,
-            baseURL: "http://localhost:8080"
+            baseURL: "http://192.168.1.200:8080"
           })
           ElMessage.success("ConfigMap编辑成功")
         }
@@ -158,7 +158,7 @@ export default defineComponent({
           await request<ConfigMap>({
             url: `/apis/v1/k8s/configmaps/${configMap.metadata.name}`,
             method: "delete",
-            baseURL: "http://localhost:8080"
+            baseURL: "http://192.168.1.200:8080"
           })
           ElMessage.success("ConfigMap删除成功")
           fetchConfigMapData()
