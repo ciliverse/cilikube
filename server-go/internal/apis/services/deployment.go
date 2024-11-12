@@ -3,8 +3,8 @@ package services
 import (
 	"context"
 
-	"github.com/cilliandevops/kops/server-go/internal/apis/models/k8s"
-	"github.com/cilliandevops/kops/server-go/internal/client"
+	"github.com/cilliandevops/kopsadmin/server-go/internal/apis/models/k8s"
+	"github.com/cilliandevops/kopsadmin/server-go/internal/client"
 	v1 "k8s.io/api/apps/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -12,17 +12,17 @@ import (
 
 // DeploymentService provides methods for interacting with Kubernetes Deployments
 type DeploymentService struct {
-	client *client.Client
+	client *client.K8sClient
 }
 
 // NewDeploymentService creates a new DeploymentService instance with a Kubernetes client
-func NewDeploymentService(k8sClient *client.Client) *DeploymentService {
+func NewDeploymentService(k8sClient *client.K8sClient) *DeploymentService {
 	return &DeploymentService{client: k8sClient}
 }
 
 // ListDeployments retrieves a list of Deployments in the specified namespace
 func (s *DeploymentService) ListDeployments(ctx context.Context, namespace string) ([]k8s.Deployment, error) {
-	deploymentList, err := s.client.Clientset.AppsV1().Deployments(namespace).List(ctx, metav1.ListOptions{})
+	deploymentList, err := s.client.K8sClient().AppsV1().Deployments(namespace).List(ctx, metav1.ListOptions{})
 	if err != nil {
 		return nil, err
 	}
@@ -42,7 +42,7 @@ func (s *DeploymentService) ListDeployments(ctx context.Context, namespace strin
 
 // GetDeployment retrieves a single Deployment by name and namespace
 func (s *DeploymentService) GetDeployment(ctx context.Context, namespace, name string) (*k8s.Deployment, error) {
-	deployment, err := s.client.Clientset.AppsV1().Deployments(namespace).Get(ctx, name, metav1.GetOptions{})
+	deployment, err := s.client.K8sClient().AppsV1().Deployments(namespace).Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
 		return nil, err
 	}
@@ -57,7 +57,7 @@ func (s *DeploymentService) GetDeployment(ctx context.Context, namespace, name s
 
 // CreateDeployment creates a new Deployment
 func (s *DeploymentService) CreateDeployment(ctx context.Context, deployment *k8s.Deployment) error {
-	_, err := s.client.Clientset.AppsV1().Deployments(deployment.Namespace).Create(ctx, &v1.Deployment{
+	_, err := s.client.K8sClient().AppsV1().Deployments(deployment.Namespace).Create(ctx, &v1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      deployment.Name,
 			Namespace: deployment.Namespace,
@@ -69,7 +69,7 @@ func (s *DeploymentService) CreateDeployment(ctx context.Context, deployment *k8
 
 // UpdateDeployment updates an existing Deployment
 func (s *DeploymentService) UpdateDeployment(ctx context.Context, deployment *k8s.Deployment) error {
-	_, err := s.client.Clientset.AppsV1().Deployments(deployment.Namespace).Update(ctx, &v1.Deployment{
+	_, err := s.client.K8sClient().AppsV1().Deployments(deployment.Namespace).Update(ctx, &v1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      deployment.Name,
 			Namespace: deployment.Namespace,
@@ -81,7 +81,7 @@ func (s *DeploymentService) UpdateDeployment(ctx context.Context, deployment *k8
 
 // DeleteDeployment deletes a Deployment by name and namespace
 func (s *DeploymentService) DeleteDeployment(ctx context.Context, namespace, name string) error {
-	err := s.client.Clientset.AppsV1().Deployments(namespace).Delete(ctx, name, metav1.DeleteOptions{})
+	err := s.client.K8sClient().AppsV1().Deployments(namespace).Delete(ctx, name, metav1.DeleteOptions{})
 	if errors.IsNotFound(err) {
 		return nil
 	}

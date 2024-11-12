@@ -1,9 +1,9 @@
 package app
 
 import (
-	"github.com/cilliandevops/kops/server-go/internal/apis/middlewares"
-	"github.com/cilliandevops/kops/server-go/internal/apis/routes"
-	"github.com/cilliandevops/kops/server-go/internal/apis/services"
+	"github.com/cilliandevops/kopsadmin/server-go/internal/apis/middlewares"
+	"github.com/cilliandevops/kopsadmin/server-go/internal/apis/routes"
+	"github.com/cilliandevops/kopsadmin/server-go/internal/apis/services"
 	"github.com/gin-gonic/gin"
 )
 

@@ -1,8 +1,8 @@
 package routes
 
 import (
-	"github.com/cilliandevops/kops/server-go/internal/apis/services"
-	"github.com/cilliandevops/kops/server-go/internal/apis/v1/k8s"
+	"github.com/cilliandevops/kopsadmin/server-go/internal/apis/services"
+	"github.com/cilliandevops/kopsadmin/server-go/internal/apis/v1/k8s"
 	"github.com/gin-gonic/gin"
 )
 
@@ -85,7 +85,8 @@ func RegisterK8sRoutes(
 	// ConfigMap 路由
 	configMapController := k8s.NewConfigMapController(configMapService)
 	v1.POST("/namespaces/:namespace/configmaps", configMapController.CreateConfigMap)
-	v1.GET("/namespaces/:namespace/configmaps/:name", configMapController.GetConfigMap)
+	v1.GET("/namespaces/:namespace/configmaps", configMapController.ListConfigMaps)
+
 	v1.PUT("/namespaces/:namespace/configmaps/:name", configMapController.UpdateConfigMap)
 	v1.DELETE("/namespaces/:namespace/configmaps/:name", configMapController.DeleteConfigMap)
 

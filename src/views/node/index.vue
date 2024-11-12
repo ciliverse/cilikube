@@ -85,7 +85,7 @@ export default defineComponent({
         const response = await request<Node[]>({
           url: "/apis/v1/k8s/nodes",
           method: "get",
-          baseURL: "http://localhost:8080" // 可根据需要调整 baseURL
+          baseURL: "http://192.168.1.200:8080" // 可根据需要调整 baseURL
         })
         console.log("API response:", response)
         nodeData.value = response

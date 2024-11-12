@@ -3,23 +3,25 @@ package services
 import (
 	"context"
 
+	"github.com/cilliandevops/kopsadmin/server-go/internal/client"
 	networkingv1 "k8s.io/api/networking/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes"
 )
 
+// IngressService provides methods for managing Kubernetes Ingresses
 type IngressService struct {
-	clientset *kubernetes.Clientset
+	client *client.K8sClient
 }
 
 // NewIngressService creates a new instance of IngressService
-func NewIngressService(clientset *kubernetes.Clientset) *IngressService {
-	return &IngressService{clientset: clientset}
+func NewIngressService(client *client.K8sClient) *IngressService {
+	return &IngressService{client: client}
 }
 
 // ListIngresses lists all ingresses in a given namespace
-func (s *IngressService) ListIngresses(namespace string) ([]networkingv1.Ingress, error) {
-	ingresses, err := s.clientset.NetworkingV1().Ingresses(namespace).List(context.TODO(), v1.ListOptions{})
+func (s *IngressService) ListIngresses(ctx context.Context, namespace string) ([]networkingv1.Ingress, error) {
+	// Use the K8sClient's clientset to list ingresses
+	ingresses, err := s.client.K8sClient().NetworkingV1().Ingresses(namespace).List(ctx, v1.ListOptions{})
 	if err != nil {
 		return nil, err
 	}
@@ -27,16 +29,19 @@ func (s *IngressService) ListIngresses(namespace string) ([]networkingv1.Ingress
 }
 
 // GetIngress retrieves a specific ingress by name in a given namespace
-func (s *IngressService) GetIngress(namespace, name string) (*networkingv1.Ingress, error) {
-	return s.clientset.NetworkingV1().Ingresses(namespace).Get(context.TODO(), name, v1.GetOptions{})
+func (s *IngressService) GetIngress(ctx context.Context, namespace, name string) (*networkingv1.Ingress, error) {
+	// Use the K8sClient's clientset to get a specific ingress
+	return s.client.K8sClient().NetworkingV1().Ingresses(namespace).Get(ctx, name, v1.GetOptions{})
 }
 
 // CreateIngress creates a new ingress in a given namespace
-func (s *IngressService) CreateIngress(namespace string, ingress *networkingv1.Ingress) (*networkingv1.Ingress, error) {
-	return s.clientset.NetworkingV1().Ingresses(namespace).Create(context.TODO(), ingress, v1.CreateOptions{})
+func (s *IngressService) CreateIngress(ctx context.Context, namespace string, ingress *networkingv1.Ingress) (*networkingv1.Ingress, error) {
+	// Use the K8sClient's clientset to create an ingress
+	return s.client.K8sClient().NetworkingV1().Ingresses(namespace).Create(ctx, ingress, v1.CreateOptions{})
 }
 
 // DeleteIngress deletes an ingress by name in a given namespace
-func (s *IngressService) DeleteIngress(namespace, name string) error {
-	return s.clientset.NetworkingV1().Ingresses(namespace).Delete(context.TODO(), name, v1.DeleteOptions{})
+func (s *IngressService) DeleteIngress(ctx context.Context, namespace, name string) error {
+	// Use the K8sClient's clientset to delete an ingress
+	return s.client.K8sClient().NetworkingV1().Ingresses(namespace).Delete(ctx, name, v1.DeleteOptions{})
 }

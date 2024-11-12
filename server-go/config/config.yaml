@@ -3,4 +3,4 @@ server:
   port: ":8080"
 
 k8s:
-  configPath: "C:/Users/cillian/.kube/config"
+  configPath: "/root/.kube/config"

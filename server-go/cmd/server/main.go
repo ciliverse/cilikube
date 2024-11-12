@@ -3,10 +3,10 @@ package main
 import (
 	"log"
 
-	"github.com/cilliandevops/kops/server-go/config"
-	"github.com/cilliandevops/kops/server-go/internal/apis/services"
-	"github.com/cilliandevops/kops/server-go/internal/app"
-	"github.com/cilliandevops/kops/server-go/internal/client"
+	"github.com/cilliandevops/kopsadmin/server-go/config"
+	"github.com/cilliandevops/kopsadmin/server-go/internal/apis/services"
+	"github.com/cilliandevops/kopsadmin/server-go/internal/app"
+	"github.com/cilliandevops/kopsadmin/server-go/internal/client"
 )
 
 func main() {
@@ -15,7 +15,7 @@ func main() {
 
 	// 初始化 K8s 客户端
 	kubeconfig := config.Cfg.K8s.ConfigPath
-	k8sClient, err := client.NewClient(kubeconfig)
+	k8sClient, err := client.NewK8sClient(kubeconfig)
 	if err != nil {
 		log.Fatalf("Failed to create Kubernetes client: %v", err)
 	}
@@ -27,8 +27,8 @@ func main() {
 	daemonSetService := services.NewDaemonSetService(k8sClient) // 新增 DaemonSet 服务
 	statefulSetService := services.NewStatefulSetService(k8sClient)
 	nodeService := services.NewNodeService(k8sClient)
-	clusterService := services.NewClusterService(k8sClient.Clientset)
-	ingressService := services.NewIngressService(k8sClient.Clientset)
+	clusterService := services.NewClusterService(k8sClient)
+	ingressService := services.NewIngressService(k8sClient)
 	configMapService := services.NewConfigMapService(k8sClient)
 	secretService := services.NewSecretService(k8sClient)
 	namespaceService := services.NewNamespaceService(k8sClient)

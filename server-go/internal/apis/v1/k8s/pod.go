@@ -3,7 +3,7 @@ package k8s
 import (
 	"net/http"
 
-	"github.com/cilliandevops/kops/server-go/internal/apis/services"
+	"github.com/cilliandevops/kopsadmin/server-go/internal/apis/services"
 	"github.com/gin-gonic/gin"
 	corev1 "k8s.io/api/core/v1"
 )

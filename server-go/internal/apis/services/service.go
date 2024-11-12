@@ -3,25 +3,25 @@ package services
 import (
 	"context"
 
-	"github.com/cilliandevops/kops/server-go/internal/apis/models/k8s"
-	"github.com/cilliandevops/kops/server-go/internal/client"
+	"github.com/cilliandevops/kopsadmin/server-go/internal/apis/models/k8s"
+	"github.com/cilliandevops/kopsadmin/server-go/internal/client"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // ServiceService 提供对 Kubernetes Service 资源的操作
 type ServiceService struct {
-	client *client.Client
+	client *client.K8sClient
 }
 
 // NewServiceService 创建一个新的 ServiceService 实例
-func NewServiceService(client *client.Client) *ServiceService {
+func NewServiceService(client *client.K8sClient) *ServiceService {
 	return &ServiceService{client: client}
 }
 
 // ListServices 列出指定命名空间中的所有 Services
 func (s *ServiceService) ListServices(namespace string) ([]k8s.ServiceModel, error) {
-	services, err := s.client.Clientset.CoreV1().Services(namespace).List(context.TODO(), metav1.ListOptions{})
+	services, err := s.client.K8sClient().CoreV1().Services(namespace).List(context.TODO(), metav1.ListOptions{})
 	if err != nil {
 		return nil, err
 	}
@@ -43,7 +43,7 @@ func (s *ServiceService) ListServices(namespace string) ([]k8s.ServiceModel, err
 func (s *ServiceService) ListAllServices() ([]k8s.ServiceModel, error) {
 	var allServices []k8s.ServiceModel
 
-	namespaces, err := s.client.Clientset.CoreV1().Namespaces().List(context.TODO(), metav1.ListOptions{})
+	namespaces, err := s.client.K8sClient().CoreV1().Namespaces().List(context.TODO(), metav1.ListOptions{})
 	if err != nil {
 		return nil, err
 	}
@@ -61,7 +61,7 @@ func (s *ServiceService) ListAllServices() ([]k8s.ServiceModel, error) {
 
 // GetService 获取指定命名空间中指定 Service 的详细信息
 func (s *ServiceService) GetService(namespace, name string) (*k8s.ServiceModel, error) {
-	svc, err := s.client.Clientset.CoreV1().Services(namespace).Get(context.TODO(), name, metav1.GetOptions{})
+	svc, err := s.client.K8sClient().CoreV1().Services(namespace).Get(context.TODO(), name, metav1.GetOptions{})
 	if err != nil {
 		return nil, err
 	}
@@ -77,7 +77,7 @@ func (s *ServiceService) GetService(namespace, name string) (*k8s.ServiceModel, 
 
 // CreateService 创建一个新的 Service
 func (s *ServiceService) CreateService(namespace string, service *v1.Service) (*k8s.ServiceModel, error) {
-	svc, err := s.client.Clientset.CoreV1().Services(namespace).Create(context.TODO(), service, metav1.CreateOptions{})
+	svc, err := s.client.K8sClient().CoreV1().Services(namespace).Create(context.TODO(), service, metav1.CreateOptions{})
 	if err != nil {
 		return nil, err
 	}
@@ -93,5 +93,5 @@ func (s *ServiceService) CreateService(namespace string, service *v1.Service) (*
 
 // DeleteService 删除指定命名空间中的指定 Service
 func (s *ServiceService) DeleteService(namespace, name string) error {
-	return s.client.Clientset.CoreV1().Services(namespace).Delete(context.TODO(), name, metav1.DeleteOptions{})
+	return s.client.K8sClient().CoreV1().Services(namespace).Delete(context.TODO(), name, metav1.DeleteOptions{})
 }

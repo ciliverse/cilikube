@@ -3,7 +3,7 @@ package k8s
 import (
 	"net/http"
 
-	"github.com/cilliandevops/kops/server-go/internal/apis/services"
+	"github.com/cilliandevops/kopsadmin/server-go/internal/apis/services"
 	"github.com/gin-gonic/gin"
 	v1 "k8s.io/api/core/v1"
 )
@@ -35,17 +35,16 @@ func (ctrl *ConfigMapController) CreateConfigMap(c *gin.Context) {
 	c.JSON(http.StatusOK, createdConfigMap)
 }
 
-func (ctrl *ConfigMapController) GetConfigMap(c *gin.Context) {
+func (ctrl *ConfigMapController) ListConfigMaps(c *gin.Context) {
 	namespace := c.Param("namespace")
-	name := c.Param("name")
-
-	configMap, err := ctrl.Service.GetConfigMap(namespace, name)
+	configMaps, err := ctrl.Service.ListConfigMaps(namespace)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
-	c.JSON(http.StatusOK, configMap)
+	// 返回 ConfigMap 列表的 Items 部分
+	c.JSON(http.StatusOK, configMaps.Items)
 }
 
 func (ctrl *ConfigMapController) UpdateConfigMap(c *gin.Context) {
