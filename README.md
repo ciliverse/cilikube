@@ -1,6 +1,7 @@
-﻿# Empty Repository
+# Empty Repository
 
-![Alt](https://repobeats.axiom.co/api/embed/4b23db6e62b6a072c36e2d37235d49c9bf08af5b.svg "Repobeats analytics image")
+![Alt](https://repobeats.axiom.co/api/embed/4b23db6e62b6a072c36e2d37235d49c9bf08af5b.svg "Repobeats analytics image")[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Fciliverse%2Fcilikube.svg?type=shield)](https://app.fossa.com/projects/git%2Bgithub.com%2Fciliverse%2Fcilikube?ref=badge_shield)
+
 
 ## 🌟Star History
 
@@ -12,3 +13,7 @@
  </picture>
 </a>
 
+
+
+## License
+[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Fciliverse%2Fcilikube.svg?type=large)](https://app.fossa.com/projects/git%2Bgithub.com%2Fciliverse%2Fcilikube?ref=badge_large)
