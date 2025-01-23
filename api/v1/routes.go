@@ -13,17 +13,5 @@ func RegisterRoutes(r *gin.Engine) {
 		api.GET("/pods/:name", handlers.GetPod)
 		api.PUT("/pods/:name", handlers.UpdatePod)
 		api.DELETE("/pods/:name", handlers.DeletePod)
-
-		api.GET("/deployments", handlers.ListDeployments)
-		api.POST("/deployments", handlers.CreateDeployment)
-		api.GET("/deployments/:name", handlers.GetDeployment)
-		api.PUT("/deployments/:name", handlers.UpdateDeployment)
-		api.DELETE("/deployments/:name", handlers.DeleteDeployment)
-
-		api.GET("/services", handlers.ListServices)
-		api.POST("/services", handlers.CreateService)
-		api.GET("/services/:name", handlers.GetService)
-		api.PUT("/services/:name", handlers.UpdateService)
-		api.DELETE("/services/:name", handlers.DeleteService)
 	}
 }

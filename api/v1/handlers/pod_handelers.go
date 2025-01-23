@@ -7,57 +7,57 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func ListServices(c *gin.Context) {
-	services, err := service.ListServices()
+func ListPods(c *gin.Context) {
+	pods, err := service.ListPods()
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	c.JSON(http.StatusOK, services)
+	c.JSON(http.StatusOK, pods)
 }
 
-func CreateService(c *gin.Context) {
-	var svc service.Service
-	if err := c.ShouldBindJSON(&svc); err != nil {
+func CreatePod(c *gin.Context) {
+	var pod service.Pod
+	if err := c.ShouldBindJSON(&pod); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	if err := service.CreateService(&svc); err != nil {
+	if err := service.CreatePod(&pod); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	c.JSON(http.StatusCreated, svc)
+	c.JSON(http.StatusCreated, pod)
 }
 
-func GetService(c *gin.Context) {
+func GetPod(c *gin.Context) {
 	name := c.Param("name")
-	svc, err := service.GetService(name)
+	pod, err := service.GetPod(name)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	c.JSON(http.StatusOK, svc)
+	c.JSON(http.StatusOK, pod)
 }
 
-func UpdateService(c *gin.Context) {
+func UpdatePod(c *gin.Context) {
 	name := c.Param("name")
-	var svc service.Service
-	if err := c.ShouldBindJSON(&svc); err != nil {
+	var pod service.Pod
+	if err := c.ShouldBindJSON(&pod); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	if err := service.UpdateService(name, &svc); err != nil {
+	if err := service.UpdatePod(name, &pod); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	c.JSON(http.StatusOK, svc)
+	c.JSON(http.StatusOK, pod)
 }
 
-func DeleteService(c *gin.Context) {
+func DeletePod(c *gin.Context) {
 	name := c.Param("name")
-	if err := service.DeleteService(name); err != nil {
+	if err := service.DeletePod(name); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	c.Status(http.StatusNoContent)
+	c.JSON(http.StatusNoContent, nil)
 }
