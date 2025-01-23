@@ -3,6 +3,7 @@ package service
 import (
 	"github.com/ciliverse/cilikube/pkg/k8s"
 	v1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 type Pod v1.Pod
@@ -17,8 +18,8 @@ func ListPods() ([]Pod, error) {
 		return nil, err
 	}
 	var result []Pod
-	for _, p := range pods {
-		result = append(result, Pod(p))
+	for _, pod := range pods {
+		result = append(result, Pod(pod))
 	}
 	return result, nil
 }
@@ -48,7 +49,7 @@ func UpdatePod(name string, pod *Pod) error {
 	if err != nil {
 		return err
 	}
-	return client.UpdatePod(name, (*v1.Pod)(pod))
+	return client.UpdatePod((*v1.Pod)(pod))
 }
 
 func DeletePod(name string) error {
@@ -56,5 +57,6 @@ func DeletePod(name string) error {
 	if err != nil {
 		return err
 	}
-	return client.DeletePod(name)
+	deleteOptions := metav1.DeleteOptions{}
+	return client.DeletePod(name, &deleteOptions)
 }
