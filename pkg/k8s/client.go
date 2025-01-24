@@ -1,57 +1,48 @@
 package k8s
 
 import (
-	"context"
+	"os"
+	"path/filepath"
 
-	v1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/clientcmd"
 )
 
 type Client struct {
-	clientset *kubernetes.Clientset
+	Clientset kubernetes.Interface
 }
 
-func NewClient() (*Client, error) {
-	config, err := rest.InClusterConfig()
-	if err != nil {
-		return nil, err
+func NewClient(kubeconfig string) (*Client, error) {
+	var config *rest.Config
+	var err error
+
+	// 优先使用in-cluster配置
+	if kubeconfig == "" {
+		if config, err = rest.InClusterConfig(); err != nil {
+			return nil, err
+		}
+	} else {
+		// 处理kubeconfig路径
+		if kubeconfig == "default" {
+			kubeconfig = filepath.Join(os.Getenv("HOME"), ".kube", "config")
+		}
+		config, err = clientcmd.BuildConfigFromFlags("", kubeconfig)
+		if err != nil {
+			return nil, err
+		}
 	}
+
 	clientset, err := kubernetes.NewForConfig(config)
 	if err != nil {
 		return nil, err
 	}
-	return &Client{clientset: clientset}, nil
+
+	return &Client{Clientset: clientset}, nil
 }
 
-func (c *Client) ListPods() ([]v1.Pod, error) {
-	pods, err := c.clientset.CoreV1().Pods("").List(context.TODO(), metav1.ListOptions{})
-	if err != nil {
-		return nil, err
-	}
-	return pods.Items, nil
-}
-
-func (c *Client) CreatePod(pod *v1.Pod) error {
-	_, err := c.clientset.CoreV1().Pods(pod.Namespace).Create(context.TODO(), pod, metav1.CreateOptions{})
-	return err
-}
-
-func (c *Client) GetPod(name string) (*v1.Pod, error) {
-	pod, err := c.clientset.CoreV1().Pods("").Get(context.TODO(), name, metav1.GetOptions{})
-	if err != nil {
-		return nil, err
-	}
-	return pod, nil
-}
-
-func (c *Client) UpdatePod(pod *v1.Pod) error {
-	_, err := c.clientset.CoreV1().Pods(pod.Namespace).Update(context.TODO(), pod, metav1.UpdateOptions{})
-	return err
-}
-
-func (c *Client) DeletePod(name string, options *metav1.DeleteOptions) error {
-	err := c.clientset.CoreV1().Pods("").Delete(context.TODO(), name, *options)
+// 健康检查扩展
+func (c *Client) CheckConnection() error {
+	_, err := c.Clientset.Discovery().ServerVersion()
 	return err
 }
