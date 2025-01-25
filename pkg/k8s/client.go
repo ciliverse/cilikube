@@ -19,11 +19,13 @@ func NewClient(kubeconfig string) (*Client, error) {
 
 	// 优先使用in-cluster配置
 	if kubeconfig == "" {
+		// InCluster模式（生产环境）
 		if config, err = rest.InClusterConfig(); err != nil {
 			return nil, err
 		}
 	} else {
 		// 处理kubeconfig路径
+		// 本地开发模式
 		if kubeconfig == "default" {
 			kubeconfig = filepath.Join(os.Getenv("HOME"), ".kube", "config")
 		}

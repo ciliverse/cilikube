@@ -17,6 +17,7 @@ func NewPodService(client kubernetes.Interface) *PodService {
 	return &PodService{client: client}
 }
 
+// 获取单个Pod
 func (s *PodService) Get(namespace, name string) (*corev1.Pod, error) {
 	return s.client.CoreV1().Pods(namespace).Get(
 		context.TODO(),
@@ -25,7 +26,13 @@ func (s *PodService) Get(namespace, name string) (*corev1.Pod, error) {
 	)
 }
 
+// 创建Pod
 func (s *PodService) Create(namespace string, pod *corev1.Pod) (*corev1.Pod, error) {
+
+	if pod.Namespace != "" && pod.Namespace != namespace {
+		return nil, NewValidationError("pod namespace conflicts with path parameter")
+	}
+
 	return s.client.CoreV1().Pods(namespace).Create(
 		context.TODO(),
 		pod,
@@ -33,6 +40,7 @@ func (s *PodService) Create(namespace string, pod *corev1.Pod) (*corev1.Pod, err
 	)
 }
 
+// 更新Pod（包含冲突检测）
 func (s *PodService) Update(namespace string, pod *corev1.Pod) (*corev1.Pod, error) {
 	return s.client.CoreV1().Pods(namespace).Update(
 		context.TODO(),
@@ -41,6 +49,7 @@ func (s *PodService) Update(namespace string, pod *corev1.Pod) (*corev1.Pod, err
 	)
 }
 
+// 删除Pod
 func (s *PodService) Delete(namespace, name string) error {
 	return s.client.CoreV1().Pods(namespace).Delete(
 		context.TODO(),
@@ -49,6 +58,7 @@ func (s *PodService) Delete(namespace, name string) error {
 	)
 }
 
+// 列表查询（支持分页和标签过滤）
 func (s *PodService) List(namespace, selector string, limit int64) (*corev1.PodList, error) {
 	return s.client.CoreV1().Pods(namespace).List(
 		context.TODO(),
@@ -59,6 +69,7 @@ func (s *PodService) List(namespace, selector string, limit int64) (*corev1.PodL
 	)
 }
 
+// Watch机制实现
 func (s *PodService) Watch(namespace, selector string) (watch.Interface, error) {
 	return s.client.CoreV1().Pods(namespace).Watch(
 		context.TODO(),
@@ -70,4 +81,18 @@ func (s *PodService) Watch(namespace, selector string) (watch.Interface, error) 
 	)
 }
 
+// 辅助函数
 func int64ptr(i int64) *int64 { return &i }
+
+// 自定义错误类型
+type ValidationError struct {
+	Message string
+}
+
+func (e *ValidationError) Error() string {
+	return e.Message
+}
+
+func NewValidationError(msg string) error {
+	return &ValidationError{Message: msg}
+}
