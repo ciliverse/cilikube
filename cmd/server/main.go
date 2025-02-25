@@ -31,9 +31,11 @@ func main() {
 	}
 	// 初始化服务层
 	podService := service.NewPodService(k8sClient.Clientset)
+	deploymentService := service.NewDeploymentService(k8sClient.Clientset)
 
 	// 初始化处理器
 	podHandler := handlers.NewPodHandler(podService)
+	deploymentHandler := handlers.NewDeploymentHandler(deploymentService)
 
 	// 创建Gin实例
 	router := gin.Default()
@@ -41,6 +43,7 @@ func main() {
 	// 注册路由
 	v1 := router.Group("/api/v1")
 	routes.RegisterPodRoutes(v1, podHandler)
+	routes.RegisterDeploymentRoutes(v1, deploymentHandler)
 
 	// 监控路由
 	router.Use(metrics.PromMiddleware())
