@@ -14,6 +14,7 @@ func RegisterPodRoutes(router *gin.RouterGroup, handler *handlers.PodHandler) {
 		podGroup.GET("/:name", handler.GetPod)
 		podGroup.PUT("/:name", handler.UpdatePod)
 		podGroup.DELETE("/:name", handler.DeletePod)
+
 	}
 
 	// Watch端点
@@ -21,4 +22,7 @@ func RegisterPodRoutes(router *gin.RouterGroup, handler *handlers.PodHandler) {
 	{
 		watchGroup.GET("", handler.WatchPods)
 	}
+
+	// 新增命名空间列表路由
+	router.GET("/namespaces", handler.ListNamespaces)
 }
