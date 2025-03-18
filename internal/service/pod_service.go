@@ -17,6 +17,21 @@ func NewPodService(client kubernetes.Interface) *PodService {
 	return &PodService{client: client}
 }
 
+// ListNamespaces 列出所有命名空间
+func (s *PodService) ListNamespaces() ([]string, error) {
+	namespaceList, err := s.client.CoreV1().Namespaces().List(context.TODO(), metav1.ListOptions{})
+	if err != nil {
+		return nil, err
+	}
+
+	namespaces := make([]string, 0, len(namespaceList.Items))
+	for _, ns := range namespaceList.Items {
+		namespaces = append(namespaces, ns.Name)
+	}
+
+	return namespaces, nil
+}
+
 // 获取单个Pod
 func (s *PodService) Get(namespace, name string) (*corev1.Pod, error) {
 	return s.client.CoreV1().Pods(namespace).Get(

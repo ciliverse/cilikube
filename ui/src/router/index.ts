@@ -85,7 +85,7 @@ export const constantRoutes: RouteRecordRaw[] = [
         component: () => import("@/views/node/index.vue"),
         name: "Node",
         meta: {
-          title: "node"
+          title: "节点"
         }
       },
       {
@@ -93,7 +93,7 @@ export const constantRoutes: RouteRecordRaw[] = [
         component: () => import("@/views/namespace/index.vue"),
         name: "Namespace",
         meta: {
-          title: "namespace"
+          title: "命名空间"
         }
       }
     ]

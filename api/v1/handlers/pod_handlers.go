@@ -23,6 +23,25 @@ func NewPodHandler(svc *service.PodService) *PodHandler {
 	return &PodHandler{service: svc}
 }
 
+// ListNamespaces 列出所有命名空间
+// @Summary 列出所有命名空间
+// @Tags Namespaces
+// @Success 200 {object} []string
+// @Router /api/v1/namespaces [get]
+func (h *PodHandler) ListNamespaces(c *gin.Context) {
+	namespaces, err := h.service.ListNamespaces()
+	if err != nil {
+		respondError(c, http.StatusInternalServerError, "获取命名空间失败: "+err.Error())
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"code":    http.StatusOK,
+		"data":    namespaces,
+		"message": "success",
+	})
+}
+
 // GetPod 获取Pod详情
 // @Summary 获取Pod详情
 // @Tags Pods

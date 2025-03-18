@@ -1,5 +1,10 @@
 <template>
   <div class="pod-container">
+    <!-- 命名空间筛选框 -->
+    <el-select v-model="selectedNamespace" placeholder="选择命名空间" @change="fetchPodData" class="namespace-select">
+      <el-option v-for="namespace in namespaces" :key="namespace" :label="namespace" :value="namespace" />
+    </el-select>
+
     <!-- 搜索框 -->
     <el-input
       v-model="searchQuery"
@@ -87,10 +92,21 @@ interface Pod {
   image: string
 }
 
+interface PodResponse {
+  code: number
+  data: {
+    items: Pod[]
+    total: number
+  }
+  message: string
+}
+
 export default defineComponent({
   name: "Pod",
   setup() {
     const podData = ref<Pod[]>([])
+    const namespaces = ref<string[]>([])
+    const selectedNamespace = ref<string>("")
     const currentPage = ref(1)
     const pageSize = ref(10)
     const totalPods = ref(0)
@@ -153,33 +169,41 @@ export default defineComponent({
     const fetchPodData = async () => {
       try {
         const response = await request({
-          url: "/api/v1/namespaces/kube-system/pods",
+          url: `/api/v1/namespaces/${selectedNamespace.value}/pods`,
           method: "get",
-          baseURL: "http://192.168.1.100:8080"
-        })
-
-        console.log("API response:", response)
-        
-        if (response.code === 200 && response.data.items) {
-          podData.value = response.data.items.map((item: any) => ({
-            name: item.name,
-            namespace: item.namespace,
-            labels: item.labels || {},
-            annotations: item.annotations || null,
-            status: item.status,
-            ip: item.ip,
-            node: item.node,
-            createdAt: item.createdAt
-          }))
+          baseURL: "http://192.168.10.100:8080"
+        }) as PodResponse
+        if (response.code === 200) {
+          podData.value = response.data.items
           totalPods.value = response.data.total
-          console.log("Processed pod data:", podData.value)
         } else {
-          console.error("Invalid response format:", response)
           ElMessage.error("获取Pod数据失败: " + response.message)
         }
       } catch (error) {
         console.error("获取Pod数据失败:", error)
         ElMessage.error("获取Pod数据失败")
+      }
+    }
+
+    const fetchNamespaces = async () => {
+      try {
+        const response = await request({
+          url: "/api/v1/namespaces",
+          method: "get",
+          baseURL: "http://192.168.10.100:8080"
+        }) as { code: number, data: string[], message: string }
+        if (response.code === 200) {
+          namespaces.value = response.data
+          if (namespaces.value.length > 0) {
+            selectedNamespace.value = namespaces.value[0]
+            fetchPodData()
+          }
+        } else {
+          ElMessage.error("获取命名空间失败: " + response.message)
+        }
+      } catch (error) {
+        console.error("获取命名空间失败:", error)
+        ElMessage.error("获取命名空间失败")
       }
     }
 
@@ -201,7 +225,7 @@ export default defineComponent({
       dialogTitle.value = "新增Pod"
       currentPod.value = {
         name: "",
-        namespace: "default",
+        namespace: selectedNamespace.value,
         labels: {},
         annotations: null,
         status: "Pending",
@@ -223,18 +247,18 @@ export default defineComponent({
       try {
         if (dialogTitle.value === "新增Pod") {
           await request({
-            url: "/api/v1/namespaces/default/pods",
+            url: `/api/v1/namespaces/${currentPod.value.namespace}/pods`,
             method: "post",
             data: currentPod.value,
-            baseURL: "http://192.168.1.100:8080" // 可根据需要调整 baseURL
+            baseURL: "http://192.168.10.100:8080"
           })
           ElMessage.success("Pod新增成功")
         } else {
           await request({
-            url: `/api/v1/namespaces/default/pods/${currentPod.value.name}`,
+            url: `/api/v1/namespaces/${currentPod.value.namespace}/pods/${currentPod.value.name}`,
             method: "put",
             data: currentPod.value,
-            baseURL: "http://192.168.1.100:8080" // 可根据需要调整 baseURL
+            baseURL: "http://192.168.10.100:8080"
           })
           ElMessage.success("Pod编辑成功")
         }
@@ -254,9 +278,9 @@ export default defineComponent({
       }).then(async () => {
         try {
           await request({
-            url: `/api/v1/namespaces/default/pods/${pod.name}`,
+            url: `/api/v1/namespaces/${pod.namespace}/pods/${pod.name}`,
             method: "delete",
-            baseURL: "http://192.168.1.100:8080" // 可根据需要调整 baseURL
+            baseURL: "http://192.168.10.100:8080"
           })
           ElMessage.success("Pod删除成功")
           fetchPodData()
@@ -281,11 +305,13 @@ export default defineComponent({
     }
 
     onMounted(() => {
-      fetchPodData()
+      fetchNamespaces()
     })
 
     return {
       podData,
+      namespaces,
+      selectedNamespace,
       currentPage,
       pageSize,
       totalPods,
@@ -330,6 +356,11 @@ export default defineComponent({
 }
 
 .search-input {
+  margin-bottom: 20px;
+  width: 300px;
+}
+
+.namespace-select {
   margin-bottom: 20px;
   width: 300px;
 }
