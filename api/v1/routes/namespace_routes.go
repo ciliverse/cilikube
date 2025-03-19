@@ -8,7 +8,7 @@ import (
 // RegisterNamespaceRoutes 注册Namespace相关路由
 func RegisterNamespaceRoutes(router *gin.RouterGroup, handler *handlers.NamespaceHandler) {
 	// 基础资源操作
-	namespaceGroup := router.Group("/namespaces")
+	namespaceGroup := router.Group("/namespace")
 	{
 		namespaceGroup.GET("", handler.ListNamespaces)
 		namespaceGroup.POST("", handler.CreateNamespace)
