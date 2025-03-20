@@ -1,7 +1,23 @@
 <template>
   <div class="pod-container">
+    <!-- 集群知识卡片 -->
+    <el-row :gutter="20" class="card-row explanation-card">
+      <el-col :span="24">
+        <el-card class="custom-card">
+          <template #header>
+            <div class="card-header">
+              <span>集群知识</span>
+            </div>
+          </template>
+          <div class="card-content">
+            <p>在 Kubernetes 中，Pod 是最小的可部署单元。一个 Pod 表示一个运行中的进程，通常包含一个或多个容器。Pod 提供了容器之间共享的网络和存储资源。</p>
+          </div>
+        </el-card>
+      </el-col>
+    </el-row>
+
     <!-- 命名空间筛选框 -->
-    <el-select v-model="selectedNamespace" placeholder="选择命名空间" @change="fetchPodData" class="namespace-select">
+    <el-select v-model="selectedNamespace" placeholder="选择命名空间" @change="handleNamespaceChange" class="namespace-select">
       <el-option v-for="namespace in namespaces" :key="namespace" :label="namespace" :value="namespace" />
     </el-select>
 
@@ -19,7 +35,7 @@
     <el-button type="success" @click="handleAdd" class="add-pod-button">新增Pod</el-button>
 
     <el-table
-      :data="filteredAndSortedData"
+      :data="currentPageData"
       border
       stripe
       style="width: 100%; margin-top: 20px;"
@@ -77,8 +93,9 @@
 
 <script lang="ts">
 import { defineComponent, onMounted, ref, computed } from "vue"
-import { ElMessage, ElMessageBox } from "element-plus"
+import { ElMessage, ElMessageBox, ElLoading } from "element-plus"
 import { request } from "@/utils/service"
+import dayjs from "dayjs"
 
 interface Pod {
   name: string
@@ -167,44 +184,75 @@ export default defineComponent({
     })
 
     const fetchPodData = async () => {
+      if (!selectedNamespace.value) {
+        ElMessage.warning("请选择命名空间")
+        return
+      }
+
+      const loading = ElLoading.service({
+        lock: true,
+        text: "加载中",
+        background: "rgba(0, 0, 0, 0.7)",
+      })
       try {
         const response = await request({
           url: `/api/v1/namespaces/${selectedNamespace.value}/pods`,
           method: "get",
           baseURL: "http://192.168.10.100:8080"
         }) as PodResponse
+        console.log("Pod response:", response) // 添加日志
         if (response.code === 200) {
-          podData.value = response.data.items
+          podData.value = response.data.items.map(item => ({
+            ...item,
+            createdAt: dayjs(item.createdAt).format("YYYY-MM-DD HH:mm:ss")
+          }))
           totalPods.value = response.data.total
         } else {
           ElMessage.error("获取Pod数据失败: " + response.message)
         }
       } catch (error) {
         console.error("获取Pod数据失败:", error)
-        ElMessage.error("获取Pod数据失败")
+        ElMessage.error("获取Pod数据失败: " + (error instanceof Error ? error.message : String(error)))
+      } finally {
+        loading.close()
       }
     }
 
     const fetchNamespaces = async () => {
+      const loading = ElLoading.service({
+        lock: true,
+        text: "加载中",
+        background: "rgba(0, 0, 0, 0.7)",
+      })
       try {
-        const response = await request({
+        const response = await request<{ code: number; data: string[]; message: string }>({
           url: "/api/v1/namespaces",
           method: "get",
           baseURL: "http://192.168.10.100:8080"
-        }) as { code: number, data: string[], message: string }
-        if (response.code === 200) {
+        })
+        console.log("Namespace response:", response) // 添加日志
+        if (response.code === 200 && response.data) {
           namespaces.value = response.data
           if (namespaces.value.length > 0) {
             selectedNamespace.value = namespaces.value[0]
-            fetchPodData()
+            await fetchPodData() // 等待 Pod 数据加载完成
+          } else {
+            ElMessage.warning("没有可用的命名空间")
           }
         } else {
-          ElMessage.error("获取命名空间失败: " + response.message)
+          ElMessage.error(`获取命名空间失败: ${response.message || '未知错误'}`)
         }
       } catch (error) {
         console.error("获取命名空间失败:", error)
-        ElMessage.error("获取命名空间失败")
+        ElMessage.error("获取命名空间失败: " + (error instanceof Error ? error.message : String(error)))
+      } finally {
+        loading.close()
       }
+    }
+
+    const handleNamespaceChange = async () => {
+      currentPage.value = 1
+      await fetchPodData()
     }
 
     const handlePageChange = (page: number) => {
@@ -320,6 +368,7 @@ export default defineComponent({
       searchQuery,
       sortKey,
       sortOrder,
+      handleNamespaceChange,
       handlePageChange,
       handleSearch,
       handleSortChange,
@@ -363,5 +412,24 @@ export default defineComponent({
 .namespace-select {
   margin-bottom: 20px;
   width: 300px;
+}
+
+.card-row {
+  margin-bottom: 20px;
+}
+
+.custom-card {
+  border: 1px solid #ebeef5;
+  border-radius: 4px;
+}
+
+.card-header {
+  font-size: 16px;
+  font-weight: bold;
+}
+
+.card-content {
+  font-size: 14px;
+  color: #606266;
 }
 </style>
