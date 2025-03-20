@@ -1,5 +1,26 @@
 <template>
   <div class="deployment-container">
+
+        <!-- 集群知识卡片 -->
+        <el-row :gutter="20" class="card-row explanation-card">
+      <el-col :span="24">
+        <el-card class="custom-card">
+          <template #header>
+            <div class="card-header">
+              <span>集群知识</span>
+            </div>
+          </template>
+          <div class="card-content">
+            <p>Deployment 用于管理运行一个应用负载的一组 Pod，通常适用于不保持状态的负载。</p>
+          </div>
+        </el-card>
+      </el-col>
+    </el-row>
+    <!-- 命名空间筛选框 -->
+    <el-select v-model="selectedNamespace" placeholder="选择命名空间" @change="handleNamespaceChange" class="namespace-select">
+      <el-option v-for="namespace in namespaces" :key="namespace" :label="namespace" :value="namespace" />
+    </el-select>
+
     <!-- 搜索框 -->
     <el-input
       v-model="searchQuery"
@@ -14,16 +35,17 @@
     <el-button type="success" @click="handleAdd" class="add-deployment-button">新增Deployment</el-button>
 
     <el-table
-      :data="filteredAndSortedData"
+      :data="currentPageData"
       border
       stripe
       style="width: 100%; margin-top: 20px;"
       @sort-change="handleSortChange"
     >
-      <el-table-column prop="name" label="Deployment名称" min-width="180" sortable />
-      <el-table-column prop="namespace" label="命名空间" min-width="180" sortable />
-      <el-table-column prop="replicas" label="副本数" min-width="100" sortable />
-      <el-table-column prop="deploymentSpec.template.spec.containers[0].image" label="镜像" min-width="300" sortable />
+      <el-table-column prop="metadata.name" label="Deployment名称" min-width="180" sortable />
+      <el-table-column prop="metadata.namespace" label="命名空间" min-width="180" sortable />
+      <el-table-column prop="spec.replicas" label="副本数" min-width="120" sortable />
+      <el-table-column prop="status.availableReplicas" label="可用副本数" min-width="120" sortable />
+      <el-table-column prop="metadata.creationTimestamp" label="创建时间" min-width="200" sortable />
       <el-table-column label="操作" min-width="200">
         <template #default="{ row }">
           <el-button type="primary" size="small" @click="handleEdit(row)">编辑</el-button>
@@ -45,16 +67,13 @@
     <el-dialog :title="dialogTitle" v-model="dialogVisible">
       <el-form :model="currentDeployment" label-width="120px">
         <el-form-item label="Deployment名称">
-          <el-input v-model="currentDeployment.name" />
+          <el-input v-model="currentDeployment.metadata.name" />
         </el-form-item>
         <el-form-item label="命名空间">
-          <el-input v-model="currentDeployment.namespace" />
+          <el-input v-model="currentDeployment.metadata.namespace" />
         </el-form-item>
         <el-form-item label="副本数">
-          <el-input-number v-model="currentDeployment.replicas" :min="1" />
-        </el-form-item>
-        <el-form-item label="镜像">
-          <el-input v-model="currentDeployment.deploymentSpec.template.spec.containers[0].image" />
+          <el-input v-model="currentDeployment.spec.replicas" />
         </el-form-item>
       </el-form>
       <template #footer>
@@ -67,165 +86,55 @@
 
 <script lang="ts">
 import { defineComponent, onMounted, ref, computed } from "vue"
-import { ElMessage, ElMessageBox } from "element-plus"
+import { ElMessage, ElMessageBox, ElLoading } from "element-plus"
 import { request } from "@/utils/service"
+import dayjs from "dayjs"
 
 interface Deployment {
-  name: string
-  namespace: string
-  replicas: number
-  deploymentSpec: {
-    replicas: number
-    selector: {
-      matchLabels: { [key: string]: string }
-    }
-    template: {
-      metadata: {
-        creationTimestamp: string | null
-        labels: { [key: string]: string }
-      }
-      spec: {
-        containers: {
-          name: string
-          image: string
-          args?: string[]
-          ports?: {
-            containerPort: number
-            protocol: string
-          }[]
-          resources?: {
-            limits?: { [key: string]: string }
-            requests?: { [key: string]: string }
-          }
-          livenessProbe?: {
-            httpGet: {
-              path: string
-              port: number
-              scheme: string
-            }
-            initialDelaySeconds: number
-            timeoutSeconds: number
-            periodSeconds: number
-            successThreshold: number
-            failureThreshold: number
-          }
-          terminationMessagePath: string
-          terminationMessagePolicy: string
-          imagePullPolicy: string
-          securityContext?: {
-            capabilities?: {
-              add?: string[]
-              drop?: string[]
-            }
-            readOnlyRootFilesystem?: boolean
-            allowPrivilegeEscalation?: boolean
-          }
-        }[]
-        restartPolicy: string
-        terminationGracePeriodSeconds: number
-        dnsPolicy: string
-        nodeSelector?: { [key: string]: string }
-        serviceAccountName: string
-        serviceAccount: string
-        securityContext: { [key: string]: any }
-        schedulerName: string
-        tolerations?: {
-          key: string
-          operator: string
-          effect: string
-        }[]
-      }
-    }
-    strategy: {
-      type: string
-      rollingUpdate: {
-        maxUnavailable: string
-        maxSurge: string
-      }
-    }
-    revisionHistoryLimit: number
-    progressDeadlineSeconds: number
+  metadata: {
+    name: string
+    namespace: string
+    creationTimestamp: string
   }
-  deploymentStatus: {
-    observedGeneration: number
+  spec: {
     replicas: number
-    updatedReplicas: number
-    readyReplicas: number
+  }
+  status: {
     availableReplicas: number
-    conditions: {
-      type: string
-      status: string
-      lastUpdateTime: string
-      lastTransitionTime: string
-      reason: string
-      message: string
-    }[]
   }
+}
+
+interface DeploymentResponse {
+  code: number
+  data: {
+    items: Deployment[] | null
+    total: number
+  }
+  message: string
 }
 
 export default defineComponent({
   name: "Deployment",
   setup() {
     const deploymentData = ref<Deployment[]>([])
+    const namespaces = ref<string[]>([])
+    const selectedNamespace = ref<string>("")
     const currentPage = ref(1)
     const pageSize = ref(10)
     const totalDeployments = ref(0)
     const dialogVisible = ref(false)
     const dialogTitle = ref("新增Deployment")
     const currentDeployment = ref<Deployment>({
-      name: "",
-      namespace: "default",
-      replicas: 1,
-      deploymentSpec: {
-        replicas: 1,
-        selector: {
-          matchLabels: {
-            app: "default"
-          }
-        },
-        template: {
-          metadata: {
-            creationTimestamp: null,
-            labels: {
-              app: "default"
-            }
-          },
-          spec: {
-            containers: [
-              {
-                name: "container-name",
-                image: "nginx:latest",
-                terminationMessagePath: "/dev/termination-log",
-                terminationMessagePolicy: "File",
-                imagePullPolicy: "IfNotPresent"
-              }
-            ],
-            restartPolicy: "Always",
-            terminationGracePeriodSeconds: 30,
-            dnsPolicy: "ClusterFirst",
-            serviceAccountName: "default",
-            serviceAccount: "default",
-            securityContext: {},
-            schedulerName: "default-scheduler"
-          }
-        },
-        strategy: {
-          type: "RollingUpdate",
-          rollingUpdate: {
-            maxUnavailable: "25%",
-            maxSurge: "25%"
-          }
-        },
-        revisionHistoryLimit: 10,
-        progressDeadlineSeconds: 600
+      metadata: {
+        name: "",
+        namespace: "default",
+        creationTimestamp: ""
       },
-      deploymentStatus: {
-        observedGeneration: 1,
-        replicas: 1,
-        updatedReplicas: 1,
-        readyReplicas: 1,
-        availableReplicas: 1,
-        conditions: []
+      spec: {
+        replicas: 1
+      },
+      status: {
+        availableReplicas: 0
       }
     })
     const searchQuery = ref("")
@@ -246,9 +155,8 @@ export default defineComponent({
         const query = searchQuery.value.toLowerCase()
         data = data.filter(
           (deployment) =>
-            deployment.name.toLowerCase().includes(query) ||
-            deployment.namespace.toLowerCase().includes(query) ||
-            deployment.deploymentSpec.template.spec.containers[0].image.toLowerCase().includes(query)
+            deployment.metadata.name.toLowerCase().includes(query) ||
+            deployment.metadata.namespace.toLowerCase().includes(query)
         )
       }
 
@@ -270,23 +178,83 @@ export default defineComponent({
     })
 
     const fetchDeploymentData = async () => {
+      if (!selectedNamespace.value) {
+        ElMessage.warning("请选择命名空间")
+        return
+      }
+
+      const loading = ElLoading.service({
+        lock: true,
+        text: "加载中",
+        background: "rgba(0, 0, 0, 0.7)",
+      })
       try {
         const response = await request({
-          url: "/api/v1/namespaces/kube-system/deployments",
+          url: `/api/v1/namespaces/${selectedNamespace.value}/deployments`,
           method: "get",
-          baseURL: "http://192.168.1.100:8080" // 可根据需要调整 baseURL
-        })
-        console.log("API response:", response)
-        deploymentData.value = response
-        totalDeployments.value = response.length
+          baseURL: "http://192.168.10.100:8080"
+        }) as DeploymentResponse
+        console.log("Deployment response:", response) // 添加日志
+        if (response.code === 200) {
+          deploymentData.value = response.data.items ? response.data.items.map(item => ({
+            ...item,
+            metadata: {
+              ...item.metadata,
+              creationTimestamp: dayjs(item.metadata.creationTimestamp).format("YYYY-MM-DD HH:mm:ss")
+            }
+          })) : []
+          totalDeployments.value = response.data.items ? response.data.items.length : 0
+        } else {
+          ElMessage.error("获取Deployment数据失败: " + response.message)
+        }
       } catch (error) {
         console.error("获取Deployment数据失败:", error)
-        ElMessage.error("获取Deployment数据失败")
+        ElMessage.error("获取Deployment数据失败: " + (error instanceof Error ? error.message : String(error)))
+      } finally {
+        loading.close()
       }
+    }
+
+    const fetchNamespaces = async () => {
+      const loading = ElLoading.service({
+        lock: true,
+        text: "加载中",
+        background: "rgba(0, 0, 0, 0.7)",
+      })
+      try {
+        const response = await request<{ code: number; data: string[]; message: string }>({
+          url: "/api/v1/namespaces",
+          method: "get",
+          baseURL: "http://192.168.10.100:8080"
+        })
+        console.log("Namespace response:", response) // 添加日志
+        if (response.code === 200 && response.data) {
+          namespaces.value = response.data
+          if (namespaces.value.length > 0) {
+            selectedNamespace.value = namespaces.value[0]
+            await fetchDeploymentData() // 等待 Deployment 数据加载完成
+          } else {
+            ElMessage.warning("没有可用的命名空间")
+          }
+        } else {
+          ElMessage.error(`获取命名空间失败: ${response.message || '未知错误'}`)
+        }
+      } catch (error) {
+        console.error("获取命名空间失败:", error)
+        ElMessage.error("获取命名空间失败: " + (error instanceof Error ? error.message : String(error)))
+      } finally {
+        loading.close()
+      }
+    }
+
+    const handleNamespaceChange = async () => {
+      currentPage.value = 1
+      await fetchDeploymentData()
     }
 
     const handlePageChange = (page: number) => {
       currentPage.value = page
+      fetchDeploymentData()
     }
 
     const handleSearch = () => {
@@ -301,59 +269,16 @@ export default defineComponent({
     const handleAdd = () => {
       dialogTitle.value = "新增Deployment"
       currentDeployment.value = {
-        name: "",
-        namespace: "default",
-        replicas: 1,
-        deploymentSpec: {
-          replicas: 1,
-          selector: {
-            matchLabels: {
-              app: "default"
-            }
-          },
-          template: {
-            metadata: {
-              creationTimestamp: null,
-              labels: {
-                app: "default"
-              }
-            },
-            spec: {
-              containers: [
-                {
-                  name: "container-name",
-                  image: "nginx:latest",
-                  terminationMessagePath: "/dev/termination-log",
-                  terminationMessagePolicy: "File",
-                  imagePullPolicy: "IfNotPresent"
-                }
-              ],
-              restartPolicy: "Always",
-              terminationGracePeriodSeconds: 30,
-              dnsPolicy: "ClusterFirst",
-              serviceAccountName: "default",
-              serviceAccount: "default",
-              securityContext: {},
-              schedulerName: "default-scheduler"
-            }
-          },
-          strategy: {
-            type: "RollingUpdate",
-            rollingUpdate: {
-              maxUnavailable: "25%",
-              maxSurge: "25%"
-            }
-          },
-          revisionHistoryLimit: 10,
-          progressDeadlineSeconds: 600
+        metadata: {
+          name: "",
+          namespace: selectedNamespace.value,
+          creationTimestamp: ""
         },
-        deploymentStatus: {
-          observedGeneration: 1,
-          replicas: 1,
-          updatedReplicas: 1,
-          readyReplicas: 1,
-          availableReplicas: 1,
-          conditions: []
+        spec: {
+          replicas: 1
+        },
+        status: {
+          availableReplicas: 0
         }
       }
       dialogVisible.value = true
@@ -369,18 +294,18 @@ export default defineComponent({
       try {
         if (dialogTitle.value === "新增Deployment") {
           await request({
-            url: "/apis/v1/k8s/deployments",
+            url: `/api/v1/namespaces/${currentDeployment.value.metadata.namespace}/deployments`,
             method: "post",
             data: currentDeployment.value,
-            baseURL: "http://192.168.1.200:8080" // 可根据需要调整 baseURL
+            baseURL: "http://192.168.10.100:8080"
           })
           ElMessage.success("Deployment新增成功")
         } else {
           await request({
-            url: `/apis/v1/k8s/deployments/${currentDeployment.value.name}`,
+            url: `/api/v1/namespaces/${currentDeployment.value.metadata.namespace}/deployments/${currentDeployment.value.metadata.name}`,
             method: "put",
             data: currentDeployment.value,
-            baseURL: "http://192.168.1.200:8080" // 可根据需要调整 baseURL
+            baseURL: "http://192.168.10.100:8080"
           })
           ElMessage.success("Deployment编辑成功")
         }
@@ -393,16 +318,16 @@ export default defineComponent({
     }
 
     const handleDelete = (deployment: Deployment) => {
-      ElMessageBox.confirm(`确定删除Deployment ${deployment.name} 吗？`, "提示", {
+      ElMessageBox.confirm(`确定删除Deployment ${deployment.metadata.name} 吗？`, "提示", {
         confirmButtonText: "确定",
         cancelButtonText: "取消",
         type: "warning"
       }).then(async () => {
         try {
           await request({
-            url: `/apis/v1/k8s/deployments/${deployment.name}`,
+            url: `/api/v1/namespaces/${deployment.metadata.namespace}/deployments/${deployment.metadata.name}`,
             method: "delete",
-            baseURL: "http://192.168.1.200:8080" // 可根据需要调整 baseURL
+            baseURL: "http://192.168.10.100:8080"
           })
           ElMessage.success("Deployment删除成功")
           fetchDeploymentData()
@@ -414,11 +339,13 @@ export default defineComponent({
     }
 
     onMounted(() => {
-      fetchDeploymentData()
+      fetchNamespaces()
     })
 
     return {
       deploymentData,
+      namespaces,
+      selectedNamespace,
       currentPage,
       pageSize,
       totalDeployments,
@@ -427,6 +354,7 @@ export default defineComponent({
       searchQuery,
       sortKey,
       sortOrder,
+      handleNamespaceChange,
       handlePageChange,
       handleSearch,
       handleSortChange,
@@ -464,5 +392,29 @@ export default defineComponent({
 .search-input {
   margin-bottom: 20px;
   width: 300px;
+}
+
+.namespace-select {
+  margin-bottom: 20px;
+  width: 300px;
+}
+
+.card-row {
+  margin-bottom: 20px;
+}
+
+.custom-card {
+  border: 1px solid #ebeef5;
+  border-radius: 4px;
+}
+
+.card-header {
+  font-size: 16px;
+  font-weight: bold;
+}
+
+.card-content {
+  font-size: 14px;
+  color: #606266;
 }
 </style>

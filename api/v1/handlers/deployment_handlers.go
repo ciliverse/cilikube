@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"fmt"
 	"net/http"
 
 	"github.com/ciliverse/cilikube/api/v1/models"
@@ -31,8 +30,13 @@ func (h *DeploymentHandler) ListDeployments(c *gin.Context) {
 	}
 
 	// 2. 调用服务层获取Deployment列表
+	deployments, err := h.service.List(namespace)
+	if err != nil {
+		respondError(c, http.StatusInternalServerError, "获取Deployment列表失败: "+err.Error())
+		return
+	}
 	// 3. 返回结果
-	respondSuccess(c, http.StatusOK, fmt.Sprintf("获取Deployment列表成功: "))
+	respondSuccess(c, http.StatusOK, deployments)
 
 }
 
