@@ -63,9 +63,9 @@ export const constantRoutes: RouteRecordRaw[] = [
         }
       },
       {
-        path: "navigation",
-        component: () => import("@/views/error-page/404.vue"),
-        name: "Nav",
+        path: "navy",
+        component: () => import("@/views/navy/index.vue"),
+        name: "Navy",
         meta: {
           title: "导航"
         }

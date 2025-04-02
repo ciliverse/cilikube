@@ -198,7 +198,7 @@ export default defineComponent({
         const response = await request({
           url: `/api/v1/namespaces/${selectedNamespace.value}/pods`,
           method: "get",
-          baseURL: "http://192.168.10.100:8080"
+          baseURL: "http://192.168.1.100:8080"
         }) as PodResponse
         console.log("Pod response:", response) // 添加日志
         if (response.code === 200) {
@@ -228,7 +228,7 @@ export default defineComponent({
         const response = await request<{ code: number; data: string[]; message: string }>({
           url: "/api/v1/namespaces",
           method: "get",
-          baseURL: "http://192.168.10.100:8080"
+          baseURL: "http://192.168.1.100:8080"
         })
         console.log("Namespace response:", response) // 添加日志
         if (response.code === 200 && response.data) {
@@ -298,7 +298,7 @@ export default defineComponent({
             url: `/api/v1/namespaces/${currentPod.value.namespace}/pods`,
             method: "post",
             data: currentPod.value,
-            baseURL: "http://192.168.10.100:8080"
+            baseURL: "http://192.168.1.100:8080"
           })
           ElMessage.success("Pod新增成功")
         } else {
@@ -306,7 +306,7 @@ export default defineComponent({
             url: `/api/v1/namespaces/${currentPod.value.namespace}/pods/${currentPod.value.name}`,
             method: "put",
             data: currentPod.value,
-            baseURL: "http://192.168.10.100:8080"
+            baseURL: "http://192.168.1.100:8080"
           })
           ElMessage.success("Pod编辑成功")
         }
@@ -328,7 +328,7 @@ export default defineComponent({
           await request({
             url: `/api/v1/namespaces/${pod.namespace}/pods/${pod.name}`,
             method: "delete",
-            baseURL: "http://192.168.10.100:8080"
+            baseURL: "http://192.168.1.100:8080"
           })
           ElMessage.success("Pod删除成功")
           fetchPodData()
