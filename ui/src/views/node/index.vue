@@ -181,7 +181,7 @@ export default defineComponent({
         const response = await request<NodeResponse>({
           url: "/api/v1/nodes",
           method: "get",
-          baseURL: "http://192.168.10.100:8080" // 可根据需要调整 baseURL
+          baseURL: "http://192.168.1.100:8080" // 可根据需要调整 baseURL
         })
         // console.log("API response:", response)
         if (response.code === 200) {
@@ -243,11 +243,11 @@ export default defineComponent({
 
     // 处理更多操作
     const handleAction1 = () => {
-      ElMessage.info("操作1功能待实现")
+      ElMessage.info("更多功能待实现")
     }
 
     const handleAction2 = () => {
-      ElMessage.info("操作2功能待实现")
+      ElMessage.info("更多功能待实现")
     }
 
     // 组件挂载时获取节点数据

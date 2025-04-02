@@ -192,7 +192,7 @@ export default defineComponent({
         const response = await request({
           url: `/api/v1/namespaces/${selectedNamespace.value}/deployments`,
           method: "get",
-          baseURL: "http://192.168.10.100:8080"
+          baseURL: "http://192.168.1.100:8080"
         }) as DeploymentResponse
         console.log("Deployment response:", response) // 添加日志
         if (response.code === 200) {
@@ -225,7 +225,7 @@ export default defineComponent({
         const response = await request<{ code: number; data: string[]; message: string }>({
           url: "/api/v1/namespaces",
           method: "get",
-          baseURL: "http://192.168.10.100:8080"
+          baseURL: "http://192.168.1.100:8080"
         })
         console.log("Namespace response:", response) // 添加日志
         if (response.code === 200 && response.data) {
@@ -297,7 +297,7 @@ export default defineComponent({
             url: `/api/v1/namespaces/${currentDeployment.value.metadata.namespace}/deployments`,
             method: "post",
             data: currentDeployment.value,
-            baseURL: "http://192.168.10.100:8080"
+            baseURL: "http://192.168.1.100:8080"
           })
           ElMessage.success("Deployment新增成功")
         } else {
@@ -305,7 +305,7 @@ export default defineComponent({
             url: `/api/v1/namespaces/${currentDeployment.value.metadata.namespace}/deployments/${currentDeployment.value.metadata.name}`,
             method: "put",
             data: currentDeployment.value,
-            baseURL: "http://192.168.10.100:8080"
+            baseURL: "http://192.168.1.100:8080"
           })
           ElMessage.success("Deployment编辑成功")
         }
@@ -327,7 +327,7 @@ export default defineComponent({
           await request({
             url: `/api/v1/namespaces/${deployment.metadata.namespace}/deployments/${deployment.metadata.name}`,
             method: "delete",
-            baseURL: "http://192.168.10.100:8080"
+            baseURL: "http://192.168.1.100:8080"
           })
           ElMessage.success("Deployment删除成功")
           fetchDeploymentData()
