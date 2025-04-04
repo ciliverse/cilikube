@@ -391,49 +391,49 @@ interface PVListApiResponseData {
   
   // --- API Interaction ---
   const fetchPVData = async () => {
-    loading.pvs = true;
-    try {
-        const params: Record<string, any> = {};
-        const url = `/api/v1/pvs`;
-        const response = await request<PVApiResponse>({ 
-            url, 
-            method: "get", 
-            params, 
-            baseURL: "http://192.168.1.100:8080" 
-        });
+  loading.pvs = true;
+  try {
+    const params: Record<string, any> = {};
+    const url = `/api/v1/pvs`;
+    const response = await request<PVApiResponse>({ 
+      url, 
+      method: "get", 
+      params, 
+      baseURL: "http://192.168.1.100:8080" 
+    });
 
-        if (response.code === 200 && response.data?.items) {
-            totalPVs.value = response.data.items.length; // 没有 total，直接用 items 长度
-            allPVs.value = response.data.items.map((item, index) => ({
-                uid: item.metadata.uid || `${item.metadata.name}-${index}`,
-                name: item.metadata.name,
-                status: item.status.phase || 'Unknown',
-                capacity: item.spec.capacity.storage || 'N/A',
-                capacityBytes: parseCapacityToBytes(item.spec.capacity.storage),
-                accessModes: item.spec.accessModes || [],
-                reclaimPolicy: item.spec.persistentVolumeReclaimPolicy || 'N/A',
-                storageClass: item.spec.storageClassName || '',
-                volumeMode: item.spec.volumeMode || 'N/A',
-                claim: '', // 后端没返回 claim，暂时为空
-                createdAt: formatTimestamp(item.metadata.creationTimestamp),
-                rawData: item,
-            }));
-            const totalPages = Math.ceil(totalPVs.value / pageSize.value);
-            if (currentPage.value > totalPages && totalPages > 0) currentPage.value = totalPages;
-            else if (totalPVs.value === 0) currentPage.value = 1;
-        } else {
-            ElMessage.error(`获取 PV 数据失败: ${response.message || '未知错误'}`);
-            allPVs.value = []; 
-            totalPVs.value = 0;
-        }
-    } catch (error: any) {
-        console.error("获取 PV 数据失败:", error);
-        ElMessage.error(`获取 PV 数据出错: ${error.message || '网络请求失败'}`);
-        allPVs.value = []; 
-        totalPVs.value = 0;
-    } finally {
-        loading.pvs = false;
+    if (response.code === 200 && response.data?.items) {
+      totalPVs.value = response.data.total; // 使用 API 返回的 total
+      allPVs.value = response.data.items.map((item) => ({
+        uid: item.uid,
+        name: item.name,
+        status: item.status || 'Unknown',
+        capacity: item.capacity || 'N/A',
+        capacityBytes: parseCapacityToBytes(item.capacity),
+        accessModes: item.accessModes || [],
+        reclaimPolicy: item.reclaimPolicy || 'N/A',
+        storageClass: item.storageClass || '',
+        volumeMode: item.volumeMode || 'N/A',
+        claim: item.claim || '', // 直接使用 claim 字段
+        createdAt: formatTimestamp(item.createdAt),
+        rawData: item, // 存储原始数据
+      }));
+      const totalPages = Math.ceil(totalPVs.value / pageSize.value);
+      if (currentPage.value > totalPages && totalPages > 0) currentPage.value = totalPages;
+      else if (totalPVs.value === 0) currentPage.value = 1;
+    } else {
+      ElMessage.error(`获取 PV 数据失败: ${response.message || '未知错误'}`);
+      allPVs.value = []; 
+      totalPVs.value = 0;
     }
+  } catch (error: any) {
+    console.error("获取 PV 数据失败:", error);
+    ElMessage.error(`获取 PV 数据出错: ${error.message || '网络请求失败'}`);
+    allPVs.value = []; 
+    totalPVs.value = 0;
+  } finally {
+    loading.pvs = false;
+  }
 };
   
   // --- Event Handlers ---

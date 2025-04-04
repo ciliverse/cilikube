@@ -11,6 +11,9 @@ importers:
       '@element-plus/icons-vue':
         specifier: 2.3.1
         version: 2.3.1(vue@3.5.13(typescript@5.5.4))
+      '@types/js-yaml':
+        specifier: ^4.0.9
+        version: 4.0.9
       auto-changelog:
         specifier: ^2.5.0
         version: 2.5.0
@@ -26,9 +29,18 @@ importers:
       element-plus:
         specifier: ^2.9.5
         version: 2.9.5(vue@3.5.13(typescript@5.5.4))
+      js-base64:
+        specifier: ^3.7.7
+        version: 3.7.7
       js-cookie:
         specifier: 3.0.5
         version: 3.0.5
+      js-quantities:
+        specifier: ^1.8.0
+        version: 1.8.0
+      js-yaml:
+        specifier: ^4.1.0
+        version: 4.1.0
       lodash-es:
         specifier: 4.17.21
         version: 4.17.21
@@ -979,6 +991,9 @@ packages:
 
   '@types/js-cookie@3.0.6':
     resolution: {integrity: sha512-wkw9yd1kEXOPnvEeEV1Go1MmxtBJL0RR79aOTAApecWFVu7w0NNXNqhcWgvw2YgZDYadliXkl14pa3WXw5jlCQ==}
+
+  '@types/js-yaml@4.0.9':
+    resolution: {integrity: sha512-k4MGaQl5TGo/iipqb2UDG2UwjXziSWkh0uysQelTlJpX1qGlpUZYm8PnO4DxG1qBomtJUdYJ6qR6xdIah10JLg==}
 
   '@types/lodash-es@4.17.12':
     resolution: {integrity: sha512-0NgftHUcV4v34VhXm8QBSftKVXtbkBG3ViCjs6+eJ5a6y6Mi/jiFGPc1sC7QK+9BFhWrURE3EOggmWaSxL9OzQ==}
@@ -2524,6 +2539,9 @@ packages:
   js-base64@2.6.4:
     resolution: {integrity: sha512-pZe//GGmwJndub7ZghVHz7vjb2LgC1m8B07Au3eYqeqv9emhESByMXxaEgkUkEqJe87oBbSniGYoQNIBklc7IQ==}
 
+  js-base64@3.7.7:
+    resolution: {integrity: sha512-7rCnleh0z2CkXhH67J8K1Ytz0b2Y+yxTPL+/KOJoa20hfnVQ/3/T6W/KflYI4bRHRagNeXeU2bkNGI3v1oS/lw==}
+
   js-beautify@1.15.3:
     resolution: {integrity: sha512-rKKGuyTxGNlyN4EQKWzNndzXpi0bOl8Gl8YQAW1as/oMz0XhD6sHJO1hTvoBDOSzKuJb9WkwoAb34FfdkKMv2A==}
     engines: {node: '>=14'}
@@ -2532,6 +2550,9 @@ packages:
   js-cookie@3.0.5:
     resolution: {integrity: sha512-cEiJEAEoIbWfCZYKWhVwFuvPX1gETRYPw6LlaTKoxD3s2AkXzkCjnp6h0V77ozyqj0jakteJ4YqDJT830+lVGw==}
     engines: {node: '>=14'}
+
+  js-quantities@1.8.0:
+    resolution: {integrity: sha512-swDw9RJpXACAWR16vAKoSojAsP6NI7cZjjnjKqhOyZSdybRUdmPr071foD3fejUKSU2JMHz99hflWkRWvfLTpQ==}
 
   js-tokens@4.0.0:
     resolution: {integrity: sha512-RdJUflcE3cUzKiMqQgsCu06FPu9UdIJO0beYbPhHN4k6apgJtifcoCtT9bcxOpYBtpD2kCM6Sbzg4CausW/PKQ==}
@@ -4448,6 +4469,8 @@ snapshots:
   '@types/estree@1.0.6': {}
 
   '@types/js-cookie@3.0.6': {}
+
+  '@types/js-yaml@4.0.9': {}
 
   '@types/lodash-es@4.17.12':
     dependencies:
@@ -6397,6 +6420,8 @@ snapshots:
 
   js-base64@2.6.4: {}
 
+  js-base64@3.7.7: {}
+
   js-beautify@1.15.3:
     dependencies:
       config-chain: 1.1.13
@@ -6406,6 +6431,8 @@ snapshots:
       nopt: 8.1.0
 
   js-cookie@3.0.5: {}
+
+  js-quantities@1.8.0: {}
 
   js-tokens@4.0.0: {}
 
