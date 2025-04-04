@@ -17,9 +17,9 @@ func RegisterSecretRoutes(router *gin.RouterGroup, handler *handlers.SecretHandl
 		secretGroup.DELETE("/:name", handler.DeleteSecret)
 	}
 
-	// Watch端点
-	watchGroup := router.Group("/watch/namespaces/:namespace/secrets")
-	{
-		watchGroup.GET("", handler.WatchSecrets)
-	}
+	// // Watch端点
+	// watchGroup := router.Group("/watch/namespaces/:namespace/secrets")
+	// {
+	// 	watchGroup.GET("", handler.WatchSecrets)
+	// }
 }

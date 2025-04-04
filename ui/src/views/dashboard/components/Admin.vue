@@ -54,6 +54,9 @@
       </div>
     </div>
 
+    <!-- 资源概览卡片 --> 
+
+    
     <!-- 健康状况指示灯 -->
     <div class="health-indicator">
       <div class="indicator-item" v-for="(item, index) in healthStatus" :key="index">
@@ -64,6 +67,9 @@
         </div>
       </div>
     </div>
+
+
+     
 
     <!-- 告警统计卡片 -->
     <div class="alert-summary-card">
@@ -81,6 +87,8 @@
         </div>
       </div>
     </div>
+
+
 
     <!-- 集群概览卡片 -->
     <div class="dashboard-card">
@@ -390,6 +398,7 @@ import {
   Warning
 } from '@element-plus/icons-vue'
 import dayjs from 'dayjs'
+import ResourceSummaryCard from '@/components/ClusterSummary/ResourceSummaryCard.vue'
 
 // 注册 ECharts 组件
 use([
@@ -1171,6 +1180,15 @@ onMounted(() => {
         width: 100%;
       }
     }
+
+    .dashboard-container {
+  padding: 20px;
+}
+/* Add spacing if needed */
+.el-row {
+    margin-bottom: 20px;
+}
+
 
     .event-statistics-container {
       flex-direction: column;

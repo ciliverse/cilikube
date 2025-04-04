@@ -5,7 +5,6 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/kubernetes"
 )
 
@@ -17,66 +16,58 @@ func NewSecretService(client kubernetes.Interface) *SecretService {
 	return &SecretService{client: client}
 }
 
-// 获取单个Secret
+// Get retrieves a single Secret by namespace and name.
 func (s *SecretService) Get(namespace, name string) (*corev1.Secret, error) {
-	return s.client.CoreV1().Secrets(namespace).Get(
-		context.TODO(),
-		name,
-		metav1.GetOptions{},
-	)
+	return s.client.CoreV1().Secrets(namespace).Get(context.TODO(), name, metav1.GetOptions{})
 }
 
-// 创建Secret
-func (s *SecretService) Create(namespace string, secret *corev1.Secret) (*corev1.Secret, error) {
-
-	if secret.Namespace != "" && secret.Namespace != namespace {
-		return nil, NewValidationError("secret namespace conflicts with path parameter")
+// List retrieves Secrets within a specific namespace.
+func (s *SecretService) List(namespace, labelSelector string, limit int64) (*corev1.SecretList, error) {
+	listOptions := metav1.ListOptions{}
+	if labelSelector != "" {
+		listOptions.LabelSelector = labelSelector
 	}
-
-	return s.client.CoreV1().Secrets(namespace).Create(
-		context.TODO(),
-		secret,
-		metav1.CreateOptions{},
-	)
+	if limit > 0 {
+		listOptions.Limit = limit
+	}
+	return s.client.CoreV1().Secrets(namespace).List(context.TODO(), listOptions)
 }
 
-// 更新Secret
+// Create creates a new Secret in the specified namespace.
+func (s *SecretService) Create(namespace string, secret *corev1.Secret) (*corev1.Secret, error) {
+	if secret.Namespace != "" && secret.Namespace != namespace {
+		return nil, NewValidationError("Secret namespace conflicts")
+	}
+	if secret.Namespace == "" {
+		secret.Namespace = namespace
+	}
+	if secret.Name == "" {
+		return nil, NewValidationError("Secret name cannot be empty")
+	}
+	// K8s automatically base64 encodes StringData into Data if Data[key] doesn't exist.
+	// No need for manual encoding here if receiving corev1.Secret object.
+	return s.client.CoreV1().Secrets(namespace).Create(context.TODO(), secret, metav1.CreateOptions{})
+}
+
+// Update updates an existing Secret.
 func (s *SecretService) Update(namespace string, secret *corev1.Secret) (*corev1.Secret, error) {
-	return s.client.CoreV1().Secrets(namespace).Update(
-		context.TODO(),
-		secret,
-		metav1.UpdateOptions{},
-	)
+	if secret.Namespace != "" && secret.Namespace != namespace {
+		return nil, NewValidationError("Secret namespace conflicts")
+	}
+	if secret.Namespace == "" {
+		secret.Namespace = namespace
+	}
+	if secret.Name == "" {
+		return nil, NewValidationError("Secret name required for update")
+	}
+	// Fetch existing for ResourceVersion recommended
+	return s.client.CoreV1().Secrets(namespace).Update(context.TODO(), secret, metav1.UpdateOptions{})
 }
 
-// 删除Secret
+// Delete deletes a Secret by namespace and name.
 func (s *SecretService) Delete(namespace, name string) error {
-	return s.client.CoreV1().Secrets(namespace).Delete(
-		context.TODO(),
-		name,
-		metav1.DeleteOptions{},
-	)
+	return s.client.CoreV1().Secrets(namespace).Delete(context.TODO(), name, metav1.DeleteOptions{})
 }
 
-// 列表查询（支持分页和标签过滤）
-func (s *SecretService) List(namespace, selector string, limit int64) (*corev1.SecretList, error) {
-	return s.client.CoreV1().Secrets(namespace).List(
-		context.TODO(),
-		metav1.ListOptions{
-			LabelSelector: selector,
-			Limit:         limit,
-		},
-	)
-}
-
-// Watch机制实现
-func (s *SecretService) Watch(namespace, selector string) (watch.Interface, error) {
-	return s.client.CoreV1().Secrets(namespace).Watch(
-		context.TODO(),
-		metav1.ListOptions{
-			LabelSelector:  selector,
-			Watch:          true,
-			TimeoutSeconds: int64ptr(1800),
-		},
-	)
-}
+// --- Re-use or define ValidationError ---
+// type ValidationError struct { Message string } ...

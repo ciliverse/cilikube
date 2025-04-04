@@ -17,9 +17,9 @@ func RegisterConfigMapRoutes(router *gin.RouterGroup, handler *handlers.ConfigMa
 		configMapGroup.DELETE("/:name", handler.DeleteConfigMap)
 	}
 
-	// Watch端点
-	watchGroup := router.Group("/watch/namespaces/:namespace/configmaps")
-	{
-		watchGroup.GET("", handler.WatchConfigMaps)
-	}
+	// // Watch端点
+	// watchGroup := router.Group("/watch/namespaces/:namespace/configmaps")
+	// {
+	// 	watchGroup.GET("", handler.WatchConfigMaps)
+	// }
 }

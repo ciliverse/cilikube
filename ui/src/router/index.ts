@@ -54,11 +54,20 @@ export const constantRoutes: RouteRecordRaw[] = [
     },
     children: [
       {
+        path: "summary",
+        component: () => import("@/views/cluster/index.vue"),
+        name: "Summary",
+        meta: {
+          title: "集群概览",
+          affix: true
+        }
+      },
+      {
         path: "dashboard",
         component: () => import("@/views/dashboard/index.vue"),
         name: "Dashboard",
         meta: {
-          title: "概要",
+          title: "集群监控",
           affix: true
         }
       },
@@ -67,7 +76,7 @@ export const constantRoutes: RouteRecordRaw[] = [
         component: () => import("@/views/navy/index.vue"),
         name: "Navy",
         meta: {
-          title: "导航"
+          title: "运维导航"
         }
       }
     ]
@@ -209,13 +218,15 @@ export const constantRoutes: RouteRecordRaw[] = [
   },
   {
     path: "/link",
+    component: Layouts,
     meta: {
-      title: "文档",
+      title: "项目相关",
+      
       svgIcon: "docs"
     },
     children: [
       {
-        path: "https://kopsadmin.cillian.website",
+        path: "https://cilikube.cillian.website",
         component: () => {},
         name: "Link1",
         meta: {
@@ -228,6 +239,14 @@ export const constantRoutes: RouteRecordRaw[] = [
         name: "Link2",
         meta: {
           title: "我的博客"
+        }
+      },
+      {
+        path: "techstack",
+        component: () => import("@/views/techstack/index.vue"),
+        name: "技术栈",
+        meta: {
+          title: "技术栈"
         }
       }
     ]

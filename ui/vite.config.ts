@@ -7,6 +7,11 @@ import vueJsx from "@vitejs/plugin-vue-jsx"
 import { createSvgIconsPlugin } from "vite-plugin-svg-icons"
 import svgLoader from "vite-svg-loader"
 import UnoCSS from "unocss/vite"
+import fs from "fs" // Keep fs import
+
+// Read package.json - Keep this outside the export function
+const packageJsonPath = resolve(__dirname, 'package.json'); // Use resolve for robustness
+const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf-8'));
 
 /** 配置项文档：https://cn.vitejs.dev/config */
 export default ({ mode }: ConfigEnv): UserConfigExport => {
@@ -34,11 +39,16 @@ export default ({ mode }: ConfigEnv): UserConfigExport => {
       strictPort: false,
       /** 接口代理 */
       proxy: {
+        // Keep your existing proxy, but ensure the target is correct for development
+        // If your backend runs on 8080 locally:
         "/api/v1": {
-          target: "https://mock.mengxuegu.com/mock/66be0c9755057713835fe7c0",
+          // target: "https://mock.mengxuegu.com/mock/66be0c9755057713835fe7c0", // Keep mock if needed for other things
+          target: "http://localhost:8080", // <<< Point to your LOCAL backend for fetching dependencies
           ws: true,
           /** 是否允许跨域 */
-          changeOrigin: true
+          changeOrigin: true,
+          // Optional: Remove the /api/v1 prefix if your backend doesn't expect it
+          // rewrite: (path) => path.replace(/^\/api\/v1/, '')
         }
       },
       /** 预热常用文件，提高初始页面加载速度 */
@@ -63,7 +73,11 @@ export default ({ mode }: ConfigEnv): UserConfigExport => {
           manualChunks: {
             vue: ["vue", "vue-router", "pinia"],
             element: ["element-plus", "@element-plus/icons-vue"],
-            vxe: ["vxe-table", "vxe-table-plugin-element", "xe-utils"]
+            // vxe: ["vxe-table", "vxe-table-plugin-element", "xe-utils"] // Only include if you use vxe-table
+             // Add other large dependencies if needed
+             lodash: ["lodash-es"],
+             echarts: ["echarts", "vue-echarts"],
+             yaml: ["js-yaml"],
           }
         }
       }
@@ -80,19 +94,29 @@ export default ({ mode }: ConfigEnv): UserConfigExport => {
             /** 打包时移除所有注释 */
             legalComments: "none"
           },
+
+    // --- ADD THE DEFINE SECTION HERE ---
+    define: {
+        // Make dependencies available (consider if devDeps are needed)
+        '__APP_DEPENDENCIES__': JSON.stringify(packageJson.dependencies || {}),
+        '__APP_DEV_DEPENDENCIES__': JSON.stringify(packageJson.devDependencies || {}),
+        '__APP_VERSION__': JSON.stringify(packageJson.version || 'unknown'),
+    },
+    // ------------------------------------
+
     /** Vite 插件 */
     plugins: [
       vue(),
       vueJsx(),
       /** 将 SVG 静态图转化为 Vue 组件 */
-      svgLoader({ defaultImport: "url" }),
+      svgLoader({ defaultImport: "url" }), // Keep 'url' if that's what you need, or change as necessary
       /** SVG */
       createSvgIconsPlugin({
         iconDirs: [path.resolve(process.cwd(), "src/icons/svg")],
         symbolId: "icon-[dir]-[name]"
       }),
       /** UnoCSS */
-      UnoCSS()
+      UnoCSS() // Keep if you are using UnoCSS
     ],
     /** Vitest 单元测试配置：https://cn.vitest.dev/config */
     test: {

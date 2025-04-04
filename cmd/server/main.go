@@ -44,6 +44,7 @@ func main() {
 	statefulsetService := service.NewStatefulSetService(k8sClient.Clientset)
 	nodeService := service.NewNodeService(k8sClient.Clientset)
 	namespaceService := service.NewNamespaceService(k8sClient.Clientset)
+	summaryService := service.NewSummaryService(k8sClient.Clientset)
 
 	// 初始化处理器
 	podHandler := handlers.NewPodHandler(podService)
@@ -59,6 +60,7 @@ func main() {
 	statefulsetHandler := handlers.NewStatefulSetHandler(statefulsetService)
 	nodeHandler := handlers.NewNodeHandler(nodeService)
 	namespaceHandler := handlers.NewNamespaceHandler(namespaceService)
+	summaryHandler := handlers.NewSummaryHandler(summaryService)
 
 	// 创建Gin实例
 	router := gin.Default()
@@ -79,6 +81,7 @@ func main() {
 	routes.RegisterStatefulSetRoutes(v1, statefulsetHandler)
 	routes.RegisterNodeRoutes(v1, nodeHandler)
 	routes.RegisterNamespaceRoutes(v1, namespaceHandler)
+	routes.RegisterSummaryRoutes(v1, summaryHandler)
 
 	// 监控路由
 	router.Use(metrics.PromMiddleware())
