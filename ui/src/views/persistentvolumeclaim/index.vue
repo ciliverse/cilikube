@@ -92,7 +92,6 @@
           <el-table-column prop="namespace" label="命名空间" min-width="150" sortable="custom" show-overflow-tooltip />
           <el-table-column prop="status" label="状态" min-width="120" sortable="custom" align="center">
               <template #default="{ row }">
-                  <!-- Correctly pass row.status which is the string phase -->
                   <el-tag :type="getStatusTagType(row.status)" size="small" effect="light">
                       <el-icon class="status-icon" v-if="getStatusIcon(row.status)" :class="getSpinClass(row.status)">
                            <component :is="getStatusIcon(row.status)" />
@@ -106,21 +105,19 @@
                   {{ row.volumeName || '-' }}
               </template>
           </el-table-column>
-          <el-table-column prop="capacity" label="请求容量" min-width="110" sortable="custom" align="right">
+          <!-- Renamed prop to match API response 'requestedStorage' -->
+          <el-table-column prop="requestedStorage" label="请求容量" min-width="110" sortable="custom" align="right">
                <template #default="{ row }">
-                   <!-- Pass row.capacity which holds the requested capacity string -->
-                  {{ formatCapacity(row.capacity) }}
+                  {{ formatCapacity(row.requestedStorage) }}
               </template>
           </el-table-column>
            <el-table-column prop="actualCapacity" label="实际容量" min-width="110" sortable="custom" align="right">
                <template #default="{ row }">
-                   <!-- Pass row.actualCapacity which holds the actual capacity string -->
                   {{ formatCapacity(row.actualCapacity) }}
               </template>
           </el-table-column>
           <el-table-column prop="accessModes" label="访问模式" min-width="150">
                <template #default="{ row }">
-                   <!-- row.accessModes is already an array of strings -->
                   <div v-for="mode in row.accessModes" :key="mode">
                       <el-tag size="small" type="info" effect="plain" style="margin-right: 4px;">{{ mode }}</el-tag>
                   </div>
@@ -129,13 +126,11 @@
           </el-table-column>
            <el-table-column prop="volumeMode" label="卷模式" min-width="100" align="center">
                <template #default="{ row }">
-                   <!-- row.volumeMode holds the string -->
                   <el-tag type="info" size="small" effect="light">{{ row.volumeMode }}</el-tag>
               </template>
             </el-table-column>
            <el-table-column prop="storageClass" label="StorageClass" min-width="150" show-overflow-tooltip>
                <template #default="{ row }">
-                   <!-- row.storageClass holds the string or '' -->
                    {{ row.storageClass || '<none>' }}
                </template>
            </el-table-column>
@@ -209,38 +204,43 @@
   } from '@element-plus/icons-vue'
   
   // --- Interfaces ---
-  // Reflect the actual K8s structure returned in API data.items
-  interface K8sMetadata { name: string; namespace: string; uid: string; resourceVersion: string; creationTimestamp: string; labels?: { [key: string]: string }; annotations?: { [key: string]: string }; finalizers?: string[]; managedFields?: any[]; }
-  interface K8sQuantity { [key: string]: string } // e.g., { "storage": "1Gi" }
-  interface K8sResourceRequirements { requests?: K8sQuantity; limits?: K8sQuantity }
-  interface K8sVolumeClaimSpec { accessModes: string[]; resources: K8sResourceRequirements; volumeName?: string; storageClassName?: string | null; volumeMode?: string } // Note: storageClassName can be null
-  interface K8sVolumeClaimStatus { phase?: string; accessModes?: string[]; capacity?: K8sQuantity } // status fields are optional
-  
-  interface PVCApiItem { // Matches the structure within data.items[]
-    metadata: K8sMetadata;
-    spec: K8sVolumeClaimSpec;
-    status: K8sVolumeClaimStatus;
+  // ** Interface matching the ACTUAL API response item structure **
+  interface PVCApiItem {
+    name: string;
+    namespace: string;
+    uid: string;
+    status: string; // Direct status string
+    volumeName: string; // Direct volume name
+    storageClass: string | null; // Can be null
+    accessModes: string[];
+    requestedStorage: string; // Direct requested storage string
+    actualCapacity?: string | null; // Direct actual capacity string (optional)
+    volumeMode: string;
+    createdAt: string;
+    annotations?: { [key: string]: string };
+    labels?: { [key: string]: string }; // Added labels based on sample
+    resourceVersion: string;
   }
   
-  interface PVCListApiResponseData { items: PVCApiItem[]; total?: number; metadata?: { resourceVersion?: string } } // Adjusted based on API sample
+  interface PVCListApiResponseData { items: PVCApiItem[]; total: number } // Assuming total is always present now
   interface PVCApiResponse { code: number; data: PVCListApiResponseData; message: string }
   interface NamespaceListResponse { code: number; data: string[]; message: string }
   
-  // Internal Display/Table Item
+  // Internal Display/Table Item - adjusted to use direct fields from PVCApiItem
   interface PVCDisplayItem {
     uid: string
     name: string
     namespace: string
-    status: string        // Derived from status.phase
-    volumeName: string    // Bound PV from spec.volumeName
-    capacity: string      // Requested from spec.resources.requests.storage
-    actualCapacity: string // Actual from status.capacity.storage
+    status: string
+    volumeName: string
+    capacity: string      // Renamed to capacity, stores requestedStorage
+    actualCapacity: string // Stores actualCapacity
     capacityBytes: number // Parsed requested capacity
-    accessModes: string[] // From spec.accessModes
-    storageClass: string  // From spec.storageClassName
-    volumeMode: string    // From spec.volumeMode
-    createdAt: string     // From metadata.creationTimestamp
-    rawData: PVCApiItem // Store raw API item for YAML editing
+    accessModes: string[]
+    storageClass: string
+    volumeMode: string
+    createdAt: string
+    rawData: PVCApiItem // Store raw API item
   }
   
   // --- Reactive State ---
@@ -260,7 +260,7 @@
   // Dialog state (YAML focus)
   const dialogVisible = ref(false)
   const dialogTitle = ref("创建 PVC (YAML)");
-  const currentEditPvc = ref<PVCApiItem | null>(null);
+  const currentEditPvc = ref<PVCApiItem | null>(null); // Store raw API item
   const yamlContent = ref("");
   const placeholderYaml = computed(() => `apiVersion: v1
   kind: PersistentVolumeClaim
@@ -269,14 +269,12 @@
     namespace: ${selectedNamespace.value || 'default'}
   spec:
     accessModes:
-      - ReadWriteOnce # Options: ReadWriteOnce, ReadOnlyMany, ReadWriteMany, ReadWriteOncePod
+      - ReadWriteOnce
     resources:
       requests:
-        storage: 1Gi # Example: Request 1 Gibibyte
-    storageClassName: standard # Optional: Specify StorageClass, omit for default or manual binding
-    # volumeMode: Filesystem # Optional: Defaults to Filesystem, can be Block
+        storage: 1Gi
+    storageClassName: standard
   `);
-  
   
   // --- Computed Properties ---
   const filteredData = computed(() => { /* ... as before ... */
@@ -288,21 +286,30 @@
       );
   });
   
-  const sortedData = computed(() => { /* ... as before ... */
+  const sortedData = computed(() => {
       const data = [...filteredData.value];
       const { key, order } = sortParams;
       if (!key || !order) return data;
   
       data.sort((a, b) => {
           let valA: any; let valB: any;
-          if (key === 'capacity') {
-               valA = a.capacityBytes ?? 0; valB = b.capacityBytes ?? 0;
-          } else if (key === 'createdAt') {
+          // ** Sort by 'capacity' uses the parsed 'capacityBytes' **
+          if (key === 'capacity' || key === 'requestedStorage') {
+               valA = a.capacityBytes ?? 0;
+               valB = b.capacityBytes ?? 0;
+          } else if (key === 'actualCapacity') {
+               // Parse actual capacity for sorting if needed, otherwise sort by string
+               valA = parseCapacityToBytes(a.actualCapacity) ?? 0;
+               valB = parseCapacityToBytes(b.actualCapacity) ?? 0;
+          }
+          else if (key === 'createdAt') {
               const timeA = a.createdAt ? dayjs(a.createdAt, "YYYY-MM-DD HH:mm:ss").valueOf() : 0;
               const timeB = b.createdAt ? dayjs(b.createdAt, "YYYY-MM-DD HH:mm:ss").valueOf() : 0;
               valA = isNaN(timeA) ? 0 : timeA; valB = isNaN(timeB) ? 0 : timeB;
           } else {
-              valA = a[key as keyof PVCDisplayItem] ?? ''; valB = b[key as keyof PVCDisplayItem] ?? '';
+              // Ensure type safety for other keys
+              valA = a[key as keyof Omit<PVCDisplayItem, 'capacityBytes' | 'rawData'>] ?? '';
+              valB = b[key as keyof Omit<PVCDisplayItem, 'capacityBytes' | 'rawData'>] ?? '';
               if (typeof valA === 'string') valA = valA.toLowerCase();
               if (typeof valB === 'string') valB = valB.toLowerCase();
           }
@@ -324,8 +331,8 @@
   
   // --- Helper Functions ---
   const formatTimestamp = (timestamp: string): string => { /* ... */ if (!timestamp) return 'N/A'; return dayjs(timestamp).format("YYYY-MM-DD HH:mm:ss"); }
-  const formatCapacity = (capacity: string | undefined): string => { /* ... */ if (!capacity) return '-'; try { const qty = Qty(capacity); return qty.format('gib').replace(/([KMG])iB/, ' $1iB'); } catch (e) { return capacity; } }
-  const parseCapacityToBytes = (capacity: string | undefined): number => { /* ... */ if (!capacity) return 0; try { const qty = Qty(capacity); return qty.toBase().scalar; } catch (e) { return 0; } }
+  const formatCapacity = (capacity: string | undefined | null): string => { /* ... Added null check */ if (!capacity) return '-'; try { const qty = Qty(capacity); return qty.format('gib').replace(/([KMG])iB/, ' $1iB'); } catch (e) { console.warn(`Failed to format capacity: ${capacity}`); return capacity; } }
+  const parseCapacityToBytes = (capacity: string | undefined | null): number => { /* ... Added null check */ if (!capacity) return 0; try { const qty = Qty(capacity); return qty.toBase().scalar; } catch (e) { return 0; } }
   const getStatusTagType = (status: string): 'success' | 'warning' | 'danger' | 'info' => { /* ... */ const lowerStatus = status?.toLowerCase(); if (lowerStatus === 'bound') return 'success'; if (lowerStatus === 'pending') return 'warning'; if (lowerStatus === 'lost') return 'danger'; return 'info'; }
   const getStatusIcon = (status: string) => { /* ... */ const lowerStatus = status?.toLowerCase(); if (lowerStatus === 'bound') return LinkIcon; if (lowerStatus === 'pending') return LoadingIcon; if (lowerStatus === 'lost') return CloseBold; return QuestionFilled; }
   const getSpinClass = (status: string) => { /* ... */ return status?.toLowerCase() === 'pending' ? 'is-loading' : ''; }
@@ -348,43 +355,51 @@
   const fetchPvcData = async () => {
       if (!selectedNamespace.value) { allPvcs.value = []; totalPvcs.value = 0; return; }
       loading.pvcs = true;
+      allPvcs.value = [];
+      totalPvcs.value = 0;
       try {
           const params: Record<string, any> = { /* Server-side params if needed */ };
-          const url = `/api/v1/namespaces/${selectedNamespace.value}/pvcs`;
+          // ** Use correct endpoint name from backend routing **
+          const url = `/api/v1/namespaces/${selectedNamespace.value}/pvcs`; // Make sure this matches Go route
           const response = await request<PVCApiResponse>({ url, method: "get", params, baseURL: "http://192.168.1.100:8080" });
   
-          if (response.code === 200 && response.data?.items) {
-              // ** Corrected Mapping based on API response **
-              allPvcs.value = response.data.items.map((item, index) => {
-                   const requestedStorage = item.spec?.resources?.requests?.storage; // Access nested field
-                   const actualStorage = item.status?.capacity?.storage; // Access nested field
-                   const requestedCapacityStr = requestedStorage || 'N/A'; // Use the string directly
-                   const actualCapacityStr = actualStorage || ''; // Use the string directly or empty
+          if (response.code === 200 && response.data?.items && Array.isArray(response.data.items)) {
+              totalPvcs.value = response.data.total; // Use total from API
   
-                  return {
-                      uid: item.metadata.uid || `${item.metadata.namespace}-${item.metadata.name}-${index}`,
-                      name: item.metadata.name,
-                      namespace: item.metadata.namespace,
-                      status: item.status?.phase || 'Unknown', // Correct path
-                      volumeName: item.spec?.volumeName || '', // Correct path
-                      capacity: requestedCapacityStr,
-                      actualCapacity: actualCapacityStr,
-                      capacityBytes: parseCapacityToBytes(requestedCapacityStr), // Parse requested for sorting
-                      accessModes: item.spec?.accessModes || [], // Correct path
-                      storageClass: item.spec?.storageClassName || '', // Correct path, handle null
-                      volumeMode: String(item.spec?.volumeMode || 'Filesystem'), // Correct path, default
-                      createdAt: formatTimestamp(item.metadata.creationTimestamp),
-                      rawData: item,
-                  };
+              allPvcs.value = response.data.items
+                  .filter(item => item && item.name && item.namespace) // Basic check
+                  .map((item, index) => {
+                      // ** Direct mapping based on the NEW API response structure **
+                      const requestedCapacityStr = item.requestedStorage || 'N/A';
+                      const actualCapacityStr = item.actualCapacity || '';
+  
+                      return {
+                          // Use item.uid directly if provided by backend, otherwise fallback
+                          uid: item.uid || `${item.namespace}-${item.name}-${index}`,
+                          name: item.name,
+                          namespace: item.namespace,
+                          status: item.status || 'Unknown',
+                          volumeName: item.volumeName || '',
+                          capacity: requestedCapacityStr, // Store requested capacity here
+                          actualCapacity: actualCapacityStr,
+                          capacityBytes: parseCapacityToBytes(item.requestedStorage), // Parse requested for sorting
+                          accessModes: item.accessModes || [],
+                          storageClass: item.storageClass || '',
+                          volumeMode: item.volumeMode || 'Filesystem', // Default if missing
+                          createdAt: formatTimestamp(item.createdAt),
+                          rawData: item, // Store the raw item from API
+                      };
               });
-               // Use total from API if available, otherwise length of items returned
-              totalPvcs.value = response.data.total ?? allPvcs.value.length;
   
               const totalPages = Math.ceil(totalPvcs.value / pageSize.value);
                if (currentPage.value > totalPages && totalPages > 0) currentPage.value = totalPages;
                else if (totalPvcs.value === 0) currentPage.value = 1;
+  
+          } else if (response.code === 200 && response.data?.items === null) {
+              console.log(`No PVCs found in namespace '${selectedNamespace.value}' (items is null).`);
+              allPvcs.value = []; totalPvcs.value = 0; currentPage.value = 1;
           } else {
-              ElMessage.error(`获取 PVC 数据失败: ${response.message || '未知错误'}`);
+              ElMessage.error(`获取 PVC 数据失败: ${response.message || '无效的响应数据'}`);
               allPvcs.value = []; totalPvcs.value = 0;
           }
       } catch (error: any) {
@@ -396,38 +411,72 @@
       }
   }
   
+  
   // --- Event Handlers ---
   const handleNamespaceChange = () => { /* ... */ currentPage.value = 1; searchQuery.value = ''; sortParams.key = 'createdAt'; sortParams.order = 'descending'; fetchPvcData(); };
   const handlePageChange = (page: number) => { currentPage.value = page; /* Fetch if server-side */ };
   const handleSizeChange = (size: number) => { pageSize.value = size; currentPage.value = 1; /* Fetch if server-side */ };
   const handleSearchDebounced = debounce(() => { currentPage.value = 1; /* Fetch if server-side */ }, 300);
-  const handleSortChange = ({ prop, order }: { prop: string | null; order: 'ascending' | 'descending' | null }) => { /* ... */ sortParams.key = prop || 'createdAt'; sortParams.order = order; currentPage.value = 1; };
+  const handleSortChange = ({ prop, order }: { prop: string | null; order: 'ascending' | 'descending' | null }) => {
+      // ** Remap sort key if needed to match internal display item property **
+      let sortKey = prop;
+      if (prop === 'requestedStorage') {
+          sortKey = 'capacity'; // Sort by the parsed capacityBytes via 'capacity' key in sortedData computed
+      }
+       // Add similar mapping for other columns if prop name differs from display item key
+      sortParams.key = sortKey || 'createdAt';
+      sortParams.order = order;
+      currentPage.value = 1;
+  };
   
   
   // --- Dialog and CRUD Actions ---
   const handleAddPVC = () => { /* ... */ if (!selectedNamespace.value) { ElMessage.warning("请先选择一个命名空间"); return; } currentEditPvc.value = null; yamlContent.value = placeholderYaml.value; dialogTitle.value = "创建 PVC (YAML)"; dialogVisible.value = true; };
   const editPvcYaml = async (pvc: PVCDisplayItem) => { /* ... */
-      ElMessage.info(`模拟: 获取 PVC "${pvc.name}" 的 YAML`);
-      currentEditPvc.value = pvc.rawData || null;
-      // Clean metadata before dumping to YAML for editing? Optional.
-      // const dataToEdit = cleanK8sMetadataForEdit(pvc.rawData);
-      yamlContent.value = pvc.rawData ? yaml.dump(pvc.rawData) : placeholderYaml.value;
+      ElMessage.info(`使用列表数据填充编辑器 YAML for PVC "${pvc.name}"`);
+      if (!pvc.rawData) { ElMessage.error("无法编辑，缺少原始数据。"); return; }
+      currentEditPvc.value = pvc.rawData;
+      // Convert raw API structure *back* to standard K8s PVC for YAML editing
+      // This is needed if your API mapping function (ToPVCResponse) significantly changed the structure
+      const k8sObjectForYaml = {
+          apiVersion: "v1",
+          kind: "PersistentVolumeClaim",
+          metadata: {
+              name: pvc.rawData.name,
+              namespace: pvc.rawData.namespace,
+              labels: pvc.rawData.labels,
+              annotations: pvc.rawData.annotations,
+              resourceVersion: pvc.rawData.resourceVersion, // Keep RV for PUT
+              // uid and creationTimestamp should usually be omitted for edits
+          },
+          spec: {
+              accessModes: pvc.rawData.accessModes,
+              resources: { requests: { storage: pvc.rawData.requestedStorage } },
+              volumeName: pvc.rawData.volumeName || undefined, // Only include if present
+              storageClassName: pvc.rawData.storageClass,
+              volumeMode: pvc.rawData.volumeMode
+          },
+          // status is omitted for editing
+      };
+      yamlContent.value = yaml.dump(k8sObjectForYaml, { skipInvalid: true }); // skipInvalid helps with undefined fields
       dialogTitle.value = `编辑 PVC: ${pvc.name} (YAML)`;
       dialogVisible.value = true;
   };
   
   const handleSaveYaml = async () => { /* ... */
-      if (!selectedNamespace.value && !currentEditPvc.value?.metadata.namespace) { ElMessage.error("无法确定目标命名空间。"); return; }
+      if (!selectedNamespace.value && !currentEditPvc.value?.namespace) { ElMessage.error("无法确定目标命名空间。"); return; }
       loading.dialogSave = true;
       // --- Replace with actual YAML editor interaction and API call ---
       // const currentYaml = yamlEditorRef.value.getContent();
       // try {
       //     let parsedYaml = yaml.load(currentYaml); ... validate ...
       //     const name = parsedYaml.metadata.name;
-      //     const namespaceToUse = parsedYaml.metadata.namespace || currentEditPvc.value?.metadata.namespace || selectedNamespace.value;
+      //     const namespaceToUse = parsedYaml.metadata.namespace || currentEditPvc.value?.namespace || selectedNamespace.value;
       //     const method = currentEditPvc.value ? 'put' : 'post';
       //     const url = currentEditPvc.value ? `/api/v1/namespaces/${namespaceToUse}/persistentvolumeclaims/${name}` : `/api/v1/namespaces/${namespaceToUse}/persistentvolumeclaims`;
-      //     const response = await request({...}); ... handle ...
+      //     // Backend expects the standard K8s structure, so send parsedYaml
+      //     const response = await request({ url, method, data: parsedYaml, baseURL:"..." });
+      //     ... handle response ...
       // } catch (e) { ... }
   
        await new Promise(resolve => setTimeout(resolve, 500)); // Simulate
@@ -444,7 +493,7 @@
           loading.pvcs = true;
           try {
               const response = await request<{ code: number; message: string }>({
-                  url: `/api/v1/namespaces/${pvc.namespace}/persistentvolumeclaims/${pvc.name}`,
+                  url: `/api/v1/namespaces/${pvc.namespace}/persistentvolumeclaims/${pvc.name}`, // Correct endpoint
                   method: "delete",
                   baseURL: "http://192.168.1.100:8080",
               });
