@@ -1,5 +1,3 @@
-Okay, here is the English translation of the optimized README content.
-
 <div align="center">
   <img alt="CiliKube Logo" width="500" height="100" src="ui/public/logo.png">
   <h1>CiliKube</h1>
