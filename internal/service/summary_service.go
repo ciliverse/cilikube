@@ -104,6 +104,170 @@ func (s *SummaryService) GetResourceSummary() (*models.ResourceSummary, map[stri
 				summary.Deployments = &count
 			}
 		},
+		"services": func() {
+			list, err := s.client.CoreV1().Services("").List(ctx, listOptions)
+			mu.Lock()
+			defer mu.Unlock()
+			if err != nil {
+				errors["services"] = err
+				log.Printf("Error listing services: %v", err)
+			} else {
+				count := len(list.Items)
+				if list.RemainingItemCount != nil {
+					count += int(*list.RemainingItemCount)
+				} else {
+					fullList, err := s.client.CoreV1().Services("").List(ctx, metav1.ListOptions{})
+					if err == nil {
+						count = len(fullList.Items)
+					}
+				}
+				summary.Services = &count
+			}
+		},
+		"persistentVolumes": func() {
+			list, err := s.client.CoreV1().PersistentVolumes().List(ctx, listOptions)
+			mu.Lock()
+			defer mu.Unlock()
+			if err != nil {
+				errors["persistentVolumes"] = err
+				log.Printf("Error listing PVs: %v", err)
+			} else {
+				count := len(list.Items)
+				if list.RemainingItemCount != nil {
+					count += int(*list.RemainingItemCount)
+				} else {
+					fullList, err := s.client.CoreV1().PersistentVolumes().List(ctx, metav1.ListOptions{})
+					if err == nil {
+						count = len(fullList.Items)
+					}
+				}
+				summary.PersistentVolumes = &count
+			}
+		},
+		"pvcs": func() {
+			list, err := s.client.CoreV1().PersistentVolumeClaims("").List(ctx, listOptions)
+			mu.Lock()
+			defer mu.Unlock()
+			if err != nil {
+				errors["pvcs"] = err
+				log.Printf("Error listing PVCs: %v", err)
+			} else {
+				count := len(list.Items)
+				if list.RemainingItemCount != nil {
+					count += int(*list.RemainingItemCount)
+				} else {
+					fullList, err := s.client.CoreV1().PersistentVolumeClaims("").List(ctx, metav1.ListOptions{})
+					if err == nil {
+						count = len(fullList.Items)
+					}
+				}
+				summary.Pvcs = &count
+			}
+		},
+		"statefulSets": func() {
+			list, err := s.client.AppsV1().StatefulSets("").List(ctx, listOptions)
+			mu.Lock()
+			defer mu.Unlock()
+			if err != nil {
+				errors["statefulSets"] = err
+				log.Printf("Error listing StatefulSets: %v", err)
+			} else {
+				count := len(list.Items)
+				if list.RemainingItemCount != nil {
+					count += int(*list.RemainingItemCount)
+				} else {
+					fullList, err := s.client.AppsV1().StatefulSets("").List(ctx, metav1.ListOptions{})
+					if err == nil {
+						count = len(fullList.Items)
+					}
+				}
+				summary.StatefulSets = &count
+			}
+		},
+		"daemonSets": func() {
+			list, err := s.client.AppsV1().DaemonSets("").List(ctx, listOptions)
+			mu.Lock()
+			defer mu.Unlock()
+			if err != nil {
+				errors["daemonSets"] = err
+				log.Printf("Error listing DaemonSets: %v", err)
+			} else {
+				count := len(list.Items)
+				if list.RemainingItemCount != nil {
+					count += int(*list.RemainingItemCount)
+				} else {
+					fullList, err := s.client.AppsV1().DaemonSets("").List(ctx, metav1.ListOptions{})
+					if err == nil {
+						count = len(fullList.Items)
+					}
+				}
+				summary.DaemonSets = &count
+			}
+		},
+		"configMaps": func() {
+			list, err := s.client.CoreV1().ConfigMaps("").List(ctx, listOptions)
+			mu.Lock()
+			defer mu.Unlock()
+			if err != nil {
+				errors["configMaps"] = err
+				log.Printf("Error listing ConfigMaps: %v", err)
+			} else {
+				count := len(list.Items)
+				if list.RemainingItemCount != nil {
+					count += int(*list.RemainingItemCount)
+				} else {
+					fullList, err := s.client.CoreV1().ConfigMaps("").List(ctx, metav1.ListOptions{})
+					if err == nil {
+						count = len(fullList.Items)
+					}
+				}
+				summary.ConfigMaps = &count
+			}
+		},
+		"secrets": func() {
+			list, err := s.client.CoreV1().Secrets("").List(ctx, listOptions)
+			mu.Lock()
+			defer mu.Unlock()
+			if err != nil {
+				errors["secrets"] = err
+				log.Printf("Error listing Secrets: %v", err)
+			} else {
+				count := len(list.Items)
+				if list.RemainingItemCount != nil {
+					count += int(*list.RemainingItemCount)
+				} else {
+					fullList, err := s.client.CoreV1().Secrets("").List(ctx, metav1.ListOptions{})
+					if err == nil {
+						count = len(fullList.Items)
+					}
+				}
+				summary.Secrets = &count
+			}
+		},
+		"ingresses": func() {
+			// Check if networking.k8s.io/v1 is available
+			// For simplicity, assuming v1 is used. Add checks/fallback if needed.
+			list, err := s.client.NetworkingV1().Ingresses("").List(ctx, listOptions)
+			mu.Lock()
+			defer mu.Unlock()
+			if err != nil {
+				errors["ingresses"] = err
+				log.Printf("Error listing Ingresses: %v", err)
+			} else {
+				count := len(list.Items)
+				if list.RemainingItemCount != nil {
+					count += int(*list.RemainingItemCount)
+				} else {
+					fullList, err := s.client.NetworkingV1().Ingresses("").List(ctx, metav1.ListOptions{})
+					if err == nil {
+						count = len(fullList.Items)
+					}
+				}
+				summary.Ingresses = &count
+			}
+		},
+		// Add more functions for other resource types here
+
 		// ... add other resource fetch funcs from previous example ...
 	}
 	wg.Add(len(fetchFuncs))

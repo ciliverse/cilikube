@@ -43,7 +43,7 @@ const { isLeft, isTop } = useLayoutMode()
     // height: 100%;
     vertical-align: middle;
     width: 200px;
-    height: 100px;
+    height: 80px;
   }
 }
 
