@@ -163,10 +163,10 @@ createCode()
       display: flex;
       justify-content: center;
       vertical-align: middle;
-      // align-items: center;
+      align-items: center;
       height: 120px;
       img {
-        height: 130%;
+        height: 100%;
       }
     }
     .content {
