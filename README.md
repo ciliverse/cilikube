@@ -13,7 +13,7 @@
 ## 🤔 What is CiliKube?
 
 CiliKube is an open-source, full-stack Kubernetes (k8s) resource management platform built with modern, mainstream technology stacks (Vue3, TypeScript, Go, Gin). It aims to provide a clean and elegant interface to simplify the daily management (CRUD operations) of Kubernetes resources and support feature expansion.
-
+![alt text](ui/src/docs/architech.png)
 ## ✨ What Makes CiliKube Special?
 
 Unlike complex systems pursuing "large and comprehensive" features, CiliKube focuses on being "small and beautiful." Its core goals are:
