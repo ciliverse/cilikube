@@ -1,7 +1,7 @@
 <div align="center">
   <img alt="CiliKube Logo" width="500" height="100" src="ui/public/logo.png">
   <h1>CiliKube</h1>
-  <span><a href="./README.zh-CN.md">中文</a> | English</span>
+  <span><a href="./README.zh-CN.md">中文纯净版</a> | English</span>
 </div>
 
 [![Alt](https://repobeats.axiom.co/api/embed/4b23db6e62b6a072c36e2d37235d49c9bf08af5b.svg "Repobeats analytics image")](https://github.com/ciliverse/cilikube)
