@@ -413,7 +413,7 @@ Email: cilliantech@gmail.com
 
 Website: https://www.cillian.website
 
-WeChat: cillianops
+WeChat: ![alt text](ui/src/docs/wechat400x400.png)
 
 ## 📜 License | 许可证
 
