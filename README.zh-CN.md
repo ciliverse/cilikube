@@ -34,7 +34,7 @@ CiliKube 起源于作者学习 Web 全栈开发的实践项目。在学习过程
 
 ## 📚 文档
 
-*   官方文档: [cilikube-docs.cillian.website](https://cilikube.cillian.website) (建设中)
+*   官方文档: [cilikube-docs.cillian.website](https://cilikube.cillian.website) 
 
 ## 🌐 在线预览
 
@@ -54,7 +54,7 @@ CiliKube 起源于作者学习 Web 全栈开发的实践项目。在学习过程
 
 *   **后端**: `Go` `Gin` `Kubernetes client-go` `JWT (dgrijalva/jwt-go)` `Gorilla Websocket` `Logger (wonderivan/logger)`
 
-## ✨ 主要功能 ([查看详细开发计划](#-开发计划))
+## ✨ 主要功能 ([查看详细开发计划](#️-开发计划-roadmap))
 
 *   **用户认证**: 基于 JWT 的登录和权限验证。
 *   **仪表盘**: 集群资源概览。
@@ -127,7 +127,7 @@ pnpm dev
 **运行后端**
 ```bash
 # 进入后端目录
-cd server
+cd cmd/server
 
 # (可选) 更新 Go 依赖
 # go mod tidy
