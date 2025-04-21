@@ -16,6 +16,7 @@ func Cors() gin.HandlerFunc {
         allowedOrigins := []string{
             "http://192.168.1.100:8888", // 明确指定前端地址
             "http://localhost:8888",     // 本地开发环境（可选）
+            "http://192.168.1.1",
         }
 
         // 检查请求的 Origin 是否在允许列表中
