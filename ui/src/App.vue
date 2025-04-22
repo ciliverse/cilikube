@@ -12,13 +12,13 @@ initTheme()
 
 /** 作者小心思 */
 ElNotification({
-  title: "希里安，你好！！",
+  title: "你好呀！朋友！",
   type: "success",
   offset: 300,
   message: h(
     "a",
     { style: "color: darkblue", target: "_blank", href: "https://www.cillian.website" },
-    "Hello world！点击直达我的博客！记得关注公众号-希里安，一同进步！"
+    "这是纯爱发电项目,点个免费star支持一下呀！如果可以，关注下公众号-希里安，共同学习进步！"
   ),
   duration: 0,
   position: "top-right"
