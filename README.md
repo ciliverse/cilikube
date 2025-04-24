@@ -54,9 +54,10 @@ CiliKube originated from the author's practical project while learning full-stac
 CiliKube 起源于作者学习 Web 全栈开发的实践项目。在学习过程中，作者深入探索了 Kubernetes，并获得了相关认证。这个项目不仅是学习成果的体现，更希望成为一把“钥匙 (Key)”，帮助更多像作者一样的学习者打开开源世界的大门，参与贡献，共同成长。
 
 ## 📚 Documentation | 文档
-
+![alt text](ui/src/docs/docs.png)
 *   Official Documentation: [cilikube-docs.cillian.website](https://cilikube.cillian.website)
 *   官方文档: [cilikube-docs.cillian.website](https://cilikube.cillian.website) 
+
 
 ## 🌐 Online Demo | 在线预览
 
@@ -173,17 +174,17 @@ This project utilizes popular frontend and backend technology stacks, ensuring d
 *   [x] Kubernetes 客户端初始化
 *   [x] 基础路由设置 (Gin)
 *   [x] CORS 跨域配置
-*   [x] JWT 认证中间件
-*   [x] WebSocket 接口 (用于日志和 Web Shell)
 *   [x] Node (节点) 资源接口
 *   [x] Pod 资源接口 (列表, 详情, 删除, 日志, Exec)
 *   [x] PV/PVC 资源接口
-*   [ ] Namespace 资源接口
-*   [ ] Deployment / StatefulSet / DaemonSet 资源接口
-*   [ ] Service / Ingress 资源接口
-*   [ ] ConfigMap / Secret 资源接口
+*   [x] Namespace 资源接口
+*   [x] Deployment / StatefulSet / DaemonSet 资源接口
+*   [x] Service / Ingress 资源接口
+*   [x] ConfigMap / Secret 资源接口
 *   [ ] RBAC 相关资源接口
 *   [ ] Event 资源接口
+*   [ ] JWT 认证中间件
+*   [ ] WebSocket 接口 (用于日志和 Web Shell)
 ## 💻 Local Development | 本地开发
 
 **Prerequisites**
@@ -287,8 +288,10 @@ cd ui
 pnpm lint
 ```
 ## 🎨 Feature Preview | 功能预览
-
 ![alt text](ui/src/docs/login.png)
+![alt text](ui/src/docs/first.png)
+![alt text](ui/src/docs/minikube2.png)
+![alt text](ui/src/docs/techstack.png)
 ![alt text](ui/src/docs/monitor1.png)
 ![alt text](ui/src/docs/monitor2.png)
 ![alt text](ui/src/docs/dashboard.png)
@@ -303,7 +306,7 @@ pnpm lint
 ![alt text](ui/src/docs/pvc.png)
 ![alt text](ui/src/docs/secret.png)
 ![alt text](ui/src/docs/configmap.png)
-![alt text](ui/src/docs/techstack.png)
+
 
 
 
@@ -413,7 +416,9 @@ Email: cilliantech@gmail.com
 
 Website: https://www.cillian.website
 
-WeChat: ![alt text](ui/src/docs/wechat400x400.png)
+WeChat
+
+![alt text](ui/src/docs/wechat400x400.png)
 
 ## 📜 License | 许可证
 

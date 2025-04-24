@@ -64,6 +64,14 @@ export const constantRoutes: RouteRecordRaw[] = [
     },
     children: [
       {
+        path: "minikube",
+        component: () => import("@/views/minikube/index.vue"),
+        name: "minikube",
+        meta: {
+          title: "集群安装"
+        }
+      },
+      {
         path: "summary",
         component: () => import("@/views/cluster/index.vue"),
         name: "Summary",
@@ -89,14 +97,7 @@ export const constantRoutes: RouteRecordRaw[] = [
           title: "运维导航"
         }
       },
-      {
-        path: "minikube",
-        component: () => import("@/views/minikube/index.vue"),
-        name: "minikube",
-        meta: {
-          title: "minikube"
-        }
-      }
+
     ]
   },
   {
