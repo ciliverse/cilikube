@@ -20,7 +20,7 @@ func Cors() gin.HandlerFunc {
 		}
 
 		// 检查请求的 Origin 是否在允许列表中
-		allowedOrigin := "*"
+		allowedOrigin := ""
 		for _, o := range allowedOrigins {
 			if o == origin {
 				allowedOrigin = origin
