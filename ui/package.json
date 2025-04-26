@@ -31,6 +31,7 @@
     "lodash-es": "4.17.21",
     "mitt": "3.0.1",
     "normalize.css": "8.0.1",
+    "npm": "^11.3.0",
     "nprogress": "0.2.0",
     "path-browserify": "1.0.1",
     "path-to-regexp": "7.1.0",
@@ -38,10 +39,13 @@
     "screenfull": "6.0.2",
     "vue": "^3.5.13",
     "vue-echarts": "^7.0.3",
+    "vue-monaco-editor": "^0.0.19",
     "vue-router": "^4.5.0",
     "vxe-table": "^4.11.13",
     "vxe-table-plugin-element": "^4.0.4",
-    "xe-utils": "^3.7.2"
+    "xe-utils": "^3.7.2",
+    "xterm": "^5.3.0",
+    "xterm-addon-fit": "^0.8.0"
   },
   "devDependencies": {
     "@types/js-cookie": "3.0.6",
