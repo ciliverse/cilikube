@@ -302,6 +302,7 @@ pnpm lint
 ![alt text](ui/src/docs/svc.png)
 ![alt text](ui/src/docs/deployment.png)
 ![alt text](ui/src/docs/pod.png)
+![alt text](ui/src/docs/shell.png)
 ![alt text](ui/src/docs/pv.png)
 ![alt text](ui/src/docs/pvc.png)
 ![alt text](ui/src/docs/secret.png)
