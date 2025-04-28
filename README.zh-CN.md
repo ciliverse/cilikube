@@ -167,6 +167,9 @@ pnpm lint
 ## 🎨 功能预览
 
 ![alt text](ui/src/docs/login.png)
+![alt text](ui/src/docs/first.png)
+![alt text](ui/src/docs/minikube2.png)
+![alt text](ui/src/docs/techstack.png)
 ![alt text](ui/src/docs/monitor1.png)
 ![alt text](ui/src/docs/monitor2.png)
 ![alt text](ui/src/docs/dashboard.png)
@@ -177,11 +180,11 @@ pnpm lint
 ![alt text](ui/src/docs/svc.png)
 ![alt text](ui/src/docs/deployment.png)
 ![alt text](ui/src/docs/pod.png)
+![alt text](ui/src/docs/shell.png)
 ![alt text](ui/src/docs/pv.png)
 ![alt text](ui/src/docs/pvc.png)
 ![alt text](ui/src/docs/secret.png)
 ![alt text](ui/src/docs/configmap.png)
-![alt text](ui/src/docs/techstack.png)
 
 ## 🤝 贡献指南
 
@@ -241,13 +244,15 @@ pnpm lint
 
 - Website: https://www.cillian.website
 
-- WeChat: cillianops
+- WeChat
+
+![alt text](ui/src/docs/wechat400x400.png)
 
 ## 📜 License
 
 本项目基于 Apache 2.0 License 开源。[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](./LICENSE)
 
-Copyright (c) 2024-present cillianops
+
 
 
 
