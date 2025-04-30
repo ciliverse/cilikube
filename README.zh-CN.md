@@ -45,8 +45,8 @@ CiliKube 起源于作者学习 Web 全栈开发的实践项目。在学习过程
 本项目采用了当前流行的前后端技术栈，确保开发者能够接触和使用最新的工具和库。
 
 *   **环境要求 (推荐)**:
-    *   Node.js >= 18.0.0 (项目使用 v20.x 开发)
-    *   Go >= 1.20 (项目使用 v1.22.x 开发)
+    *   Node.js >= 18.0.0 (项目当前使用 v22.14.0开发)
+    *   Go >= 1.20 (项目当前使用 v1.24.2开发)
     *   PNPM >= 8.x
 
 *   **前端**: `Vue3` `TypeScript` `Vite` `Element Plus` `Pinia` `Vue Router` `Axios` `UnoCSS` `Scss` `ESlint` `Prettier`
@@ -145,12 +145,6 @@ pnpm build
 # 构建后端可执行文件
 cd ../server
 go build -o cilikube-server main.go
-IGNORE_WHEN_COPYING_START
-content_copy
-download
-Use code with caution.
-Bash
-IGNORE_WHEN_COPYING_END
 ```
 **运行测试 (前端)**
 
