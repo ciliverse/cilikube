@@ -1,6 +1,8 @@
 package configs
 
 import (
+	"fmt"
+	"log"
 	"os"
 	"path/filepath"
 
@@ -17,56 +19,55 @@ type KubernetesConfig struct {
 	Kubeconfig string `yaml:"kubeconfig"`
 }
 
+type InstallerConfig struct {
+	MinikubePath   string `yaml:"minikubePath"`
+	MinikubeDriver string `yaml:"minikubeDriver"`
+	DownloadDir    string `yaml:"downloadDir"`
+}
+
 type Config struct {
 	Server     ServerConfig     `yaml:"server"`
 	Kubernetes KubernetesConfig `yaml:"kubernetes"`
 	Installer  InstallerConfig  `yaml:"installer"`
 }
 
-// InstallerConfig holds settings for the Minikube installer.
-// <-- Add this struct definition -->
-type InstallerConfig struct {
-	// Base path where minikube executable might be found or should be (simulated) installed.
-	// Leave empty to rely on PATH lookup.
-	// Minikube可执行文件可能被找到或应该被（模拟）安装的基本路径。
-	// 留空以依赖 PATH 查找。
-	MinikubePath string `yaml:"minikubePath"`
-	// The driver to use for minikube start (e.g., "docker", "hyperkit", "virtualbox").
-	// minikube start 使用的驱动程序（例如 "docker", "hyperkit", "virtualbox"）。
-	MinikubeDriver string `yaml:"minikubeDriver"`
-	// Directory for temporary downloads. Defaults to current directory if empty.
-	// 用于临时下载的目录。如果为空，则默认为当前目录。
-	DownloadDir string `yaml:"downloadDir"`
-}
-
-
 func Load(path string) (*Config, error) {
+	// 默认配置文件路径
+	if path == "" {
+		path = "config.yaml"
+	}
+
+	// 检查配置文件是否存在
+	if _, err := os.Stat(path); os.IsNotExist(err) {
+		return nil, fmt.Errorf("配置文件不存在: %s", path)
+	}
+
+	// 读取配置文件
 	data, err := os.ReadFile(path)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("无法读取配置文件 %s: %w", path, err)
 	}
 
+	// 解析配置文件
 	var cfg Config
 	if err := yaml.Unmarshal(data, &cfg); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("解析配置文件失败: %w", err)
 	}
-// --- Set Defaults ---
+
+	// 设置默认值
 	if cfg.Server.Port == "" {
-		cfg.Server.Port = "8080" // Default port
+		cfg.Server.Port = "8080"
 	}
 	if cfg.Installer.MinikubeDriver == "" {
-		cfg.Installer.MinikubeDriver = "docker" // Default driver
+		cfg.Installer.MinikubeDriver = "docker"
 	}
 	if cfg.Installer.DownloadDir == "" {
-		cfg.Installer.DownloadDir = "." // Default to current directory
+		cfg.Installer.DownloadDir = "."
 	}
-
-
-	// 处理默认kubeconfig路径
 	if cfg.Kubernetes.Kubeconfig == "default" {
 		cfg.Kubernetes.Kubeconfig = filepath.Join(os.Getenv("HOME"), ".kube", "config")
 	}
 
-
+	log.Printf("成功加载配置文件: %s", path)
 	return &cfg, nil
 }

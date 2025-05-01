@@ -1,4 +1,13 @@
 # New section for the installer
+server:
+  port: "8080"
+  read_timeout: 15
+  write_timeout: 30
+
+kubernetes:
+  kubeconfig: "default"
+
+
 installer:
   # Optional: Specify a path if minikube isn't guaranteed to be in the system PATH
   # after the simulated install. The backend will try PATH first, then this path.
