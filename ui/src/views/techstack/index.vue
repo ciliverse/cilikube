@@ -9,7 +9,7 @@
 
     <!-- Page Header -->
     <div class="page-header">
-      <h1 class="page-title">希里安项目技术栈 (UI v{{ appVersion }})</h1>
+      <h1 class="page-title">希里安项目技术栈 (CILIKUBE v{{ appVersion }})</h1>
        <el-tooltip content="刷新后端依赖" placement="top">
          <el-button :icon="Refresh" circle text @click="fetchBackendStack" :loading="loading.backend"/>
        </el-tooltip>

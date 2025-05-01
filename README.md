@@ -55,7 +55,7 @@ CiliKube 起源于作者学习 Web 全栈开发的实践项目。在学习过程
 
 ## 📚 Documentation | 文档
 ![alt text](ui/src/docs/docs.png)
-*   Official Documentation: [cilikube-docs.cillian.website](https://cilikube.cillian.website)
+*   Official Documentation: [cilikube.cillian.website](https://cilikube.cillian.website)
 *   官方文档: [cilikube-docs.cillian.website](https://cilikube.cillian.website) 
 
 
