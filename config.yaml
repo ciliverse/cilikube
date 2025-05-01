@@ -1,7 +1,0 @@
-server:
-  port: 8080
-  read_timeout: 30
-  write_timeout: 30
-
-kubernetes:
-  kubeconfig: "default" # 使用集群内配置时留空
