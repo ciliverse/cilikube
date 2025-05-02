@@ -181,7 +181,7 @@ export default defineComponent({
         const response = await request<NodeResponse>({
           url: "/api/v1/nodes",
           method: "get",
-          baseURL: "http://192.168.1.100:8080" // 可根据需要调整 baseURL
+          baseURL: "VITE_API_BASE_URL" // 可根据需要调整 baseURL
         })
         // console.log("API response:", response)
         if (response.code === 200) {

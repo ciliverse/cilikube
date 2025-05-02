@@ -399,7 +399,7 @@ interface PVListApiResponseData {
       url, 
       method: "get", 
       params, 
-      baseURL: "http://192.168.1.100:8080" 
+      baseURL: "VITE_API_BASE_URL" 
     });
 
     if (response.code === 200 && response.data?.items) {
@@ -464,7 +464,7 @@ interface PVListApiResponseData {
        //    const response = await request<PVResponse>({ // Assuming backend returns our structured response on GET
        //       url: `/api/v1/persistentvolumes/${pv.name}`,
        //       method: 'get',
-       //       baseURL: "http://192.168.1.100:8080"
+       //       baseURL: "VITE_API_BASE_URL"
        //    });
        //    if (response.code === 200 && response.data) {
        //        currentEditPV.value = response.data; // Store raw data
@@ -515,7 +515,7 @@ interface PVListApiResponseData {
       //          // headers: { 'Content-Type': 'application/yaml' },
       //          // data: currentYaml
       //          data: parsedYaml, // Assuming backend handler binds JSON to corev1.PersistentVolume
-      //          baseURL: "http://192.168.1.100:8080",
+      //          baseURL: "VITE_API_BASE_URL",
       //     });
       //
       //     if (response.code === 200 || response.code === 201) {
@@ -545,7 +545,7 @@ interface PVListApiResponseData {
               const response = await request<{ code: number; message: string }>({
                   url: `/api/v1/persistentvolumes/${pv.name}`,
                   method: "delete",
-                  baseURL: "http://192.168.1.100:8080",
+                  baseURL: "VITE_API_BASE_URL",
               });
                if (response.code === 200 || response.code === 204 || response.code === 202) { // Check for success codes
                   ElMessage.success(`PV "${pv.name}" 已删除`);

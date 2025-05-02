@@ -274,7 +274,7 @@
   const isSystemNamespace = (name: string): boolean => {
       return systemNamespaces.includes(name);
   }
-  
+  const VITE_API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://192.168.100:8080";
   // --- API Interaction ---
   const fetchNamespaceData = async () => {
     if (loading.value) return;
@@ -283,7 +283,7 @@
       const response = await request<NamespaceApiResponse>({
         url: "/api/v1/namespace", // Corrected endpoint? Verify API doc
         method: "get",
-        baseURL: "http://192.168.1.100:8080", // Configure in request util if possible
+        baseURL: "VITE_API_BASE_URL", // Configure in request util if possible
       })
   
       if (response.code === 200 && response.data?.items) {
@@ -332,7 +332,7 @@
           const response = await request<{ code: number; message: string }>({
             url: "/api/v1/namespaces", // POST to the collection endpoint
             method: "post",
-            // baseURL: "http://192.168.1.100:8080",
+            // baseURL: "VITE_API_BASE_URL",
             data: payload // Send the structured K8s object
           })
   
@@ -380,7 +380,7 @@
               const response = await request<{ code: number; message: string }>({
                   url: `/api/v1/namespaces/${namespace.name}`, // DELETE specific resource URL
                   method: "delete",
-                  // baseURL: "http://192.168.1.100:8080",
+                  // baseURL: "VITE_API_BASE_URL",
               });
   
               // Check for successful deletion status codes (200 OK or 202 Accepted)

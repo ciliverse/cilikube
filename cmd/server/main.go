@@ -46,25 +46,27 @@ func main() {
 func loadConfig() (*configs.Config, error) {
 	log.Println("加载配置文件...")
 
-	// 使用命令行参数指定配置文件路径
-	configPath := flag.String("config", "", "配置文件路径")
+	// 优先从命令行参数获取配置文件路径
+	var configPath string
+	flag.StringVar(&configPath, "config", "", "配置文件路径")
 	flag.Parse()
 
-	// 如果命令行参数未指定，则使用环境变量
-	if *configPath == "" {
-		*configPath = os.Getenv("CONFIG_PATH")
+	// 如果命令行参数未指定，则从环境变量获取
+	if configPath == "" {
+		configPath = os.Getenv("CILIKUBE_CONFIG_PATH")
 	}
 
 	// 如果环境变量也未指定，则使用默认路径
-	if *configPath == "" {
-		*configPath = "configs/config.yaml"
+	if configPath == "" {
+		configPath = "configs/config.yaml"
 	}
 
 	// 调用 configs.Load 方法加载配置
-	cfg, err := configs.Load(*configPath)
+	cfg, err := configs.Load(configPath)
 	if err != nil {
 		return nil, fmt.Errorf("加载配置失败: %w", err)
 	}
+
 	log.Println("配置文件加载成功。")
 	return cfg, nil
 }

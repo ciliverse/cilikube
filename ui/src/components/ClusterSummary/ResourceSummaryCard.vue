@@ -97,7 +97,7 @@
       return displayConfig.filter(item => summaryData.value?.[item.key] !== undefined && summaryData.value?.[item.key] !== null);
   });
   
-  
+  const VITE_API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://192.168.100:8080";
   const fetchSummary = async () => {
     loading.value = true;
     error.value = null;
@@ -106,8 +106,8 @@
       const response = await request<{ code: number; data: ResourceSummaryData; message: string }>({
         url: '/api/v1/summary/resources', // Match your Go route
         method: 'get',
-        baseURL: 'http://192.168.1.100:8080' // If needed
-        // http://192.168.1.100:8080/api/v1/summary/resources
+        baseURL: 'VITE_API_BASE_URL' // If needed
+        // VITE_API_BASE_URL/api/v1/summary/resources
       });
       if (response.code === 200 && response.data) {
         summaryData.value = response.data;

@@ -341,7 +341,7 @@
   const fetchNamespaces = async () => { /* ... same as before ... */
       loading.namespaces = true;
       try {
-          const response = await request<NamespaceListResponse>({ url: "/api/v1/namespaces", method: "get", baseURL: "http://192.168.1.100:8080" });
+          const response = await request<NamespaceListResponse>({ url: "/api/v1/namespaces", method: "get", baseURL: "VITE_API_BASE_URL" });
           if (response.code === 200 && Array.isArray(response.data)) {
               namespaces.value = response.data;
               if (namespaces.value.length > 0 && !selectedNamespace.value) {
@@ -361,7 +361,7 @@
           const params: Record<string, any> = { /* Server-side params if needed */ };
           // ** Use correct endpoint name from backend routing **
           const url = `/api/v1/namespaces/${selectedNamespace.value}/pvcs`; // Make sure this matches Go route
-          const response = await request<PVCApiResponse>({ url, method: "get", params, baseURL: "http://192.168.1.100:8080" });
+          const response = await request<PVCApiResponse>({ url, method: "get", params, baseURL: "VITE_API_BASE_URL" });
   
           if (response.code === 200 && response.data?.items && Array.isArray(response.data.items)) {
               totalPvcs.value = response.data.total; // Use total from API
@@ -495,7 +495,7 @@
               const response = await request<{ code: number; message: string }>({
                   url: `/api/v1/namespaces/${pvc.namespace}/persistentvolumeclaims/${pvc.name}`, // Correct endpoint
                   method: "delete",
-                  baseURL: "http://192.168.1.100:8080",
+                  baseURL: "VITE_API_BASE_URL",
               });
                if (response.code === 200 || response.code === 204 || response.code === 202) {
                   ElMessage.success(`PVC "${pvc.name}" 已删除`); await fetchPvcData();
