@@ -345,7 +345,7 @@
           const response = await request<NamespaceListResponse>({
               url: "/api/v1/namespaces", // Adjust if needed
               method: "get",
-              // baseURL: "http://192.168.1.100:8080",
+              // baseURL: "VITE_API_BASE_URL",
           });
           if (response.code === 200 && Array.isArray(response.data)) {
               namespaces.value = response.data;
@@ -391,7 +391,7 @@
               url: url,
               method: "get",
               params: params, // Send params for server-side processing
-              baseURL: "http://192.168.1.100:8080",
+              baseURL: "VITE_API_BASE_URL",
           });
   
           if (response.code === 200 && response.data?.items) {
@@ -577,7 +577,7 @@
               const response = await request<{ code: number; message: string }>({
                   url: `/api/v1/namespaces/${pod.namespace}/pods/${pod.name}`,
                   method: "delete",
-                  // baseURL: "http://192.168.1.100:8080",
+                  // baseURL: "VITE_API_BASE_URL",
               });
   
               if (response.code === 200 || response.code === 202) {

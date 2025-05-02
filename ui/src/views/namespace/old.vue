@@ -95,7 +95,7 @@ export default defineComponent({
         const response = await request<{ code: number; data: { items: any[] }; message: string }>({
           url: "/api/v1/namespace",
           method: "get",
-          baseURL: "http://192.168.1.100:8080",
+          baseURL: "VITE_API_BASE_URL",
         })
         if (response.code === 200) {
           namespaceData.value = response.data.items.map(item => ({
@@ -125,7 +125,7 @@ export default defineComponent({
         const response = await request<{ code: number; message: string }>({
           url: "/api/v1/namespace",
           method: "post",
-          baseURL: "http://192.168.1.100:8080",
+          baseURL: "VITE_API_BASE_URL",
           data: form.value
         })
         if (response.code === 200) {

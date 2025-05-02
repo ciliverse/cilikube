@@ -217,9 +217,9 @@ import {
 
 // --- Types ---
 type StepType = 'idle' | 'connecting' | 'download' | 'install' | 'start' | 'finished' | 'error';
-
+const VITE_API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://192.168.100:8080";
 // --- Configuration ---
-const backendBaseUrl = ref<string>('http://192.168.1.100:8080');
+const backendBaseUrl = ref<string>('VITE_API_BASE_URL');
 const healthCheckUrl = computed(() => `${backendBaseUrl.value}/health`);
 const installUrl = computed(() => `${backendBaseUrl.value}/api/v1/system/install-minikube`);
 

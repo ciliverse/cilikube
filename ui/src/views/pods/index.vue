@@ -350,9 +350,9 @@
   } from '@element-plus/icons-vue';
   
   // --- Constants ---
-  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://192.168.1.100:8080";
-  const wsProtocol = API_BASE_URL.startsWith('https://') ? 'wss://' : 'ws://';
-  const wsHostPort = API_BASE_URL.replace(/^https?:\/\//, '');
+  const VITE_API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://192.168.100:8080";
+  const wsProtocol = VITE_API_BASE_URL.startsWith('https://') ? 'wss://' : 'ws://';
+  const wsHostPort = VITE_API_BASE_URL.replace(/^https?:\/\//, '');
   const WS_BASE_URL = `${wsProtocol}${wsHostPort}`;
   
   // --- Interfaces (Ensure they match backend and usage) ---
@@ -522,7 +522,7 @@
   const fetchNamespaces = async () => {
       loading.namespaces = true;
       try {
-          const response = await request<NamespaceListResponse>({ url: "/api/v1/namespaces", method: "get", baseURL: API_BASE_URL });
+          const response = await request<NamespaceListResponse>({ url: "/api/v1/namespaces", method: "get", baseURL: VITE_API_BASE_URL });
           if (response.code === 200 && Array.isArray(response.data)) {
               namespaces.value = response.data.sort();
               if (namespaces.value.length > 0 && !selectedNamespace.value) {
@@ -557,7 +557,7 @@
       try {
           const params = { /* Server-side params if needed */ };
           const url = `/api/v1/namespaces/${selectedNamespace.value}/pods`;
-          const response = await request<PodApiResponse>({ url, method: "get", params, baseURL: API_BASE_URL });
+          const response = await request<PodApiResponse>({ url, method: "get", params, baseURL: VITE_API_BASE_URL });
   
           if (response.code === 200 && response.data?.items) {
               // FIXED: Store raw ISO date string for sorting
@@ -596,7 +596,7 @@
        // Reuse table loading indicator or add specific loading state
        // loading.pods = true;
        try {
-           const response = await request<PodDetailApiResponse>({ url: `/api/v1/namespaces/${namespace}/pods/${name}`, method: "get", baseURL: API_BASE_URL });
+           const response = await request<PodDetailApiResponse>({ url: `/api/v1/namespaces/${namespace}/pods/${name}`, method: "get", baseURL: VITE_API_BASE_URL });
            if (response.code === 200 && response.data) {
                return response.data;
            } else {
@@ -631,7 +631,7 @@
        isEditMode.value = true; editingPodName.value = pod.name;
        yamlDialogConfig.saving = true; yamlDialogConfig.content = "# 正在加载 YAML..."; yamlDialogConfig.visible = true;
        try {
-           const response = await request<YamlApiResponse>({ url: `/api/v1/namespaces/${pod.namespace}/pods/${pod.name}/yaml`, method: 'get', baseURL: API_BASE_URL });
+           const response = await request<YamlApiResponse>({ url: `/api/v1/namespaces/${pod.namespace}/pods/${pod.name}/yaml`, method: 'get', baseURL: VITE_API_BASE_URL });
            if (response.code === 200 && typeof response.data === 'string') {
                yamlDialogConfig.content = response.data;
            } else { /* ... error handling ... */
@@ -654,10 +654,10 @@
       try {
           let response: any; let successMsg = '';
           if (isEditMode.value && editingPodName.value) {
-              response = await request({ url: `/api/v1/namespaces/${targetNamespace}/pods/${editingPodName.value}/yaml`, method: 'put', baseURL: API_BASE_URL, headers: { 'Content-Type': 'application/yaml' }, data: currentYaml });
+              response = await request({ url: `/api/v1/namespaces/${targetNamespace}/pods/${editingPodName.value}/yaml`, method: 'put', baseURL: VITE_API_BASE_URL, headers: { 'Content-Type': 'application/yaml' }, data: currentYaml });
               successMsg = `Pod "${editingPodName.value}" 更新成功！`;
           } else {
-              response = await request({ url: `/api/v1/namespaces/${targetNamespace}/pods`, method: 'post', baseURL: API_BASE_URL, headers: { 'Content-Type': 'application/yaml' }, data: currentYaml });
+              response = await request({ url: `/api/v1/namespaces/${targetNamespace}/pods`, method: 'post', baseURL: VITE_API_BASE_URL, headers: { 'Content-Type': 'application/yaml' }, data: currentYaml });
               const createdName = response.data?.name || '新创建的 Pod';
               successMsg = `Pod "${createdName}" 创建成功！`;
           }
@@ -680,7 +680,7 @@
       ).then(async () => {
           loading.pods = true;
           try {
-              await request({ url: `/api/v1/namespaces/${pod.namespace}/pods/${pod.name}`, method: "delete", baseURL: API_BASE_URL });
+              await request({ url: `/api/v1/namespaces/${pod.namespace}/pods/${pod.name}`, method: "delete", baseURL: VITE_API_BASE_URL });
               ElMessage.success(`Pod "${pod.name}" 已删除`);
               // Refresh list or optimistic update
               await fetchPodData();
@@ -714,7 +714,7 @@
        logDialogConfig.loadingLogs = true; logDialogConfig.content = '正在加载日志...';
        try {
            const actualContainerName = logDialogConfig.selectedContainer.replace(/^\[init\]\s/, '');
-           const response = await request<string>({ url: `/api/v1/namespaces/${logDialogConfig.targetPod.namespace}/pods/${logDialogConfig.targetPod.name}/logs`, method: 'get', baseURL: API_BASE_URL, params: { container: actualContainerName, tailLines: logDialogConfig.tailLines || undefined }, responseType: 'text' });
+           const response = await request<string>({ url: `/api/v1/namespaces/${logDialogConfig.targetPod.namespace}/pods/${logDialogConfig.targetPod.name}/logs`, method: 'get', baseURL: VITE_API_BASE_URL, params: { container: actualContainerName, tailLines: logDialogConfig.tailLines || undefined }, responseType: 'text' });
            logDialogConfig.content = response || '(日志内容为空)';
        } catch (error: any) { /* ... error handling ... */
            console.error("获取日志失败:", error);
