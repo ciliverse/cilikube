@@ -4,7 +4,6 @@ import (
 	"flag"
 	"fmt"
 	"log"
-	"net/http"
 	"os"
 
 	// time is still needed for healthz in main
@@ -36,7 +35,7 @@ func main() {
 
 	// --- Start Server ---
 	// startServer remains in main as it's the server lifecycle management
-	startServer(cfg, router)
+	initialization.StartServer(cfg, router)
 
 	log.Println("服务器已关闭。")
 }
@@ -107,25 +106,4 @@ func initializeK8sClient(cfg *configs.Config) (*k8s.Client, bool) {
 		log.Printf("连接到 API Server: %s", k8sClient.Config.Host)
 	}
 	return k8sClient, true
-}
-
-// startServer starts the HTTP server.
-// Kept in main as it's the final step in the program's main execution flow.
-func startServer(cfg *configs.Config, router http.Handler) {
-	serverAddr := ":" + cfg.Server.Port
-	log.Printf("服务器准备启动，监听地址 %s", serverAddr)
-
-	server := &http.Server{
-		Addr:    serverAddr,
-		Handler: router,
-		// Add timeouts for production hardening
-		// ReadTimeout:  15 * time.Second,
-		// WriteTimeout: 30 * time.Second,
-		// IdleTimeout:  120 * time.Second,
-	}
-
-	// ListenAndServe blocks until the server stops
-	if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-		log.Fatalf("启动服务器失败: %v", err)
-	}
 }
