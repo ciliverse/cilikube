@@ -312,6 +312,7 @@
     // return nodeData.value;
   })
   
+  const VITE_API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://192.168.1.100:8080";
   // --- API Fetching ---
   const fetchNodeData = async () => {
     if (loading.value) return;
@@ -326,7 +327,7 @@
         //   page: currentPage.value,
         //   limit: pageSize.value,
         // }
-        baseURL: "VITE_API_BASE_URL" // Keep if needed, but prefer configuring in request util
+        baseURL: VITE_API_BASE_URL // Keep if needed, but prefer configuring in request util
       })
   
       if (response.code === 200 && response.data?.items) {

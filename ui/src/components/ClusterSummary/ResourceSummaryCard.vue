@@ -106,7 +106,7 @@
       const response = await request<{ code: number; data: ResourceSummaryData; message: string }>({
         url: '/api/v1/summary/resources', // Match your Go route
         method: 'get',
-        baseURL: 'VITE_API_BASE_URL' // If needed
+        baseURL: VITE_API_BASE_URL // If needed
         // VITE_API_BASE_URL/api/v1/summary/resources
       });
       if (response.code === 200 && response.data) {
