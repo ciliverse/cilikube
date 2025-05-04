@@ -283,7 +283,7 @@
       const response = await request<NamespaceApiResponse>({
         url: "/api/v1/namespace", // Corrected endpoint? Verify API doc
         method: "get",
-        baseURL: "VITE_API_BASE_URL", // Configure in request util if possible
+        baseURL: VITE_API_BASE_URL, // Configure in request util if possible
       })
   
       if (response.code === 200 && response.data?.items) {
