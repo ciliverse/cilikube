@@ -4,7 +4,7 @@
   <span><a href="./README.zh-CN.md">中文纯净版</a> | English</span>
 </div>
 
-[![Alt](https://repobeats.axiom.co/api/embed/4b23db6e62b6a072c36e2d37235d49c9bf08af5b.svg "Repobeats analytics image")](https://github.com/ciliverse/cilikube)
+![Alt](https://repobeats.axiom.co/api/embed/97bc0de802d8faf0f90512177cb349c4e494d76d.svg "Repobeats analytics image")
 <!-- [![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Fciliverse%2Fcilikube.svg?type=shield)](https://app.fossa.com/projects/git%2Bgithub.com%2Fciliverse%2Fcilikube?ref=badge_shield) -->
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](./LICENSE)
 
