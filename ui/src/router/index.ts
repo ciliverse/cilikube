@@ -50,10 +50,8 @@ export const constantRoutes: RouteRecordRaw[] = [
     // component: Layouts,
     // redirect: "/board/dashboard",
     component: () => import("@/views/navi/index.vue"),
-    name: "Home",
+    name: "Home"
   },
-
- 
   {
     path: "/board",
     component: Layouts,
@@ -96,8 +94,7 @@ export const constantRoutes: RouteRecordRaw[] = [
         meta: {
           title: "运维导航"
         }
-      },
-
+      }
     ]
   },
   {
@@ -240,7 +237,7 @@ export const constantRoutes: RouteRecordRaw[] = [
     component: Layouts,
     meta: {
       title: "项目相关",
-      
+
       svgIcon: "docs"
     },
     children: [

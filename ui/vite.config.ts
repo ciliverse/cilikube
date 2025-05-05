@@ -10,8 +10,8 @@ import UnoCSS from "unocss/vite"
 import fs from "fs" // Keep fs import
 
 // Read package.json - Keep this outside the export function
-const packageJsonPath = resolve(__dirname, 'package.json'); // Use resolve for robustness
-const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf-8'));
+const packageJsonPath = resolve(__dirname, `package.json`) // Use resolve for robustness
+const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, `utf-8`));
 
 /** 配置项文档：https://cn.vitejs.dev/config */
 export default ({ mode }: ConfigEnv): UserConfigExport => {
@@ -46,7 +46,7 @@ export default ({ mode }: ConfigEnv): UserConfigExport => {
           target: "http://localhost:8080", // <<< Point to your LOCAL backend for fetching dependencies
           ws: true,
           /** 是否允许跨域 */
-          changeOrigin: true,
+          changeOrigin: true
           // Optional: Remove the /api/v1 prefix if your backend doesn't expect it
           // rewrite: (path) => path.replace(/^\/api\/v1/, '')
         }
@@ -74,10 +74,10 @@ export default ({ mode }: ConfigEnv): UserConfigExport => {
             vue: ["vue", "vue-router", "pinia"],
             element: ["element-plus", "@element-plus/icons-vue"],
             // vxe: ["vxe-table", "vxe-table-plugin-element", "xe-utils"] // Only include if you use vxe-table
-             // Add other large dependencies if needed
-             lodash: ["lodash-es"],
-             echarts: ["echarts", "vue-echarts"],
-             yaml: ["js-yaml"],
+            // Add other large dependencies if needed
+            lodash: ["lodash-es"],
+            echarts: ["echarts", "vue-echarts"],
+            yaml: ["js-yaml"]
           }
         }
       }
@@ -97,10 +97,10 @@ export default ({ mode }: ConfigEnv): UserConfigExport => {
 
     // --- ADD THE DEFINE SECTION HERE ---
     define: {
-        // Make dependencies available (consider if devDeps are needed)
-        '__APP_DEPENDENCIES__': JSON.stringify(packageJson.dependencies || {}),
-        '__APP_DEV_DEPENDENCIES__': JSON.stringify(packageJson.devDependencies || {}),
-        '__APP_VERSION__': JSON.stringify(packageJson.version || 'unknown'),
+      // Make dependencies available (consider if devDeps are needed)
+      '__APP_DEPENDENCIES__': JSON.stringify(packageJson.dependencies || {}),
+      '__APP_DEV_DEPENDENCIES__': JSON.stringify(packageJson.devDependencies || {}),
+      '__APP_VERSION__': JSON.stringify(packageJson.version || 'unknown'),
     },
     // ------------------------------------
 
