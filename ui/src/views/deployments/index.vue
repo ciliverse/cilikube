@@ -416,7 +416,7 @@
       if (row.desiredReplicas === 0) return 'replicas-scaled-down';
       return '';
   };
-  const VITE_API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://192.168.100:8080";
+  const VITE_API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://192.168.1.100:8080";
   // Extract image names from containers spec
   const extractImages = (spec: K8sDeploymentSpec | undefined): string[] => {
       if (!spec?.template?.spec?.containers) {
@@ -429,7 +429,7 @@
   const fetchNamespaces = async () => { /* ... same as in Pod component ... */
       loading.namespaces = true;
       try {
-          const response = await request<NamespaceListResponse>({ url: "/api/v1/namespaces", method: "get", baseURL: "VITE_API_BASE_URL" });
+          const response = await request<NamespaceListResponse>({ url: "/api/v1/namespaces", method: "get", baseURL: VITE_API_BASE_URL });
           if (response.code === 200 && Array.isArray(response.data)) {
               namespaces.value = response.data;
               if (namespaces.value.length > 0 && !selectedNamespace.value) {
@@ -448,7 +448,7 @@
       try {
           const params: Record<string, any> = { /* Server-side params */ };
           const url = `/api/v1/namespaces/${selectedNamespace.value}/deployments`;
-          const response = await request<DeploymentApiResponse>({ url, method: "get", params, baseURL: "VITE_API_BASE_URL" });
+          const response = await request<DeploymentApiResponse>({ url, method: "get", params, baseURL: VITE_API_BASE_URL });
   
           if (response.code === 200 && response.data?.items) {
               apiTotalCount.value = response.data.total ?? response.data.items.length; // Use API total or length
@@ -614,7 +614,7 @@
               const response = await request<{ code: number; message: string }>({
                   url: `/api/v1/namespaces/${deployment.namespace}/deployments/${deployment.name}`,
                   method: "delete",
-                  baseURL: "VITE_API_BASE_URL",
+                  baseURL: VITE_API_BASE_URL,
               });
                if (response.code === 200 || response.code === 202 || response.code === 204) {
                   ElMessage.success(`Deployment "${deployment.name}" 已删除`);

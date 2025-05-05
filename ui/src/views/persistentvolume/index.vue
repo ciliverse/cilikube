@@ -389,6 +389,7 @@ interface PVListApiResponseData {
        return mode === 'Block' ? 'primary' : 'info';
   }
   
+  const VITE_API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://192.168.1.100:8080"; // Adjust as needed
   // --- API Interaction ---
   const fetchPVData = async () => {
   loading.pvs = true;
@@ -399,7 +400,7 @@ interface PVListApiResponseData {
       url, 
       method: "get", 
       params, 
-      baseURL: "VITE_API_BASE_URL" 
+      baseURL: VITE_API_BASE_URL
     });
 
     if (response.code === 200 && response.data?.items) {
