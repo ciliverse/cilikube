@@ -8,5 +8,5 @@ Learn more about the recommended Project Setup and IDE Support in the [Vue Docs 
 ```angular2html
 cd ui
 docker build -t "cilikube-fe:latest" .
-docker run ---name cilikube-fe -p 8888:8888 -d cilikube-fe:latest
+docker run --name cilikube-fe -p 8888:8888 -d cilikube-fe:latest
 ```
