@@ -296,12 +296,12 @@
   // --- Helper Functions ---
   const formatTimestamp = (timestamp: string): string => { /* ... */ if (!timestamp) return 'N/A'; return dayjs(timestamp).format("YYYY-MM-DD HH:mm:ss"); }
   const formatSecretType = (type: string | undefined): string => { /* ... */ if (!type) return 'Opaque'; if (type.startsWith('kubernetes.io/')) { return type.substring('kubernetes.io/'.length); } return type; };
-  
+  const VITE_API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://192.168.1.100:8080"; // Ensure this is set in your environment variables
   // --- API Interaction ---
   const fetchNamespaces = async () => { /* ... same as before ... */
       loading.namespaces = true;
       try {
-          const response = await request<NamespaceListResponse>({ url: "/api/v1/namespaces", method: "get", baseURL: "VITE_API_BASE_URL" });
+          const response = await request<NamespaceListResponse>({ url: "/api/v1/namespaces", method: "get", baseURL: VITE_API_BASE_URL });
           if (response.code === 200 && Array.isArray(response.data)) {
               namespaces.value = response.data;
               if (namespaces.value.length > 0 && !selectedNamespace.value) {
@@ -321,7 +321,7 @@
           const params: Record<string, any> = { /* Server-side params */ };
           const url = `/api/v1/namespaces/${selectedNamespace.value}/secrets`;
           // ** Expect the SIMPLIFIED list response structure **
-          const response = await request<SecretApiResponse>({ url, method: "get", params, baseURL: "VITE_API_BASE_URL" });
+          const response = await request<SecretApiResponse>({ url, method: "get", params, baseURL: VITE_API_BASE_URL });
   
           if (response.code === 200 && response.data?.items && Array.isArray(response.data.items)) {
               totalSecrets.value = response.data.total ?? response.data.items.length;
@@ -380,7 +380,7 @@
          const response = await request<SecretDetailApiResponse>({
              url: `/api/v1/namespaces/${secret.namespace}/secrets/${secret.name}`,
              method: 'get',
-             baseURL: "VITE_API_BASE_URL",
+             baseURL: VITE_API_BASE_URL,
          });
          if (response.code === 200 && response.data) {
               currentEditSecret.value = response.data; // Store full data from GET request
@@ -456,7 +456,7 @@
               const response = await request<{ code: number; message: string }>({
                   url: `/api/v1/namespaces/${secret.namespace}/secrets/${secret.name}`,
                   method: "delete",
-                  baseURL: "VITE_API_BASE_URL",
+                  baseURL: VITE_API_BASE_URL,
               });
                if (response.code === 200 || response.code === 204 || response.code === 202) {
                   ElMessage.success(`Secret "${secret.name}" 已删除`); await fetchSecretData();

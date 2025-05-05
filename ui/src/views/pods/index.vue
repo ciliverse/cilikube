@@ -350,7 +350,7 @@
   } from '@element-plus/icons-vue';
   
   // --- Constants ---
-  const VITE_API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://192.168.100:8080";
+  const VITE_API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://192.168.1.100:8080";
   const wsProtocol = VITE_API_BASE_URL.startsWith('https://') ? 'wss://' : 'ws://';
   const wsHostPort = VITE_API_BASE_URL.replace(/^https?:\/\//, '');
   const WS_BASE_URL = `${wsProtocol}${wsHostPort}`;

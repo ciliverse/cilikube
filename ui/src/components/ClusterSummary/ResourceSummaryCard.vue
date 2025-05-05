@@ -97,7 +97,7 @@
       return displayConfig.filter(item => summaryData.value?.[item.key] !== undefined && summaryData.value?.[item.key] !== null);
   });
   
-  const VITE_API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://192.168.100:8080";
+  const VITE_API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://192.168.1.100:8080";
   const fetchSummary = async () => {
     loading.value = true;
     error.value = null;

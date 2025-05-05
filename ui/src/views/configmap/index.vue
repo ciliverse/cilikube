@@ -160,7 +160,7 @@
       Plus as PlusIcon, Search as SearchIcon, Refresh as RefreshIcon, Tickets as TicketsIcon, // Icon for CM
       EditPen as EditPenIcon, Delete as DeleteIcon
   } from '@element-plus/icons-vue'
-  const VITE_API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://192.168.100:8080";
+  const VITE_API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://192.168.1.100:8080";
   // --- Interfaces ---
   // ** Adjusted to match a simplified API response (like the corrected PVC) **
   interface ConfigMapApiItem {
@@ -285,7 +285,7 @@
   const fetchNamespaces = async () => { /* ... same as before ... */
       loading.namespaces = true;
       try {
-          const response = await request<NamespaceListResponse>({ url: "/api/v1/namespaces", method: "get", baseURL: "VITE_API_BASE_URL" });
+          const response = await request<NamespaceListResponse>({ url: "/api/v1/namespaces", method: "get", baseURL: VITE_API_BASE_URL});
           if (response.code === 200 && Array.isArray(response.data)) {
               namespaces.value = response.data;
               if (namespaces.value.length > 0 && !selectedNamespace.value) {
@@ -305,7 +305,7 @@
           const params: Record<string, any> = { /* Server-side params */ };
           const url = `/api/v1/namespaces/${selectedNamespace.value}/configmaps`;
           // ** Use the interface matching the SIMPLIFIED API list response **
-          const response = await request<ConfigMapApiResponse>({ url, method: "get", params, baseURL: "VITE_API_BASE_URL" });
+          const response = await request<ConfigMapApiResponse>({ url, method: "get", params, baseURL: VITE_API_BASE_URL });
   
           if (response.code === 200 && response.data?.items && Array.isArray(response.data.items)) {
               totalConfigMaps.value = response.data.total ?? response.data.items.length;
@@ -360,7 +360,7 @@
          const response = await request<ConfigMapDetailApiResponse>({
              url: `/api/v1/namespaces/${cm.namespace}/configmaps/${cm.name}`,
              method: 'get',
-             baseURL: "VITE_API_BASE_URL",
+             baseURL: VITE_API_BASE_URL,
          });
          if (response.code === 200 && response.data) {
               currentEditCm.value = response.data; // Store full data from GET request
@@ -426,7 +426,7 @@
               const response = await request<{ code: number; message: string }>({
                   url: `/api/v1/namespaces/${cm.namespace}/configmaps/${cm.name}`,
                   method: "delete",
-                  baseURL: "VITE_API_BASE_URL",
+                  baseURL: VITE_API_BASE_URL,
               });
                if (response.code === 200 || response.code === 204 || response.code === 202) {
                   ElMessage.success(`ConfigMap "${cm.name}" 已删除`); await fetchConfigMapData();

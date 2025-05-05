@@ -352,12 +352,14 @@ const getTypeTagType = (type: string): '' | 'success' | 'warning' | 'info' | 'da
     }
 }
 
+const VITE_API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://1992.168.1.100:8080'; // Ensure this is set in your environment
+
 
 // --- API Interaction ---
 const fetchNamespaces = async () => { /* ... same as before ... */
     loading.namespaces = true;
     try {
-        const response = await request<NamespaceListResponse>({ url: "/api/v1/namespaces", method: "get", baseURL: "VITE_API_BASE_URL" });
+        const response = await request<NamespaceListResponse>({ url: "/api/v1/namespaces", method: "get", baseURL: VITE_API_BASE_URL });
         if (response.code === 200 && Array.isArray(response.data)) {
             namespaces.value = response.data;
             if (namespaces.value.length > 0 && !selectedNamespace.value) {
@@ -374,7 +376,7 @@ const fetchServiceData = async () => {
     try {
         const params: Record<string, any> = { /* Server-side params */ };
         const url = `/api/v1/namespaces/${selectedNamespace.value}/services`;
-        const response = await request<ServiceApiResponse>({ url, method: "get", params, baseURL: "VITE_API_BASE_URL" });
+        const response = await request<ServiceApiResponse>({ url, method: "get", params, baseURL: VITE_API_BASE_URL });
 
         if (response.code === 200 && response.data?.items) {
             totalServices.value = response.data.total ?? response.data.items.length;
@@ -444,7 +446,7 @@ const handleDeleteService = (service: ServiceDisplayItem) => { /* ... */
             const response = await request<{ code: number; message: string }>({
                 url: `/api/v1/namespaces/${service.namespace}/services/${service.name}`,
                 method: "delete",
-                baseURL: "VITE_API_BASE_URL",
+                baseURL: VITE_API_BASE_URL,
             });
              if (response.code === 200 || response.code === 204 || response.code === 202) {
                 ElMessage.success(`Service "${service.name}" 已删除`); await fetchServiceData();
