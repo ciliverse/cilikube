@@ -36,6 +36,7 @@ type AppServices struct {
 	SummaryService       *service.SummaryService
 	InstallerService     service.InstallerService // Non-k8s service
 	EventsService        *service.EventsService
+	RbacService          *service.RbacService
 }
 
 // AppHandlers holds all initialized handlers
@@ -57,6 +58,7 @@ type AppHandlers struct {
 	SummaryHandler       *handlers.SummaryHandler
 	InstallerHandler     *handlers.InstallerHandler // Non-k8s handler
 	EventsHandler        *handlers.EventsHandler
+	RbacHandler          *handlers.RbacHandler
 }
 
 // InitializeServices initializes all application services.
@@ -95,6 +97,7 @@ func InitializeServices(k8sClient *k8s.Client, k8sAvailable bool, cfg *configs.C
 		services.NamespaceService = service.NewNamespaceService(k8sClient.Clientset)
 		services.SummaryService = service.NewSummaryService(k8sClient.Clientset)
 		services.EventsService = service.NewEventsService(k8sClient.Clientset)
+		services.RbacService = service.NewRbacService(k8sClient.Clientset)
 		log.Println("Kubernetes 相关服务初始化完成。")
 	} else {
 		log.Println("Kubernetes 不可用，跳过相关服务初始化。")
@@ -166,6 +169,9 @@ func InitializeHandlers(services *AppServices) *AppHandlers {
 	}
 	if services.EventsService != nil {
 		appHandlers.EventsHandler = handlers.NewEventsHandler(services.EventsService)
+	}
+	if services.RbacService != nil {
+		appHandlers.RbacHandler = handlers.NewRbacHandler(services.RbacService)
 	}
 
 	log.Println("处理器初始化尝试完成 (部分可能因服务未初始化而跳过)。")
@@ -298,6 +304,11 @@ func SetupRouter(cfg *configs.Config, handlers *AppHandlers, k8sAvailable bool) 
 			} else {
 				log.Println("跳过 Events 路由注册: Handler 未初始化。")
 			}
+			if handlers.RbacHandler != nil {
+				routes.RegisterRbacRoutes(v1, handlers.RbacHandler)
+			} else {
+				log.Println("跳过 Rbac 路由注册: Handler 未初始化。")
+			}
 
 			// Optional check if any K8s routes were registered
 			// This check is still a bit manual, could be more abstract, but works.
@@ -306,7 +317,7 @@ func SetupRouter(cfg *configs.Config, handlers *AppHandlers, k8sAvailable bool) 
 				handlers.NetworkPolicyHandler == nil && handlers.ConfigMapHandler == nil && handlers.SecretHandler == nil &&
 				handlers.PVCHandler == nil && handlers.PVHandler == nil && handlers.StatefulSetHandler == nil &&
 				handlers.NodeHandler == nil && handlers.NamespaceHandler == nil && handlers.SummaryHandler == nil &&
-				handlers.EventsHandler == nil {
+				handlers.EventsHandler == nil && handlers.RbacHandler == nil {
 				log.Println("警告: Kubernetes 似乎可用，但没有注册任何 Kubernetes API 路由。")
 			} else {
 				log.Println("Kubernetes API 路由注册完成。")
