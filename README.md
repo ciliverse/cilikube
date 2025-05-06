@@ -56,7 +56,7 @@ CiliKube 起源于作者学习 Web 全栈开发的实践项目。在学习过程
 ## 📚 Documentation | 文档
 ![alt text](ui/src/docs/docs.png)
 *   Official Documentation: [cilikube.cillian.website](https://cilikube.cillian.website)
-*   官方文档: [cilikube-docs.cillian.website](https://cilikube.cillian.website) 
+*   官方文档: [cilikube.cillian.website](https://cilikube.cillian.website) 
 
 
 ## 🌐 Online Demo | 在线预览
@@ -264,6 +264,11 @@ cd cmd/server
 go mod tidy
 # 运行后端服务 (默认监听 8081 端口)
 go run main.go
+```
+
+**Docker 部署**
+```bash
+docker run -d --name cilikube-server -p 8080:8080 cilliantech/cilikube:v0.1.0
 ```
 
 **构建项目**
