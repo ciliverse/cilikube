@@ -10,7 +10,7 @@ import (
 	"github.com/ciliverse/cilikube/configs"
 	"github.com/ciliverse/cilikube/internal/service"
 	"github.com/ciliverse/cilikube/pkg/k8s"
-	"github.com/ciliverse/cilikube/pkg/utils" // Assuming utils package exists
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	// Add any other necessary imports that were in main.go functions moved here
 	// For k8sClient.Config (type *rest.Config), you might need "k8s.io/client-go/rest"
@@ -186,14 +186,17 @@ func SetupRouter(cfg *configs.Config, handlers *AppHandlers, k8sAvailable bool) 
 	router := gin.Default()
 
 	// 从配置或环境变量加载允许的源
-	origins := []string{
-		"http://192.168.1.100:8888",
-		"http://localhost:8888",
-		"http://192.168.1.1",
-	}
+	router.Use(cors.New(cors.Config{
+		AllowAllOrigins:  true,
+		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"},
+		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
+		ExposeHeaders:    []string{"Content-Length"},
+		AllowCredentials: true,
+		MaxAge:           12 * time.Hour,
+	}))
 	// --- Middlewares ---
 	log.Println("应用 CORS 中间件...")
-	router.Use(utils.Cors(origins)) // Ensure utils.Cors() is correctly configured
+	//router.Use(utils.Cors(origins)) // Ensure utils.Cors() is correctly configured
 
 	// Prometheus Metrics Middleware (if enabled) - Example
 	// if cfg.Server.EnableMetrics {
