@@ -111,6 +111,18 @@ CiliKube 起源于作者学习 Web 全栈开发的实践项目。在学习过程
 2.  安装 [Go](https://go.dev/) (>=1.20)
 3.  拥有一个 Kubernetes 集群，并配置好 `kubeconfig` 文件 (默认读取 `~/.kube/config`)
 
+## 本地启动开发环境
+
+```bash
+# 启动后端
+make run-backend
+
+# 启动前端
+make dev-ui
+```
+
+
+
 **运行前端**
 
 ```bash
@@ -127,13 +139,13 @@ pnpm dev
 **运行后端**
 ```bash
 # 进入后端目录
-cd cmd/server
+# cd cmd/server
 
 # (可选) 更新 Go 依赖
 # go mod tidy
 
 # 运行后端服务 (默认监听 8081 端口)
-go run main.go
+go run cmd/server/main.go
 ```
 
 **构建项目**
