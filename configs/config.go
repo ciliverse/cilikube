@@ -65,7 +65,12 @@ func Load(path string) (*Config, error) {
 		cfg.Installer.DownloadDir = "."
 	}
 	if cfg.Kubernetes.Kubeconfig == "default" {
-		cfg.Kubernetes.Kubeconfig = filepath.Join(os.Getenv("HOME"), ".kube", "config")
+		// 通过环境变量 KUBECONFIG指定配置文件
+		if kubeconfig := os.Getenv("KUBECONFIG"); kubeconfig != "" {
+			cfg.Kubernetes.Kubeconfig = kubeconfig
+		} else {
+			cfg.Kubernetes.Kubeconfig = filepath.Join(os.Getenv("HOME"), ".kube", "config")
+		}
 	}
 
 	log.Printf("成功加载配置文件: %s", path)
