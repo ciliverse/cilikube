@@ -193,6 +193,22 @@ This project utilizes popular frontend and backend technology stacks, ensuring d
 2.  Install [Go](https://go.dev/) (>=1.20)
 3.  Have a Kubernetes cluster and configure your `kubeconfig` file (reads `~/.kube/config` by default)
 
+
+**Helm Deployment**
+
+```bash
+># Add the Ciliverse Charts repository
+helm repo add ciliverse https://charts.cillian.website
+
+# Update your Helm repositories
+helm repo update
+
+# Install the cilikube Chart
+helm install cilikube ciliverse/cilikube --namespace cilikube --create-namespace
+# Uninstall the cilikube Chart
+helm uninstall cilikube --namespace cilikube
+```
+
 **Run Frontend**
 
 ```bash
@@ -244,6 +260,21 @@ pnpm lint
 1.  安装 [Node.js](https://nodejs.org/) (>=18) 和 [pnpm](https://pnpm.io/)
 2.  安装 [Go](https://go.dev/) (>=1.20)
 3.  拥有一个 Kubernetes 集群，并配置好 `kubeconfig` 文件 (默认读取 `~/.kube/config`)
+
+
+**Helm部署**
+```bash
+# 添加 Ciliverse Charts 仓库
+helm repo add ciliverse https://charts.cillian.website
+# 更新 Helm 仓库
+helm repo update
+# 安装 cilikube Chart
+helm install cilikube ciliverse/cilikube --namespace cilikube --create-namespace
+# 卸载 cilikube Chart
+helm uninstall cilikube --namespace cilikube
+```
+
+
 
 **运行前端**
 
