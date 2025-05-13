@@ -12,11 +12,11 @@ installer:
   # Optional: Specify a path if minikube isn't guaranteed to be in the system PATH
   # after the simulated install. The backend will try PATH first, then this path.
   # minikubePath: "/usr/local/bin/minikube" # Example
-  minikubePath: "" # Rely on PATH lookup by default
+  minikubePath: "/usr/local/bin/minikube" # Rely on PATH lookup by default
 
   # Driver for minikube (docker is common, others: hyperkit, virtualbox, vmware, podman, etc.)
   minikubeDriver: "docker"
 
   # Directory to store downloaded files temporarily. Defaults to '.' (server's working dir)
   # downloadDir: "/tmp/cilikube_downloads" # Example using /tmp
-  downloadDir: "" # Use default (current directory)
+  downloadDir: "/tmp/cilikube_downloads" # Use default (current directory)

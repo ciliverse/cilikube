@@ -26,6 +26,7 @@ func (s *RbacService) ListRoles(namespace string) ([]*models.RoleResponse, error
 	return roles, nil
 }
 
+// GetRole retrieves a single Role by namespace and name.
 func (s *RbacService) GetRole(namespace string, name string) (*models.RoleResponse, error) {
 	role, err := s.client.RbacV1().Roles(namespace).Get(context.TODO(), name, metav1.GetOptions{})
 	if err != nil {
