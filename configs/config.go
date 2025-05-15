@@ -10,9 +10,10 @@ import (
 )
 
 type ServerConfig struct {
-	Port         string `yaml:"port"`
-	ReadTimeout  int    `yaml:"read_timeout"`
-	WriteTimeout int    `yaml:"write_timeout"`
+	Port          string `yaml:"port"`
+	ReadTimeout   int    `yaml:"read_timeout"`
+	WriteTimeout  int    `yaml:"write_timeout"`
+	ActiveCluster string `yaml:"activeCluster"` // New: Name of the cluster to activate on startup
 }
 
 type KubernetesConfig struct {
