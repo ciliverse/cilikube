@@ -187,111 +187,340 @@ This project utilizes popular frontend and backend technology stacks, ensuring d
 *   [ ] WebSocket 接口 (用于日志和 Web Shell)
 ## 💻 Local Development | 本地开发
 
-**Prerequisites**
+CiliKube offers multiple deployment methods, making it convenient for users who want to quickly experience its interface or perform secondary development.
 
-1.  Install [Node.js](https://nodejs.org/) (>=18) and [pnpm](https://pnpm.io/)
-2.  Install [Go](https://go.dev/) (>=1.20)
-3.  Have a Kubernetes cluster and configure your `kubeconfig` file (reads `~/.kube/config` by default)
+## 1. Local Development
+**Tip**: If you want to perform secondary development or quickly experience CiliKube's front-end and back-end features, local development is a great choice. CiliKube's front-end and back-end code can run locally, ideal for development and debugging. Below are the steps for local setup:
 
-**Run Frontend**
+### Environment Preparation
+- Install Node.js (>=18) and pnpm
+- Install Go (>=1.20)
+- Have a Kubernetes cluster and configure the kubeconfig file (defaults to reading `~/.kube/config`)
 
+### Running the Front-End
 ```bash
-# Enter frontend directory
-cd ui
-
+# Navigate to the front-end directory
+cd cilikube-web
 # Install dependencies
 pnpm install
-
-# Start development server
+# Start the development server
 pnpm dev
-```
-**Run Backend**
-```bash
-# Enter backend directory
-cd cmd/server/
+````
 
+Visit http://localhost:8888 to see the front-end interface. You can modify the port and service configuration in the front-end code to connect to different back-end services.
+
+### Running the Back-End
+
+```bash
+# Navigate to the back-end directory
+cd cilikube
 # (Optional) Update Go dependencies
-# go mod tidy
-
-# Run backend service (listens on port 8081 by default)
-go run main.go
+go mod tidy
+# Run the back-end service (listens on port 8080 by default)
+go run cmd/server/main.go
 ```
-**Build Project**
+
+## 2\. Docker Deployment
+
+**Tip**: For a quick experience of CiliKube's front-end and back-end features, Docker deployment is recommended. Both front-end and back-end can run via Docker images, perfect for quick setup and testing. Below are the steps for Docker deployment:
+
+### Environment Preparation
+
+  - Install Docker (\>=20.10)
+  - Install Docker Compose (\>=1.29)
+  - Have a Kubernetes cluster and configure the kubeconfig file (defaults to reading \~/.kube/config)
+
+**Note**: When using official images, the latest stable version on Docker Hub is v0.1.0. Features in v0.1.1 can be experienced by building from source locally, with updated images coming soon.
+
+  - Back-end: `cilliantech/cilikube:v0.1.0`
+  - Front-end: `cilliantech/cilikube-web:v0.1.0`
+
+<!-- end list -->
+
 ```bash
-# Build frontend for production (output to ui/dist)
-cd ui
-pnpm build
-
-# Build backend executable
-cd ../server
-go build -o cilikube-server main.go
+# Assuming the host's kubeconfig is at ~/.kube/config, the container expects it at /root/.kube/config
+docker run -d --name cilikube -p 8080:8080 -v ~/.kube:/root/.kube:ro cilliantech/cilikube:v0.1.0
+docker run -d --name cilikube-web -p 80:80 cilliantech/cilikube-web:v0.1.0
 ```
 
-**Run Tests (Frontend)**
+Alternatively, use Docker Compose to run:
+A sample `docker-compose.yml` file can be found in the project's GitHub repository root directory.
+
 ```bash
-cd ui
-pnpm test:unit
+docker-compose up -d
 ```
 
-**Lint Code (Frontend)**
+Visit http://localhost to access the interface.
+
+**Note**: The above commands run CiliKube's front-end on port 80 and back-end on port 8080 locally. You can modify port mappings as needed.
+
+### Building Custom Docker Images
+
+You can also pull the code, modify the Dockerfile, and build custom images.
+**Note**: The following steps assume you've cloned the front-end and back-end projects and are operating in their respective root directories.
+
+#### 1\. Obtain the Code
+
+Clone the CiliKube front-end and back-end repositories and navigate to their root directories.
+
 ```bash
-cd ui
-pnpm lint
+cd path/to/cilikube
+cd path/to/cilikube-web
 ```
+
+#### 2\. Build Docker Images
+
+After modifying the Dockerfile, build the Docker images for the front-end and back-end.
+
+```bash
+docker build -t "cilikube-server:latest" .
+docker build -t "cilikube-web:latest" .
+```
+
+#### 3\. Run Docker Containers
+
+After building the images, run the containers.
+
+```bash
+docker run --name cilikube-server -p 8080:8080 -d cilikube-server:latest
+docker run --name cilikube-web -p 80:80 -d cilikube-web:latest
+```
+
+Now, open your browser and visit `http://<your-host-ip>` or `http://localhost` (if running Docker locally) to see the CiliKube login interface\!
+
+## 3\. Kubernetes Deployment (Helm)
+
+**Tip**: To run CiliKube in a Kubernetes cluster, Helm deployment is recommended. Both front-end and back-end can be deployed via Helm Charts, suitable for production environments and large-scale clusters. Below are the steps for Helm deployment:
+
+### Environment Preparation
+
+  - Install Helm (\>=3.0)
+  - Have a Kubernetes cluster and configure the kubeconfig file (defaults to reading \~/.kube/config)
+  - Install kubectl (\>=1.20)
+
+### Deployment Steps
+
+#### 1\. Add Helm Repository
+
+Add the CiliKube Helm repository.
+
+```bash
+helm repo add cilikube [https://charts.cillian.website](https://charts.cillian.website)
+```
+
+#### 2\. Update Helm Repository
+
+Update local Helm repository information.
+
+```bash
+helm repo update
+```
+
+#### 3\. Install CiliKube
+
+Use Helm to install CiliKube.
+
+```bash
+helm install cilikube cilikube/cilikube -n cilikube --create-namespace
+```
+
+#### 4\. Access CiliKube
+
+After installation, check the CiliKube service details.
+
+```bash
+kubectl get svc cilikube -n cilikube
+```
+
+Example output:
+
+```bash
+NAME         TYPE        CLUSTER-IP      EXTERNAL-IP   PORT(S)          AGE
+cilikube     NodePort    <your-host-ip>:<NodePort>   8080:80/TCP   1m
+```
+
+This indicates CiliKube is deployed and accessible via NodePort. Visit `http://<your-host-ip>:<NodePort>` in your browser to access the front-end interface.
+
+#### 5\. Uninstall CiliKube
+
+To remove CiliKube, use:
+
+```bash
+helm uninstall cilikube -n cilikube
+```
+
+**Note**: This command removes all CiliKube-related resources.
+
+## 4\. Additional Notes
+
+We strongly recommend consulting the official CiliKube documentation for the most comprehensive and up-to-date deployment guides:
+
+  - Official Documentation: [cilikube.cillian.website](https://www.google.com/search?q=cilikube.cillian.website)
+  - GitHub Repository: [github.com/ciliverse/cilikube](github.com/ciliverse/cilikube)
+
+The official documentation provides detailed information on back-end deployment, database configuration (if required), and potential future deployment options.
+
+
+---
+CILIKUBE有多重部署方式，这对于想要快速体验其界面或进行二次开发的同学来说非常方便。
+
+####  1.本地开发
+
+Tips:  如果你想进行二次开发，或者想要快速体验 CiliKube 的前后端功能，可以选择本地开发的方式。CiliKube 的前后端代码都可以在本地运行，适合开发和调试。以下是本地运行的步骤：
 
 **环境准备**
 
-1.  安装 [Node.js](https://nodejs.org/) (>=18) 和 [pnpm](https://pnpm.io/)
-2.  安装 [Go](https://go.dev/) (>=1.20)
-3.  拥有一个 Kubernetes 集群，并配置好 `kubeconfig` 文件 (默认读取 `~/.kube/config`)
+1. 安装 Node.js (>=18) 和 pnpm
+2. 安装 Go (>=1.20)
+3. 拥有一个 Kubernetes 集群，并配置好 kubeconfig 文件 (默认读取 ~/.kube/config)
 
 **运行前端**
-
 ```bash
 # 进入前端目录
-cd ui
+cd cilikube-web
 # 安装依赖
 pnpm install
 # 启动开发服务器
 pnpm dev
 ```
+- 访问 http://localhost:8888 即可看到前端界面，你可以在前端代码中修改端口以及服务配置，来连接不同的后端服务。
 
 **运行后端**
 ```bash
 # 进入后端目录
-cd cmd/server
+cd cilikube
 # (可选) 更新 Go 依赖
 go mod tidy
-# 运行后端服务 (默认监听 8081 端口)
-go run main.go
+# 运行后端服务 (默认监听 8080 端口)
+go run cmd/server/main.go
 ```
 
-**Docker 部署**
+
+#### 2.Docker部署运行
+
+Tips: 如果你想快速体验 CiliKube 的前后端功能，可以选择 Docker 部署的方式。CiliKube 的前后端都可以通过 Docker 镜像来运行，适合快速上手和测试。以下是 Docker 部署的步骤：
+
+**环境准备**
+1. 安装 Docker (>=20.10)
+2. 安装 Docker Compose (>=1.29)
+3. 拥有一个 Kubernetes 集群，并配置好 kubeconfig 文件 (默认读取 ~/.kube/config)
+
+
+**注意：使用官方镜像，目前 Docker Hub 最新稳定版为 v0.1.0，v0.1.1 的特性可通过本地源码构建体验，镜像即将更新**
+- 后端： cilliantech/cilikube:v0.1.0
+- 前端：cilliantech/cilikube-web:v0.1.0
+
 ```bash
-docker run -d --name cilikube-server -p 8080:8080 cilliantech/cilikube:v0.1.0
+# 假设宿主机的 kubeconfig 在 ~/.kube/config, 容器内应用期望在 /root/.kube/config 读取
+docker run -d --name cilikube -p 8080:8080 -v ~/.kube:/root/.kube:ro cilliantech/cilikube:v0.1.0
+docker run -d --name cilikube-web -p 80:80 cilliantech/cilikube-web:v0.1.0
 ```
 
-**构建项目**
-```bash
-# 构建前端生产环境包 (输出到 ui/dist)
-cd ui
-pnpm build
-# 构建后端可执行文件
-cd ../server
-go build -o cilikube-server main.go
-```
-**运行测试 (前端)**
+- 也可以使用docker-compose来运行
+
+你可以在项目的 GitHub 仓库根目录找到 docker-compose.yml 文件示例
 
 ```bash
-cd ui
-pnpm test:unit
+docker-compose up -d
 ```
+- 访问 http://localhost即可
 
-**代码规范检查 (前端)**
-```bash
-cd ui
-pnpm lint
-```
+
+
+- **注意：** 以上命令会在本地80端口运行CiliKube的前端应用，8080端口运行后端应用。你可以根据需要修改端口映射。
+
+
+也可以自己拉取代码后更改dockerfile内容后打镜像
+
+**注意： 以下操作在clone前后端项目后分别在其根目录下操作**
+
+
+1.  **获取代码：**
+    首先，你需要获取CiliKube前后端的代码。通常可以通过`git clone`项目仓库，然后进入根目录。
+    
+    ```bash
+    cd path/to/cilikube
+    cd path/to/cilikube-web
+    ```
+
+2.  **构建Docker镜像：**
+    在根目录下，修改镜像内容后执行以下命令来构建前后端应用的Docker镜像。
+
+    ```bash
+    docker build -t "cilikube-server:latest" .
+    docker build -t "cilikube-web:latest" .
+    ```
+
+3.  **运行Docker容器：**
+    镜像构建成功后，使用以下命令来运行前后端容器。
+
+    ```bash
+    docker run --name cilikube-server -p 8080:8080 -d cilikube-server:latest
+    docker run --name cilikube-web -p 80:80 -d cilikube-web:latest
+    ```
+
+现在，打开你的浏览器，访问 `http://<你的主机IP>` 或 `http://localhost` (如果你在本机运行Docker)，就应该能看到CiliKube的登录界面了！
+
+
+#### 3. Kubernetes 部署 (Helm部署)
+Tips: 如果你想在 Kubernetes 集群中运行 CiliKube，可以选择 Helm 部署的方式。CiliKube 的前后端都可以通过 Helm Chart 来部署，适合生产环境和大规模集群。以下是 Helm 部署的步骤：
+**环境准备**
+1. 安装 Helm (>=3.0)
+2. 拥有一个 Kubernetes 集群，并配置好 kubeconfig 文件 (默认读取 ~/.kube/config)
+3. 安装 kubectl (>=1.20)
+
+
+**部署步骤：**
+1.  **添加 Helm 仓库：**
+    首先，你需要添加 CiliKube 的 Helm 仓库。
+
+    ```bash
+    helm repo add cilikube https://charts.cillian.website
+    ```
+2.  **更新 Helm 仓库：**
+    更新本地的 Helm 仓库信息。
+
+    ```bash
+    helm repo update
+    ```
+3.  **安装 CiliKube：**
+    使用 Helm 安装 CiliKube。
+
+    ```bash
+    helm install cilikube cilikube/cilikube -n cilikube --create-namespace
+    ```
+4.  **访问 CiliKube：**
+    安装完成后，你可以使用以下命令查看 CiliKube 的服务信息。
+
+    ```bash
+    kubectl get svc cilikube -n cilikube
+    ```
+    你会看到类似以下的输出：
+    ```bash
+    NAME         TYPE        CLUSTER-IP      EXTERNAL-IP   PORT(S)          AGE
+    cilikube     NodePort
+    你的主机IP: <NodePort>   8080:80/TCP   1m
+    ```
+    这表示 CiliKube 的服务已经成功部署，并且可以通过 NodePort 访问。你可以通过浏览器访问 `http://<你的主机IP>:<NodePort>` 来访问 CiliKube 的前端界面。
+5.  **卸载 CiliKube：**
+    如果你想卸载 CiliKube，可以使用以下命令。
+
+    ```bash
+    helm uninstall cilikube -n cilikube
+    ```
+
+**注意：** 以上命令会卸载CiliKube的所有相关资源。
+
+
+#### 4. 备注
+
+**我们强烈建议查阅CiliKube的官方文档以获取最全面和最新的部署指南：**
+
+* **官方文档:** [cilikube.cillian.website](https://cilikube.cillian.website)
+* **GitHub仓库:** [github.com/ciliverse/cilikube](https://github.com/ciliverse/cilikube)
+
+在官方文档中，你可能会找到关于后端部署、数据库配置（如果需要）、以及未来可能支持的更多部署选项的详细信息。
+
 ## 🎨 Feature Preview | 功能预览
 ![alt text](ui/src/docs/login.png)
 ![alt text](ui/src/docs/first.png)
