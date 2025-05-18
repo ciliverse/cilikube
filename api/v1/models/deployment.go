@@ -39,6 +39,10 @@ type DeploymentListResponse struct {
 	Total int                  `json:"total"`
 }
 
+type ScaleDeploymentRequest struct {
+	Replicas int32 `json:"replicas" binding:"required"`
+}
+
 func ToDeploymentResponse(deployment *appsv1.Deployment) DeploymentResponse {
 	return DeploymentResponse{
 		Name:                deployment.Name,

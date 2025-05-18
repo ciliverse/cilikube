@@ -2,6 +2,8 @@ package service
 
 import (
 	"context"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/labels"
 
 	appsv1 "k8s.io/api/apps/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -41,7 +43,21 @@ func (s *DeploymentService) Create(namespace string, deployment *appsv1.Deployme
 }
 
 // 更新Deployment（包含冲突检测）
-func (s *DeploymentService) Update(namespace string, deployment *appsv1.Deployment) (*appsv1.Deployment, error) {
+func (s *DeploymentService) Update(namespace, name string, deployment *appsv1.Deployment) (*appsv1.Deployment, error) {
+	// --- 严格校验 ---
+	// 1. 名称必须匹配
+	if deployment.Name != name {
+		return nil, NewValidationError("YAML / JSON 中的 metadata.name ('" + deployment.Name + "') 与请求路径中的 name ('" + name + "') 不匹配")
+	}
+	// 2. 命名空间必须匹配（或在 YAML / JSON 中为空，此时使用路径参数）
+	if deployment.Namespace == "" {
+		deployment.Namespace = namespace // Set namespace from path if missing in YAML / JSON
+	} else if deployment.Namespace != namespace {
+		return nil, NewValidationError("YAML / JSON 中的 metadata.namespace ('" + deployment.Namespace + "') 与请求路径中的 namespace ('" + namespace + "') 不匹配")
+	}
+	// 3. Kind 和 APIVersion (可选但推荐)
+	// ...
+
 	return s.client.AppsV1().Deployments(namespace).Update(
 		context.TODO(),
 		deployment,
@@ -150,5 +166,62 @@ func (s *DeploymentService) Resume(namespace, name string) (*appsv1.Deployment, 
 		context.TODO(),
 		deployment,
 		metav1.UpdateOptions{},
+	)
+}
+
+// PodList 实现获取Deployment关联的Pod列表查询（支持分页和标签过滤）
+func (s *DeploymentService) PodList(namespace, deploymentName string, limit int64) (*corev1.PodList, error) {
+	// 1. 获取 Deployment
+	deployment, err := s.Get(namespace, deploymentName)
+	if err != nil {
+		return nil, err
+	}
+
+	// 2. 获取 ReplicaSet（Deployment 控制器会创建 ReplicaSet）
+	rsList, err := s.client.AppsV1().ReplicaSets(namespace).List(
+		context.TODO(),
+		metav1.ListOptions{
+			LabelSelector: labels.SelectorFromSet(deployment.Spec.Selector.MatchLabels).String(),
+		},
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	// 3. 初始化一个空的 Selector
+	allSelectors := labels.NewSelector()
+
+	// 4. 过滤出 replicas > 0 的 ReplicaSet
+	for _, rs := range rsList.Items {
+		if rs.Spec.Replicas != nil && *rs.Spec.Replicas > 0 {
+			// 5. 将 ReplicaSet 的 LabelSelector 转换为 Selector
+			selector, err := metav1.LabelSelectorAsSelector(rs.Spec.Selector)
+			if err != nil {
+				return nil, err
+			}
+
+			// 6. 将 Selector 转换为 Requirements
+			requirements, selectable := selector.Requirements()
+			if !selectable {
+				continue
+			}
+
+			// 7. 将 Requirements 添加到 allSelectors 中
+			allSelectors = allSelectors.Add(requirements...)
+		}
+	}
+
+	// 8. 如果没有活跃的 ReplicaSet，返回空列表
+	if allSelectors.String() == "" {
+		return &corev1.PodList{}, nil
+	}
+
+	// 9. 查询 Pod 列表
+	return s.client.CoreV1().Pods(namespace).List(
+		context.TODO(),
+		metav1.ListOptions{
+			LabelSelector: allSelectors.String(),
+			Limit:         limit,
+		},
 	)
 }
