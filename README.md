@@ -61,8 +61,14 @@ CiliKube 起源于作者学习 Web 全栈开发的实践项目。在学习过程
 
 ## 🌐 Online Demo | 在线预览
 
-*   An online demo site is being deployed, stay tuned!
-*   在线演示站点正在部署中，敬请期待！
+*   Online Demo: http://cilikubedemo.cillian.website
+*   在线演示站点: http://cilikubedemo.cillian.website
+*   Demo Credentials:
+    *   Username: admin
+    *   Password: 12345678
+*   演示账号:
+    *   用户名: admin
+    *   密码: 12345678
 
 ## 🚀 Tech Stack | 技术栈
 
@@ -81,7 +87,7 @@ This project utilizes popular frontend and backend technology stacks, ensuring d
 本项目采用了当前流行的前后端技术栈，确保开发者能够接触和使用最新的工具和库。
 
 *   **环境要求 (推荐)**:
-    *   Node.js >= 18.0.0 (项目当前使用 v22.14.0 开发)
+    *   Node.js >= 18.0.0 (项目当前使用 v22.15.0 开发)
     *   Go >= 1.20 (项目当前使用 v1.24.2 开发)
     *   PNPM >= 8.x
 
@@ -125,10 +131,10 @@ This project utilizes popular frontend and backend technology stacks, ensuring d
 *   [x] Login Page
 *   [x] Basic Layout (Sidebar, Topbar, Tabs)
 *   [x] Notifications
-*   [ ] Workload Resource Pages (Deployment, StatefulSet, DaemonSet, etc.)
-*   [ ] Configuration Management Pages (ConfigMap, Secret)
-*   [ ] Network Resource Pages (Service, Ingress)
-*   [ ] Storage Resource Pages (StorageClass, PV, PVC) - *PV/PVC partially done*
+*   [x] Workload Resource Pages (Deployment, StatefulSet, DaemonSet, etc.)
+*   [x] Configuration Management Pages (ConfigMap, Secret)
+*   [x] Network Resource Pages (Service, Ingress)
+*   [x] Storage Resource Pages (StorageClass, PV, PVC) - *PV/PVC partially done*
 *   [ ] Access Control Pages (RBAC - ServiceAccount, Role, ClusterRoleBinding, etc.)
 *   [ ] Events Viewer
 *   [ ] Basic CRD Resource Management
@@ -146,12 +152,12 @@ This project utilizes popular frontend and backend technology stacks, ensuring d
 *   [x] Node Resource API
 *   [x] Pod Resource API (List, Get, Delete, Logs, Exec)
 *   [x] PV/PVC Resource API
-*   [ ] Namespace Resource API
-*   [ ] Deployment / StatefulSet / DaemonSet Resource API
-*   [ ] Service / Ingress Resource API
-*   [ ] ConfigMap / Secret Resource API
+*   [x] Namespace Resource API
+*   [x] Deployment / StatefulSet / DaemonSet Resource API
+*   [x] Service / Ingress Resource API
+*   [x] ConfigMap / Secret Resource API
 *   [ ] RBAC Related Resource API
-*   [ ] Event Resource API
+*   [x] Event Resource API
 
 **前端**
 
@@ -159,10 +165,10 @@ This project utilizes popular frontend and backend technology stacks, ensuring d
 *   [x] 基础布局 (侧边栏, 顶部导航, 标签栏)
 *   [x] 消息通知
 *   [x] 工作负载资源页面 (Deployment, StatefulSet, DaemonSet 等)
-*   [ ] 配置管理页面 (ConfigMap, Secret)
-*   [ ] 网络资源页面 (Service, Ingress)
-*   [ ] 存储资源页面 (StorageClass, PV, PVC) - *PV/PVC 部分完成*
-*   [ ] 访问控制页面 (RBAC - ServiceAccount, Role, ClusterRoleBinding 等)
+*   [x] 配置管理页面 (ConfigMap, Secret)
+*   [x] 网络资源页面 (Service, Ingress)
+*   [x] 存储资源页面 (StorageClass, PV, PVC) - *PV/PVC 部分完成*
+*   [x] 访问控制页面 (RBAC - ServiceAccount, Role, ClusterRoleBinding 等)
 *   [ ] 事件 (Events) 查看
 *   [ ] CRD 资源管理 (基础)
 *   [ ] 监控集成 (集成 Prometheus/Grafana 数据展示)
