@@ -97,7 +97,9 @@ func (s *DeploymentService) Watch(namespace, selector string) (watch.Interface, 
 	return s.client.AppsV1().Deployments(namespace).Watch(
 		context.TODO(),
 		metav1.ListOptions{
-			LabelSelector: selector,
+			LabelSelector:  selector,
+			Watch:          true,
+			TimeoutSeconds: int64ptr(1800), // 30 minutes
 		},
 	)
 }

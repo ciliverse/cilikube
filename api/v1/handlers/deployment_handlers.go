@@ -1,17 +1,19 @@
 package handlers
 
 import (
-	"io"
-	appsv1 "k8s.io/api/apps/v1"
-	"net/http"
-	"strconv"
-	"strings"
-
+	"fmt"
 	"github.com/ciliverse/cilikube/api/v1/models"
 	"github.com/ciliverse/cilikube/internal/service"
 	"github.com/ciliverse/cilikube/pkg/utils"
 	"github.com/gin-gonic/gin"
+	"io"
+	appsv1 "k8s.io/api/apps/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/watch"
+	"net/http"
+	"strconv"
+	"strings"
 )
 
 // DeploymentHandler ...
@@ -218,7 +220,53 @@ func (h *DeploymentHandler) DeleteDeployment(c *gin.Context) {
 }
 
 // WatchDeployments ...
-func (h *DeploymentHandler) WatchDeployments(c *gin.Context) {}
+func (h *DeploymentHandler) WatchDeployments(c *gin.Context) {
+	// 参数获取校验
+	namespace := strings.TrimSpace(c.Param("namespace"))
+	if !utils.ValidateNamespace(namespace) {
+		respondError(c, http.StatusBadRequest, "无效的命名空间格式")
+		return
+	}
+	labelSelector := c.Query("labelSelector")
+
+	// 创建 Deployment Watcher
+	watcher, err := h.service.Watch(namespace, labelSelector)
+	if err != nil {
+		respondError(c, http.StatusInternalServerError, "开始监听Deployment失败: "+err.Error())
+		return
+	}
+	defer watcher.Stop()
+
+	// 设置响应头为 text/event-stream，启用 SSE
+	c.Writer.Header().Set("Content-Type", "text/event-stream")
+	c.Writer.Header().Set("Cache-Control", "no-cache")
+	c.Writer.Header().Set("Connection", "keep-alive")
+	c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
+
+	// 使用 Gin 的流式响应
+	c.Stream(func(w io.Writer) bool {
+		for {
+			select {
+			case event, ok := <-watcher.ResultChan(): // channel 接收事件
+				if !ok {
+					// Watch channel 关闭，重新连接
+					fmt.Println("Watcher channel closed")
+					c.SSEvent("close", gin.H{"message": "Watcher channel closed"})
+					return false
+				}
+
+				// 发送事件到客户端
+				c.SSEvent("message", toWatchDeploymentEvent(event))
+				return true
+
+			case <-c.Request.Context().Done():
+				// 客户端断开连接
+				fmt.Println("Client disconnected from watch stream")
+				return false
+			}
+		}
+	})
+}
 
 // ScaleDeployment ...
 func (h *DeploymentHandler) ScaleDeployment(c *gin.Context) {
@@ -297,4 +345,26 @@ func (h *DeploymentHandler) GetDeploymentPods(c *gin.Context) {
 	}
 
 	respondSuccess(c, http.StatusOK, response)
+}
+
+// --- Helper Functions ---
+
+// toWatchDeploymentEvent ...
+func toWatchDeploymentEvent(event watch.Event) interface{} {
+	deployment, ok := event.Object.(*appsv1.Deployment)
+	resp := gin.H{
+		"type": string(event.Type),
+	}
+	if ok {
+		resp["object"] = models.ToDeploymentResponse(deployment)
+	} else {
+		if status, okStatus := event.Object.(*metav1.Status); okStatus {
+			resp["error"] = fmt.Sprintf("K8s API Error: %s (Code: %d)", status.Message, status.Code)
+			resp["status"] = status
+		} else {
+			resp["error"] = "事件对象类型不是 Deployment 或 Status"
+			resp["rawObject"] = fmt.Sprintf("%T", event.Object) // Show type
+		}
+	}
+	return resp
 }
