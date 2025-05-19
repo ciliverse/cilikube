@@ -1,5 +1,5 @@
 <div align="center">
-  <img alt="CiliKube Logo" width="500" height="100" src="ui/public/logo.png">
+  <img alt="CiliKube Logo" width="500" height="100" src="docs/logo.png">
   <h1>CiliKube</h1>
   <span><a href="./README.zh-CN.md">中文纯净版</a> | English</span>
 </div>
@@ -15,7 +15,7 @@
 CiliKube is an open-source, full-stack Kubernetes (k8s) resource management platform built with modern, mainstream technology stacks (Vue3, TypeScript, Go, Gin). It aims to provide a clean and elegant interface to simplify the daily management (CRUD operations) of Kubernetes resources and support feature expansion.
 
 CiliKube 是一个使用现代主流技术栈（Vue3, TypeScript, Go, Gin）构建的开源全栈 Kubernetes (k8s) 资源管理平台。它致力于提供一个简洁、优雅的界面，来简化 Kubernetes 资源的日常管理（增删改查）并支持功能拓展。
-![alt text](ui/src/docs/architech.png)
+![alt text](docs/architech.png)
 
 
 
@@ -54,7 +54,7 @@ CiliKube originated from the author's practical project while learning full-stac
 CiliKube 起源于作者学习 Web 全栈开发的实践项目。在学习过程中，作者深入探索了 Kubernetes，并获得了相关认证。这个项目不仅是学习成果的体现，更希望成为一把“钥匙 (Key)”，帮助更多像作者一样的学习者打开开源世界的大门，参与贡献，共同成长。
 
 ## 📚 Documentation | 文档
-![alt text](ui/src/docs/docs.png)
+![alt text](docs/docs.png)
 *   Official Documentation: [cilikube.cillian.website](https://cilikube.cillian.website)
 *   官方文档: [cilikube.cillian.website](https://cilikube.cillian.website) 
 
@@ -398,9 +398,16 @@ pnpm dev
 cd cilikube
 # (可选) 更新 Go 依赖
 go mod tidy
+
+# 进入后端目录
+cd cmd/server
+
+# (可选) 更新 Go 依赖
+# go mod tidy
+
 # 运行后端服务 (默认监听 8080 端口)
 # 配置文件在 config/config.yaml 中修改
-go run cmd/server/main.go
+go run main.go
 ```
 
 
@@ -530,25 +537,25 @@ Tips: 如果你想在 Kubernetes 集群中运行 CiliKube，可以选择 Helm �
 在官方文档中，你可能会找到关于后端部署、数据库配置（如果需要）、以及未来可能支持的更多部署选项的详细信息。
 
 ## 🎨 Feature Preview | 功能预览
-![alt text](ui/src/docs/login.png)
-![alt text](ui/src/docs/first.png)
-![alt text](ui/src/docs/minikube2.png)
-![alt text](ui/src/docs/techstack.png)
-![alt text](ui/src/docs/monitor1.png)
-![alt text](ui/src/docs/monitor2.png)
-![alt text](ui/src/docs/dashboard.png)
-![alt text](ui/src/docs/nav.png)
-![alt text](ui/src/docs/cluster.png)
-![alt text](ui/src/docs/ingress.png)
-![alt text](ui/src/docs/namespace.png)
-![alt text](ui/src/docs/svc.png)
-![alt text](ui/src/docs/deployment.png)
-![alt text](ui/src/docs/pod.png)
-![alt text](ui/src/docs/shell.png)
-![alt text](ui/src/docs/pv.png)
-![alt text](ui/src/docs/pvc.png)
-![alt text](ui/src/docs/secret.png)
-![alt text](ui/src/docs/configmap.png)
+![alt text](docs/login.png)
+![alt text](docs/first.png)
+![alt text](docs/minikube2.png)
+![alt text](docs/techstack.png)
+![alt text](docs/monitor1.png)
+![alt text](docs/monitor2.png)
+![alt text](docs/dashboard.png)
+![alt text](docs/nav.png)
+![alt text](docs/cluster.png)
+![alt text](docs/ingress.png)
+![alt text](docs/namespace.png)
+![alt text](docs/svc.png)
+![alt text](docs/deployment.png)
+![alt text](docs/pod.png)
+![alt text](docs/shell.png)
+![alt text](docs/pv.png)
+![alt text](docs/pvc.png)
+![alt text](docs/secret.png)
+![alt text](docs/configmap.png)
 
 
 
@@ -661,7 +668,7 @@ Website: https://www.cillian.website
 
 WeChat
 
-![alt text](ui/src/docs/wechat400x400.png)
+![alt text](docs/wechat400x400.png)
 
 ## 📜 License | 许可证
 

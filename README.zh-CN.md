@@ -132,7 +132,7 @@ cd cmd/server
 # (可选) 更新 Go 依赖
 # go mod tidy
 
-# 运行后端服务 (默认监听 8081 端口)
+# 运行后端服务 (默认监听 8080 端口)
 go run main.go
 ```
 
