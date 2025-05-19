@@ -1,5 +1,5 @@
 <div align="center">
-  <img alt="CiliKube Logo" width="500" height="100" src="ui/public/logo.png">
+  <img alt="CiliKube Logo" width="500" height="100" src="docs/logo.png">
   <h1>CiliKube</h1>
   <span><a href="./README.zh-CN.md">中文纯净版</a> | English</span>
 </div>
@@ -15,7 +15,7 @@
 CiliKube is an open-source, full-stack Kubernetes (k8s) resource management platform built with modern, mainstream technology stacks (Vue3, TypeScript, Go, Gin). It aims to provide a clean and elegant interface to simplify the daily management (CRUD operations) of Kubernetes resources and support feature expansion.
 
 CiliKube 是一个使用现代主流技术栈（Vue3, TypeScript, Go, Gin）构建的开源全栈 Kubernetes (k8s) 资源管理平台。它致力于提供一个简洁、优雅的界面，来简化 Kubernetes 资源的日常管理（增删改查）并支持功能拓展。
-![alt text](ui/src/docs/architech.png)
+![alt text](docs/architech.png)
 
 
 
@@ -54,15 +54,21 @@ CiliKube originated from the author's practical project while learning full-stac
 CiliKube 起源于作者学习 Web 全栈开发的实践项目。在学习过程中，作者深入探索了 Kubernetes，并获得了相关认证。这个项目不仅是学习成果的体现，更希望成为一把“钥匙 (Key)”，帮助更多像作者一样的学习者打开开源世界的大门，参与贡献，共同成长。
 
 ## 📚 Documentation | 文档
-![alt text](ui/src/docs/docs.png)
+![alt text](docs/docs.png)
 *   Official Documentation: [cilikube.cillian.website](https://cilikube.cillian.website)
 *   官方文档: [cilikube.cillian.website](https://cilikube.cillian.website) 
 
 
 ## 🌐 Online Demo | 在线预览
 
-*   An online demo site is being deployed, stay tuned!
-*   在线演示站点正在部署中，敬请期待！
+*   Online Demo: http://cilikubedemo.cillian.website
+*   在线演示站点: http://cilikubedemo.cillian.website
+*   Demo Credentials:
+    *   Username: admin
+    *   Password: 12345678
+*   演示账号:
+    *   用户名: admin
+    *   密码: 12345678
 
 ## 🚀 Tech Stack | 技术栈
 
@@ -81,7 +87,7 @@ This project utilizes popular frontend and backend technology stacks, ensuring d
 本项目采用了当前流行的前后端技术栈，确保开发者能够接触和使用最新的工具和库。
 
 *   **环境要求 (推荐)**:
-    *   Node.js >= 18.0.0 (项目当前使用 v22.14.0 开发)
+    *   Node.js >= 18.0.0 (项目当前使用 v22.15.0 开发)
     *   Go >= 1.20 (项目当前使用 v1.24.2 开发)
     *   PNPM >= 8.x
 
@@ -125,10 +131,10 @@ This project utilizes popular frontend and backend technology stacks, ensuring d
 *   [x] Login Page
 *   [x] Basic Layout (Sidebar, Topbar, Tabs)
 *   [x] Notifications
-*   [ ] Workload Resource Pages (Deployment, StatefulSet, DaemonSet, etc.)
-*   [ ] Configuration Management Pages (ConfigMap, Secret)
-*   [ ] Network Resource Pages (Service, Ingress)
-*   [ ] Storage Resource Pages (StorageClass, PV, PVC) - *PV/PVC partially done*
+*   [x] Workload Resource Pages (Deployment, StatefulSet, DaemonSet, etc.)
+*   [x] Configuration Management Pages (ConfigMap, Secret)
+*   [x] Network Resource Pages (Service, Ingress)
+*   [x] Storage Resource Pages (StorageClass, PV, PVC) - *PV/PVC partially done*
 *   [ ] Access Control Pages (RBAC - ServiceAccount, Role, ClusterRoleBinding, etc.)
 *   [ ] Events Viewer
 *   [ ] Basic CRD Resource Management
@@ -146,12 +152,12 @@ This project utilizes popular frontend and backend technology stacks, ensuring d
 *   [x] Node Resource API
 *   [x] Pod Resource API (List, Get, Delete, Logs, Exec)
 *   [x] PV/PVC Resource API
-*   [ ] Namespace Resource API
-*   [ ] Deployment / StatefulSet / DaemonSet Resource API
-*   [ ] Service / Ingress Resource API
-*   [ ] ConfigMap / Secret Resource API
+*   [x] Namespace Resource API
+*   [x] Deployment / StatefulSet / DaemonSet Resource API
+*   [x] Service / Ingress Resource API
+*   [x] ConfigMap / Secret Resource API
 *   [ ] RBAC Related Resource API
-*   [ ] Event Resource API
+*   [x] Event Resource API
 
 **前端**
 
@@ -159,10 +165,10 @@ This project utilizes popular frontend and backend technology stacks, ensuring d
 *   [x] 基础布局 (侧边栏, 顶部导航, 标签栏)
 *   [x] 消息通知
 *   [x] 工作负载资源页面 (Deployment, StatefulSet, DaemonSet 等)
-*   [ ] 配置管理页面 (ConfigMap, Secret)
-*   [ ] 网络资源页面 (Service, Ingress)
-*   [ ] 存储资源页面 (StorageClass, PV, PVC) - *PV/PVC 部分完成*
-*   [ ] 访问控制页面 (RBAC - ServiceAccount, Role, ClusterRoleBinding 等)
+*   [x] 配置管理页面 (ConfigMap, Secret)
+*   [x] 网络资源页面 (Service, Ingress)
+*   [x] 存储资源页面 (StorageClass, PV, PVC) - *PV/PVC 部分完成*
+*   [x] 访问控制页面 (RBAC - ServiceAccount, Role, ClusterRoleBinding 等)
 *   [ ] 事件 (Events) 查看
 *   [ ] CRD 资源管理 (基础)
 *   [ ] 监控集成 (集成 Prometheus/Grafana 数据展示)
@@ -217,6 +223,7 @@ cd cilikube
 # (Optional) Update Go dependencies
 go mod tidy
 # Run the back-end service (listens on port 8080 by default)
+# Configuration files are modified in config/config.yaml
 go run cmd/server/main.go
 ```
 
@@ -391,8 +398,16 @@ pnpm dev
 cd cilikube
 # (可选) 更新 Go 依赖
 go mod tidy
+
+# 进入后端目录
+cd cmd/server
+
+# (可选) 更新 Go 依赖
+# go mod tidy
+
 # 运行后端服务 (默认监听 8080 端口)
-go run cmd/server/main.go
+# 配置文件在 config/config.yaml 中修改
+go run main.go
 ```
 
 
@@ -522,25 +537,25 @@ Tips: 如果你想在 Kubernetes 集群中运行 CiliKube，可以选择 Helm �
 在官方文档中，你可能会找到关于后端部署、数据库配置（如果需要）、以及未来可能支持的更多部署选项的详细信息。
 
 ## 🎨 Feature Preview | 功能预览
-![alt text](ui/src/docs/login.png)
-![alt text](ui/src/docs/first.png)
-![alt text](ui/src/docs/minikube2.png)
-![alt text](ui/src/docs/techstack.png)
-![alt text](ui/src/docs/monitor1.png)
-![alt text](ui/src/docs/monitor2.png)
-![alt text](ui/src/docs/dashboard.png)
-![alt text](ui/src/docs/nav.png)
-![alt text](ui/src/docs/cluster.png)
-![alt text](ui/src/docs/ingress.png)
-![alt text](ui/src/docs/namespace.png)
-![alt text](ui/src/docs/svc.png)
-![alt text](ui/src/docs/deployment.png)
-![alt text](ui/src/docs/pod.png)
-![alt text](ui/src/docs/shell.png)
-![alt text](ui/src/docs/pv.png)
-![alt text](ui/src/docs/pvc.png)
-![alt text](ui/src/docs/secret.png)
-![alt text](ui/src/docs/configmap.png)
+![alt text](docs/login.png)
+![alt text](docs/first.png)
+![alt text](docs/minikube2.png)
+![alt text](docs/techstack.png)
+![alt text](docs/monitor1.png)
+![alt text](docs/monitor2.png)
+![alt text](docs/dashboard.png)
+![alt text](docs/nav.png)
+![alt text](docs/cluster.png)
+![alt text](docs/ingress.png)
+![alt text](docs/namespace.png)
+![alt text](docs/svc.png)
+![alt text](docs/deployment.png)
+![alt text](docs/pod.png)
+![alt text](docs/shell.png)
+![alt text](docs/pv.png)
+![alt text](docs/pvc.png)
+![alt text](docs/secret.png)
+![alt text](docs/configmap.png)
 
 
 
@@ -653,7 +668,7 @@ Website: https://www.cillian.website
 
 WeChat
 
-![alt text](ui/src/docs/wechat400x400.png)
+![alt text](docs/wechat400x400.png)
 
 ## 📜 License | 许可证
 

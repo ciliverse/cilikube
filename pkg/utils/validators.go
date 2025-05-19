@@ -1,6 +1,11 @@
 package utils
 
 import (
+	"bytes"
+	"fmt"
+	"io"
+	appsv1 "k8s.io/api/apps/v1"
+	"k8s.io/apimachinery/pkg/util/yaml"
 	"regexp"
 	"strconv"
 )
@@ -29,4 +34,26 @@ func ParseInt(s string, defaultValue int) int {
 		return defaultValue
 	}
 	return val
+}
+
+// ParseDeploymentFromFile 解析 YAML/JSON 文件为 Deployment 对象（使用 Kubernetes 原生解码器）
+func ParseDeploymentFromFile(data []byte) (*appsv1.Deployment, error) {
+	// 使用 Kubernetes 提供的 YAML/JSON 解码器
+	decoder := yaml.NewYAMLOrJSONDecoder(
+		io.NopCloser(
+			io.NewSectionReader(
+				bytes.NewReader(data),
+				0,
+				int64(len(data)),
+			),
+		),
+		1024,
+	)
+
+	var deployment appsv1.Deployment
+	if err := decoder.Decode(&deployment); err != nil {
+		return nil, fmt.Errorf("failed to decode YAML/JSON: %v", err.Error())
+	}
+
+	return &deployment, nil
 }
