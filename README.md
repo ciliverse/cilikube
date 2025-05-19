@@ -398,9 +398,16 @@ pnpm dev
 cd cilikube
 # (可选) 更新 Go 依赖
 go mod tidy
+
+# 进入后端目录
+cd cmd/server
+
+# (可选) 更新 Go 依赖
+# go mod tidy
+
 # 运行后端服务 (默认监听 8080 端口)
 # 配置文件在 config/config.yaml 中修改
-go run cmd/server/main.go
+go run main.go
 ```
 
 
