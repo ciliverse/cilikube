@@ -15,6 +15,8 @@ func RegisterDeploymentRoutes(router *gin.RouterGroup, handler *handlers.Deploym
 		deploymentGroup.GET("/:name", handler.GetDeployment)
 		deploymentGroup.PUT("/:name", handler.UpdateDeployment)
 		deploymentGroup.DELETE("/:name", handler.DeleteDeployment)
+		deploymentGroup.PUT("/:name/scale", handler.ScaleDeployment)
+		deploymentGroup.GET("/:name/pods", handler.GetDeploymentPods)
 	}
 
 	// Watch端点
