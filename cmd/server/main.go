@@ -57,7 +57,7 @@ func loadConfig() (*configs.Config, error) {
 
 	// 如果环境变量也未指定，则使用默认路径
 	if configPath == "" {
-		configPath = "configs/config.yaml"
+		configPath = "../../configs/config.yaml"
 	}
 
 	// 调用 configs.Load 方法加载配置
