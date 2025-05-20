@@ -577,6 +577,12 @@ Submit a Pull Request
 
 我们欢迎各种形式的贡献！如果您想参与改进 CiliKube，请：
 
+### 注意
+- 目前单集群维护在release-0.1.0分支，后续会有多集群版本的发布
+- 多集群版本在main分支，正在开发中
+- The single-cluster version is maintained in the release-0.1.0 branch, and a multi-cluster version will be released later.
+- The main branch is for the multi-cluster version, which is under development.
+
 - Fork 本仓库
 
 - 创建您的特性分支 (git checkout -b feature/AmazingFeature)
@@ -586,6 +592,8 @@ Submit a Pull Request
 - 将您的分支推送到 Github (git push origin feature/AmazingFeature)
 
 - 提交 Pull Request
+
+请确保您的代码经过充分测试，并且符合项目的代码规范。
 
 ## 🤝 Git Commit Guidelines | Git 提交规范
 
