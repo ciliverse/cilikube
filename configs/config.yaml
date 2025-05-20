@@ -12,6 +12,7 @@ kubernetes:
       isDefault: true      # 标记为默认集群
     - name: "dev-local"
       kubeconfig: "default" # 将解析为 ~/.kube/config 或 $KUBECONFIG环境变量
+      #  id: "ffa0e7d2-829f-4a2e-9c4d-1e77a1b8f123"   可选
       isDefault: false
     - name: "staging-gke"
       kubeconfig: ""         # 表示尝试 in-cluster 配置 (如果应用部署在K8s内)
