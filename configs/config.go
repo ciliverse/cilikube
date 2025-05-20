@@ -25,10 +25,19 @@ type InstallerConfig struct {
 	DownloadDir    string `yaml:"downloadDir"`
 }
 
+type MySQLConfig struct {
+	Host     string `yaml:"host"`
+	Port     int    `yaml:"port"`
+	Username string `yaml:"username"`
+	Password string `yaml:"password"`
+	DBName   string `yaml:"db_name"`
+}
+
 type Config struct {
 	Server     ServerConfig     `yaml:"server"`
 	Kubernetes KubernetesConfig `yaml:"kubernetes"`
 	Installer  InstallerConfig  `yaml:"installer"`
+	MySQL      MySQLConfig      `yaml:"mysql"`
 }
 
 func Load(path string) (*Config, error) {
@@ -52,6 +61,15 @@ func Load(path string) (*Config, error) {
 	var cfg Config
 	if err := yaml.Unmarshal(data, &cfg); err != nil {
 		return nil, fmt.Errorf("解析配置文件失败: %w", err)
+	}
+
+	// MySQL 配置验证
+	cfg.MySQL = MySQLConfig{
+		Host:     cfg.MySQL.Host,
+		Port:     cfg.MySQL.Port,
+		Username: cfg.MySQL.Username,
+		Password: cfg.MySQL.Password,
+		DBName:   cfg.MySQL.DBName,
 	}
 
 	// 设置默认值

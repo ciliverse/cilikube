@@ -20,6 +20,6 @@ func RegisterPVRoutes(router *gin.RouterGroup, handler *handlers.PVHandler) {
 	// Watch端点
 	// watchGroup := router.Group("/watch/pvs")
 	// {
-	// 	watchGroup.GET("", handler.WatchPVs)
+	// 	watchGroup.GET("", handlers.WatchPVs)
 	// }
 }

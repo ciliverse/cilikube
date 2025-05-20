@@ -48,7 +48,7 @@ type PodResponse struct {
 // PodListResponse represents the paginated list of Pods.
 type PodListResponse struct {
 	Items []PodResponse `json:"items"`
-	Total int           `json:"total"` // Total items matching filter (in this batch, see handler note)
+	Total int           `json:"total"` // Total items matching filter (in this batch, see handlers note)
 }
 
 // ToPodResponse converts a Kubernetes Pod object to our API response format.

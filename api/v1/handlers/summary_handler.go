@@ -16,7 +16,7 @@ func NewSummaryHandler(svc *service.SummaryService) *SummaryHandler {
 	return &SummaryHandler{service: svc}
 }
 
-// Existing GetResourceSummary handler...
+// Existing GetResourceSummary handlers...
 func (h *SummaryHandler) GetResourceSummary(c *gin.Context) { /* ... as before ... */
 	summary, _ := h.service.GetResourceSummary()
 	respondSuccess(c, http.StatusOK, summary)
