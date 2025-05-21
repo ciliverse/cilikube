@@ -333,8 +333,8 @@ func (h *PodHandler) WatchPods(c *gin.Context) {
 		}
 	})
 
-	// The handler function returns here, but the goroutine inside c.Stream continues
-	fmt.Println("WatchPods handler finished setup, streaming started.")
+	// The handlers function returns here, but the goroutine inside c.Stream continues
+	fmt.Println("WatchPods handlers finished setup, streaming started.")
 }
 
 // GetPodLogs ... (保持不变)
@@ -522,7 +522,7 @@ func (h *PodHandler) ExecIntoPod(c *gin.Context) {
 		fmt.Println("Exec context done (client disconnected or error).")
 	}
 
-	fmt.Println("Exec handler exiting.")
+	fmt.Println("Exec handlers exiting.")
 	// ws.Close() is handled by defer
 }
 
@@ -763,27 +763,27 @@ func (h *WebSocketStreamHandler) writeLoop() {
 // WriteMessage sends an explicit message (e.g., error text) to the WebSocket client
 func (h *WebSocketStreamHandler) WriteMessage(messageType int, data []byte) error {
 	// Consider adding locking if multiple goroutines could call this,
-	// but in this setup, only the main handler calls it for errors.
+	// but in this setup, only the main handlers calls it for errors.
 	return h.ws.WriteMessage(messageType, data)
 }
 
 // ClosePipes closes the writing ends of the pipes, typically called by the exec goroutine when done.
 func (h *WebSocketStreamHandler) ClosePipes() {
-	fmt.Println("Closing WS stream handler pipes")
+	fmt.Println("Closing WS stream handlers pipes")
 	// Closing the writer signals EOF to the reader in the other goroutine
 	h.stdinPipeW.CloseWithError(io.EOF)
 	h.stdoutPipeW.CloseWithError(io.EOF)
 }
 
 // Close closes the WebSocket connection and waits for loops to finish.
-// This should likely be called by the main handler function (e.g., in defer).
+// This should likely be called by the main handlers function (e.g., in defer).
 func (h *WebSocketStreamHandler) Close() {
-	fmt.Println("Closing WebSocket stream handler")
+	fmt.Println("Closing WebSocket stream handlers")
 	// Closing the WebSocket connection should cause ReadMessage/WriteMessage
 	// in the loops to return errors, thus stopping the loops.
 	h.ws.Close()
 	// Wait for loops to finish cleaning up (optional, but good practice)
 	<-h.readDone
 	<-h.writeDone
-	fmt.Println("WebSocket stream handler fully closed")
+	fmt.Println("WebSocket stream handlers fully closed")
 }

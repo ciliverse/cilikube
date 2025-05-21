@@ -262,7 +262,7 @@ func (h *PVCHandler) ListPVCs(c *gin.Context) {
 
 	response := models.PVCListResponse{
 		Items: make([]models.PVCResponse, 0, len(pvcList.Items)),
-		Total: len(pvcList.Items), // See notes in PV handler about total vs returned
+		Total: len(pvcList.Items), // See notes in PV handlers about total vs returned
 	}
 	for _, pvc := range pvcList.Items {
 		response.Items = append(response.Items, models.ToPVCResponse(&pvc))
