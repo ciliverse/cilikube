@@ -40,6 +40,11 @@ func (h *ServiceHandler) ListServices(c *gin.Context) {
 		return
 	}
 
+	// 修复空列表报错问题
+	if services.Items == nil {
+		services.Items = make([]corev1.Service, 0)
+	}
+
 	// 3. 返回结果
 	respondSuccess(c, http.StatusOK, services)
 }
