@@ -57,6 +57,16 @@ func loadConfig() (*configs.Config, error) {
 
 	// 如果环境变量也未指定，则使用默认路径
 	if configPath == "" {
+		//获取工作目录
+		if wd, err := os.Getwd(); err == nil {
+			// 当工作路径为项目根路径时，使用绝对路径
+			configPath = wd + "/configs/config.yaml"
+			if _, err := os.Stat(configPath); err == nil {
+				log.Printf("使用默认配置文件路径: %s\n", configPath)
+				return configs.Load(configPath)
+			}
+		}
+		// 当工作路径为当前路径时，使用相对路径
 		configPath = "../../configs/config.yaml"
 	}
 
