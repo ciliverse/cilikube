@@ -28,6 +28,16 @@ type UpdatePodRequest struct {
 
 // --- Response Structures ---
 
+// ContainerNameResponse 提供容器状态信息给前端,目前只展示日志接口部分使用的字段
+type ContainerNameResponse struct {
+	Name string `json:"name"`
+}
+
+type PodSpecResponse struct {
+	Containers     []ContainerNameResponse `json:"containers"`
+	InitContainers []ContainerNameResponse `json:"initContainers"`
+}
+
 // PodResponse represents the data sent back to the client for a single Pod.
 type PodResponse struct {
 	UID         string            `json:"uid"` // Added UID
@@ -41,8 +51,10 @@ type PodResponse struct {
 	IP          string            `json:"ip,omitempty"`      // Pod IP
 	Node        string            `json:"node,omitempty"`    // Node name where the pod is scheduled
 	CreatedAt   string            `json:"createdAt"`         // Formatted timestamp string
+	Spec        *PodSpecResponse  `json:"spec,omitempty"`    // 根据前端解析需求传参
+
 	// Add Container Statuses if needed by frontend
-	// ContainerStatuses []ContainerStatusResponse `json:"containerStatuses,omitempty"`
+	//ContainerStatuses []ContainerStatusResponse `json:"spec,omitempty"`
 }
 
 // PodListResponse represents the paginated list of Pods.
@@ -154,6 +166,19 @@ func ToPodResponse(pod *corev1.Pod) PodResponse {
 	if status == "" {
 		status = "Unknown"
 	}
+	// 正式容器和初始化容器信息
+	var containers []ContainerNameResponse
+	for _, c := range pod.Spec.Containers {
+		containers = append(containers, ContainerNameResponse{
+			Name: c.Name,
+		})
+	}
+	var initContainers []ContainerNameResponse
+	for _, c := range pod.Spec.InitContainers {
+		initContainers = append(initContainers, ContainerNameResponse{
+			Name: c.Name,
+		})
+	}
 
 	return PodResponse{
 		UID:         string(pod.UID), // Include UID
@@ -167,5 +192,9 @@ func ToPodResponse(pod *corev1.Pod) PodResponse {
 		IP:          pod.Status.PodIP,
 		Node:        pod.Spec.NodeName,
 		CreatedAt:   createdAtFormatted, // Use formatted string
+		Spec: &PodSpecResponse{
+			Containers:     containers,
+			InitContainers: initContainers,
+		},
 	}
 }
