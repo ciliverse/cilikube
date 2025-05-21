@@ -157,6 +157,8 @@ cd cilikube
 go mod tidy
 
 # 运行后端服务 (默认监听 8080 端口)
+# 配置文件在 configs/config.yaml 中修改
+go run main.go
 # 配置文件在 config/config.yaml 中修改
 go run cmd/server/main.go
 ```

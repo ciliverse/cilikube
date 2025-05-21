@@ -225,7 +225,7 @@ cd cilikube
 # (Optional) Update Go dependencies
 go mod tidy
 # Run the back-end service (listens on port 8080 by default)
-# Configuration files are modified in config/config.yaml
+# Configuration files are modified in configs/config.yaml
 go run cmd/server/main.go
 ```
 
@@ -402,8 +402,8 @@ cd cilikube
 go mod tidy
 
 # 运行后端服务 (默认监听 8080 端口)
-# 配置文件在 config/config.yaml 中修改
-go run cmd/server/main.go
+# 配置文件在 configs/config.yaml 中修改
+go run main.go
 ```
 
 
