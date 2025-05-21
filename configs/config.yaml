@@ -1,23 +1,26 @@
-# New section for the installer
 server:
-  port: "8080"
+  port: "8080" # 示例端口
   read_timeout: 15
-  write_timeout: 30
-  activeCluster: "default"
+  write_timeout: 15
+  # activeCluster: "prod-us-east" # 如果你决定使用这个字段来指定默认集群
 
 kubernetes:
-  kubeconfig: "default"
-
+  # defaultClusterName: "prod-us-east" # 另一种指定默认集群的方式，优先级需要明确
+  clusters:
+    - name: "prod-us-east" # 集群的唯一名称
+      kubeconfig: "/secure/kubeconfigs/prod-us-east.yaml" # 具体路径
+      isDefault: true      # 标记为默认集群
+    - name: "dev-local"
+      kubeconfig: "default" # 将解析为 ~/.kube/config 或 $KUBECONFIG环境变量
+      #  id: "ffa0e7d2-829f-4a2e-9c4d-1e77a1b8f123"   可选
+      isDefault: false
+    - name: "staging-gke"
+      kubeconfig: ""         # 表示尝试 in-cluster 配置 (如果应用部署在K8s内)
+    - name: "minikube"
+      kubeconfig: "/Users/yourname/.kube/minikube_config" # 另一个具体路径
+      # isDefault: false (如果省略，默认为 false)
 
 installer:
-  # Optional: Specify a path if minikube isn't guaranteed to be in the system PATH
-  # after the simulated install. The backend will try PATH first, then this path.
-  # minikubePath: "/usr/local/bin/minikube" # Example
-  minikubePath: "" # Rely on PATH lookup by default
-
-  # Driver for minikube (docker is common, others: hyperkit, virtualbox, vmware, podman, etc.)
-  minikubeDriver: "docker"
-
-  # Directory to store downloaded files temporarily. Defaults to '.' (server's working dir)
-  # downloadDir: "/tmp/cilikube_downloads" # Example using /tmp
-  downloadDir: "" # Use default (current directory)
+  minikubePath: "/usr/local/bin/minikube" # Minikube可执行文件路径
+  minikubeDriver: "docker"                # Minikube 使用的驱动
+  downloadDir: "/tmp/cilikube_artefacts"  # 下载相关文件的目录

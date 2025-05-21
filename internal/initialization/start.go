@@ -48,7 +48,7 @@ func displayServerInfo(serverAddr, mode, version string) {
 func getVersion() string {
 	data, err := os.ReadFile("VERSION")
 	if err != nil {
-		return "v0.1.0" // 如果读取失败，返回默认版本号
+		return "v0.1.2" // 如果读取失败，返回默认版本号
 	}
 	return string(data)
 }

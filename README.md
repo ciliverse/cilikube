@@ -61,8 +61,10 @@ CiliKube 起源于作者学习 Web 全栈开发的实践项目。在学习过程
 
 ## 🌐 Online Demo | 在线预览
 
-*   Online Demo: http://cilikubedemo.cillian.website
-*   在线演示站点: http://cilikubedemo.cillian.website
+![alt text](docs/login1.png)
+
+*   Online Demo: https://cilikubedemo.cillian.website
+*   在线演示站点: https://cilikubedemo.cillian.website
 *   Demo Credentials:
     *   Username: admin
     *   Password: 12345678
@@ -92,7 +94,7 @@ This project utilizes popular frontend and backend technology stacks, ensuring d
     *   PNPM >= 8.x
 
 *   **前端**: `Vue3` `TypeScript` `Vite` `Element Plus` `Pinia` `Vue Router` `Axios` `UnoCSS` `Scss` `ESlint` `Prettier`
-    *   基于优秀的 [v3-admin-vite](https://github.com/un-pany/v3-admin-vite) 模板进行开发，感谢原作者 un-pany。
+    *   基于优秀的 [v3-admin-vite](https://github.com/un-pany/v3-admin-vite) 模板进行开发，感谢原作者 @un-pany
 
 *   **后端**: `Go` `Gin` `Kubernetes client-go` `JWT (dgrijalva/jwt-go)` `Gorilla Websocket` `Logger (wonderivan/logger)`
 
@@ -398,12 +400,6 @@ pnpm dev
 cd cilikube
 # (可选) 更新 Go 依赖
 go mod tidy
-
-# 进入后端目录
-cd cmd/server
-
-# (可选) 更新 Go 依赖
-# go mod tidy
 
 # 运行后端服务 (默认监听 8080 端口)
 # 配置文件在 configs/config.yaml 中修改
