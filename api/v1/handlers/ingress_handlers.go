@@ -39,6 +39,11 @@ func (h *IngressHandler) ListIngresses(c *gin.Context) {
 		return
 	}
 
+	// 修复空列表报错问题
+	if ingresses.Items == nil {
+		ingresses.Items = make([]networkingv1.Ingress, 0)
+	}
+
 	// 3. 返回结果
 	respondSuccess(c, http.StatusOK, ingresses)
 }
