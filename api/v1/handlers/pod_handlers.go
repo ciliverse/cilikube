@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"bufio"
 	"context"
 	"fmt"
 	"io"
@@ -342,7 +343,7 @@ func (h *PodHandler) GetPodLogs(c *gin.Context) {
 	namespace := strings.TrimSpace(c.Param("namespace"))
 	name := strings.TrimSpace(c.Param("name"))
 	container := c.Query("container")
-	follow := c.Query("follow") == "true"
+	//follow := c.Query("follow") == "true"
 	timestamps := c.Query("timestamps") == "true"
 	tailLinesStr := c.Query("tailLines")
 
@@ -379,7 +380,7 @@ func (h *PodHandler) GetPodLogs(c *gin.Context) {
 
 	logOptions := &corev1.PodLogOptions{
 		Container:  container,
-		Follow:     follow,
+		Follow:     true,
 		Timestamps: timestamps,
 	}
 
@@ -399,42 +400,37 @@ func (h *PodHandler) GetPodLogs(c *gin.Context) {
 	}
 	defer logStream.Close()
 
-	c.Header("Content-Type", "text/plain; charset=utf-8")
+	// 设置 SSE 响应头
+	c.Header("Content-Type", "text/event-stream")
+	c.Header("Cache-Control", "no-cache")
+	c.Header("Connection", "keep-alive")
+	c.Header("Transfer-Encoding", "chunked")
 
-	if follow {
-		// Use c.Stream for proper handling of follow=true
-		c.Stream(func(w io.Writer) bool {
-			// Copy in a loop or use a buffer? io.Copy might block.
-			// Let's try a simple copy first.
-			_, errCopy := io.Copy(w, logStream)
-			if errCopy != nil {
-				fmt.Printf("Log stream copy error (follow=true): %v\n", errCopy)
-				return false // Stop streaming on error
-			}
-			// If io.Copy returns without error (e.g. stream closed by server), stop.
-			// Need to also check for client disconnect.
-			select {
-			case <-c.Request.Context().Done():
-				fmt.Println("Client disconnected during log follow")
-				return false
-			default:
-				// If copy returned EOF, we should stop.
-				// If copy returned no error, but context isn't done,
-				// it implies the stream finished? This path needs care.
-				// For simplicity, let's assume io.Copy blocks until error/EOF/cancel.
-				// If it returned without error, assume EOF.
-				fmt.Println("Log stream finished (follow=true, EOF?)")
-				return false
-			}
-		})
-	} else {
-		// For non-follow, just copy everything once.
-		_, errCopy := io.Copy(c.Writer, logStream)
-		if errCopy != nil {
-			// Cannot send error response here as headers/body might be partially sent
-			fmt.Printf("Log stream copy error (follow=false): %v\n", errCopy)
-			// c.AbortWithError(http.StatusInternalServerError, errCopy) // May not work
+	writer := c.Writer
+	flusher, ok := writer.(http.Flusher)
+	if !ok {
+		respondError(c, http.StatusInternalServerError, "当前响应不支持 SSE")
+		return
+	}
+
+	scanner := bufio.NewScanner(logStream)
+	for scanner.Scan() {
+		line := scanner.Text()
+		// 写入 SSE 格式
+		fmt.Fprintf(writer, "data: %s\n\n", line)
+		flusher.Flush()
+
+		// 检查客户端是否断开连接
+		select {
+		case <-c.Request.Context().Done():
+			fmt.Println("客户端断开连接")
+			return
+		default:
 		}
+	}
+
+	if err := scanner.Err(); err != nil {
+		fmt.Printf("读取日志出错: %v\n", err)
 	}
 }
 
