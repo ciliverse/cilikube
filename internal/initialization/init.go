@@ -1,32 +1,27 @@
 package initialization
 
 import (
-	"github.com/casbin/casbin/v2"
+	"log"
+	"net/http"
+	"time"
+
 	"github.com/ciliverse/cilikube/api/v1/handlers"
-	"github.com/ciliverse/cilikube/api/v1/models"
 	"github.com/ciliverse/cilikube/api/v1/routes"
 	"github.com/ciliverse/cilikube/configs"
-	"github.com/ciliverse/cilikube/internal/repository"
 	"github.com/ciliverse/cilikube/internal/service"
-	"github.com/ciliverse/cilikube/pkg/auth"
+	"github.com/ciliverse/cilikube/pkg/database"
 	"github.com/ciliverse/cilikube/pkg/k8s"
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
-	"golang.org/x/crypto/bcrypt"
-	"gorm.io/gorm"
-	"log"
-	"net/http"
-	"os"
-	"time"
 	// Add any other necessary imports that were in main.go functions moved here
 	// For k8sClient.Config (type *rest.Config), you might need "k8s.io/client-go/rest"
 	// depending on how the k8s.Client struct is defined and used.
 )
 
 // AppConfig holds all initialized Repositories
-type AppRepository struct {
-	AuthRepository *repository.AuthRepository
-}
+// type AppRepository struct {
+// 	AuthRepository *repository.AuthRepository
+// }
 
 // AppServices holds all initialized services
 // Moved from main.go
@@ -75,19 +70,19 @@ type AppHandlers struct {
 }
 
 // InitializeRepository initializes the database repository.
-func InitializeRepositories(DB *gorm.DB) *AppRepository {
+// func InitializeRepositories(DB *gorm.DB) *AppRepository {
 
-	// 初始化 Repository
-	appRepository := &AppRepository{}
-	appRepository.AuthRepository = repository.NewAuthRepository(DB)
+// 	// 初始化 Repository
+// 	appRepository := &AppRepository{}
+// 	appRepository.AuthRepository = repository.NewAuthRepository(DB)
 
-	return appRepository
-}
+// 	return appRepository
+// }
 
 // InitializeServices initializes all application services.
 // K8s-dependent services are only initialized if k8sAvailable is true.
 // Moved from main.go
-func InitializeServices(repository *AppRepository, k8sClient *k8s.Client, k8sAvailable bool, cfg *configs.Config) *AppServices {
+func InitializeServices(k8sClient *k8s.Client, k8sAvailable bool, cfg *configs.Config) *AppServices {
 	log.Println("初始化服务层...")
 	services := &AppServices{}
 
@@ -95,9 +90,18 @@ func InitializeServices(repository *AppRepository, k8sClient *k8s.Client, k8sAva
 	services.InstallerService = service.NewInstallerService(cfg)
 	log.Println("Installer 服务初始化完成。")
 
+	if err := database.InitDatabase(); err != nil {
+		log.Fatalf("初始化失败: 数据库连接失败: %v", err)
+	}
+	log.Println("数据库连接成功。")
+	if err := database.AutoMigrate(); err != nil {
+		log.Fatalf("初始化失败: 数据库自动迁移失败: %v", err)
+	}
+	log.Println("数据库自动迁移成功。")
+	// --- Database Initialization ---
+
 	// --- Auth Initialization ---
 	// - 这里初始化 AuthService
-	services.AuthService = service.NewAuthService(repository.AuthRepository)
 
 	// Initialize K8s-dependent services (conditionally)
 	if k8sAvailable && k8sClient != nil && k8sClient.Clientset != nil {
@@ -148,12 +152,6 @@ func InitializeHandlers(services *AppServices) *AppHandlers {
 		log.Println("Installer 处理器初始化完成。")
 	} else {
 		log.Println("警告: Installer 服务未初始化，跳过 Installer 处理器初始化。")
-	}
-
-	// --- Auth Initialization ---
-	// - 这里初始化 AuthHandler
-	if services.AuthService != nil {
-		appHandlers.AuthHandler = handlers.NewAuthHandler(services.AuthService)
 	}
 
 	// Initialize K8s-dependent handlers (conditionally based on service)
@@ -213,7 +211,7 @@ func InitializeHandlers(services *AppServices) *AppHandlers {
 
 // SetupRouter configures the Gin router with middleware and routes.
 // Moved from main.go
-func SetupRouter(e *casbin.Enforcer, cfg *configs.Config, handlers *AppHandlers, k8sAvailable bool) *gin.Engine {
+func SetupRouter(cfg *configs.Config, handlers *AppHandlers, k8sAvailable bool) *gin.Engine {
 	log.Println("设置 Gin 路由器...")
 	// gin.SetMode(gin.ReleaseMode) // Uncomment for production
 	router := gin.Default()
@@ -264,24 +262,22 @@ func SetupRouter(e *casbin.Enforcer, cfg *configs.Config, handlers *AppHandlers,
 		// Register non-k8s routes first (if handlers are initialized)
 		// --- Auth Routes ---
 		// 首先先从环境变量中获取 secret key
-		secretKey := os.Getenv("CILIKUBE_JWT_SECRET")
+		// secretKey := os.Getenv("CILIKUBE_JWT_SECRET")
 
 		// --- Protected Routes ---
 		// 将与 k8s 相关操作放进 v1 中，将 login
 		// 或者其他不需要受保护的路由 Ignore (这里需要注意的事一定要用v1，否则不会生效)
 		log.Println("初始化 JWT 中间件...")
-		v1.Use(auth.NewJWTBuilder().
-			IgnorePath("/api/v1/auth/login").
-			JWTMiddleware(secretKey))
+		// v1.Use(auth.JWTAuthMiddleware())
+
 		// --- RBAC Middleware ---
 		// 注册 RBAC 中间件，这个中间件会在每个受保护的路由上应用
-		log.Println("初始化 RBAC 中间件...")
-		v1.Use(auth.NewCasbinBuilder().
-			IgnorePath("/api/v1/auth/login").
-			CasbinMiddlerware(e))
+		// log.Println("初始化 RBAC 中间件...")
+		// v1.Use(auth.NewCasbinBuilder().
+		// 	IgnorePath("/api/v1/auth/login").
+		// 	CasbinMiddlerware(e))
 
 		// --- Auth Routes ---
-		routes.RegisterAuthRoutes(v1, handlers.AuthHandler)
 
 		// Register K8s related routes only if handlers were initialized
 		// We check if the specific handlers pointer is non-nil
@@ -404,51 +400,61 @@ func SetupRouter(e *casbin.Enforcer, cfg *configs.Config, handlers *AppHandlers,
 	return router
 }
 
-// InitializeDefaultUser 创建超级管理员账户和游客账户
-func InitializeDefaultUser(e *casbin.Enforcer, db *gorm.DB) {
-	// --- 检查是否已经存在超级管理员 ---
-	if _, err := db.Where("username = ?", "admin").First(&models.User{}).Rows(); err == nil {
-		// 用户已存在，不做任何操作
-		log.Println("默认用户 'admin' 已存在，跳过创建。")
-	} else {
-		// 加密初始化密码
-		password, _ := bcrypt.GenerateFromPassword([]byte("cilikube"), bcrypt.DefaultCost)
-		user := &models.User{
-			Username: "admin",
-			Password: string(password),
-			Roles:    "super_admin",
-		}
-		_, err := db.Create(user).Rows()
-		if err != nil {
-			log.Fatalf("创建默认用户 'admin' 失败: %v", err)
-		}
-		// 绑定用户的角色权限
-		// --- 默认用户绑定默认权限 ---
-		// admin <- super_admin
-		if _, err := e.AddRoleForUser("admin", "super_admin"); err != nil {
-			log.Fatalf("绑定用户 'admin' 的角色 'super_admin' 失败: %v", err)
-		}
-		log.Println("超级管理员用户初始化完成。")
-	}
+// InitializeDefaultConfig 初始化默认配置
 
-	// --- 添加游客账户 ---
-	if err := db.Where("username = ?", "visitor").First(&models.User{}).Row(); err != nil {
-		log.Println("默认游客账号已存在，不再创建。")
-	} else {
-		password, _ := bcrypt.GenerateFromPassword([]byte("123456"), bcrypt.DefaultCost)
-		user := &models.User{
-			Username: "visitor",
-			Password: string(password),
-			Roles:    "normal_user",
-		}
-		_, err := db.Create(user).Rows()
-		if err != nil {
-			log.Fatalf("创建默认游客账号 'visitor' 失败: %v", err)
-		}
-		// 给游客绑定 normal_user 的权限，全部都是只给GET
-		if _, err := e.AddRoleForUser("visitor", "normal_user"); err != nil {
-			log.Fatalf("绑定用户 'visitor' 的角色'normal_user' 失败: %v", err)
-		}
+// InitializeDefaultUser 创建超级管理员账户和游客账户
+// func InitializeDefaultUser(e *casbin.Enforcer, db *gorm.DB) {
+// 	// --- 检查是否已经存在超级管理员 ---
+// 	if _, err := db.Where("username = ?", "admin").First(&models.User{}).Rows(); err == nil {
+// 		// 用户已存在，不做任何操作
+// 		log.Println("默认用户 'admin' 已存在，跳过创建。")
+// 	} else {
+// 		// 加密初始化密码
+// 		password, _ := bcrypt.GenerateFromPassword([]byte("cilikube"), bcrypt.DefaultCost)
+// 		user := &models.User{
+// 			Username: "admin",
+// 			Password: string(password),
+// 			Role:     "super_admin",
+// 		}
+// 		_, err := db.Create(user).Rows()
+// 		if err != nil {
+// 			log.Fatalf("创建默认用户 'admin' 失败: %v", err)
+// 		}
+// 		// 绑定用户的角色权限
+// 		// --- 默认用户绑定默认权限 ---
+// 		// admin <- super_admin
+// 		if _, err := e.AddRoleForUser("admin", "super_admin"); err != nil {
+// 			log.Fatalf("绑定用户 'admin' 的角色 'super_admin' 失败: %v", err)
+// 		}
+// 		log.Println("超级管理员用户初始化完成。")
+// 	}
+
+// 	// --- 添加游客账户 ---
+// 	if err := db.Where("username = ?", "visitor").First(&models.User{}).Row(); err != nil {
+// 		log.Println("默认游客账号已存在，不再创建。")
+// 	} else {
+// 		password, _ := bcrypt.GenerateFromPassword([]byte("123456"), bcrypt.DefaultCost)
+// 		user := &models.User{
+// 			Username: "visitor",
+// 			Password: string(password),
+// 			Role:     "normal_user",
+// 		}
+// 		_, err := db.Create(user).Rows()
+// 		if err != nil {
+// 			log.Fatalf("创建默认游客账号 'visitor' 失败: %v", err)
+// 		}
+// 		// 给游客绑定 normal_user 的权限，全部都是只给GET
+// 		if _, err := e.AddRoleForUser("visitor", "normal_user"); err != nil {
+// 			log.Fatalf("绑定用户 'visitor' 的角色'normal_user' 失败: %v", err)
+// 		}
+// 	}
+// 	log.Println("游客账户初始化完成。")
+// }
+
+func Cleanup() {
+	// 关闭数据库连接
+	if err := database.CloseDatabase(); err != nil {
+		log.Fatalf("关闭数据库连接失败: %v", err)
 	}
-	log.Println("游客账户初始化完成。")
+	log.Println("数据库连接已关闭。")
 }

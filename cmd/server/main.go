@@ -3,15 +3,14 @@ package main
 import (
 	"flag"
 	"fmt"
-	"github.com/ciliverse/cilikube/pkg/auth"
-	"github.com/ciliverse/cilikube/pkg/db"
 	"log"
 	"os"
 
 	// time is still needed for healthz in main
 	"github.com/ciliverse/cilikube/configs"
 	"github.com/ciliverse/cilikube/internal/initialization" // Import the new package
-	"github.com/ciliverse/cilikube/pkg/k8s"                 // Your custom k8s client package
+	"github.com/ciliverse/cilikube/pkg/database"
+	"github.com/ciliverse/cilikube/pkg/k8s" // Your custom k8s client package
 )
 
 func main() {
@@ -23,18 +22,16 @@ func main() {
 	log.Println("配置加载成功。")
 
 	// --- 数据库初始化 ---
-	DB, err := db.InitializeDB(&cfg.MySQL)
-	if err != nil {
+	// Initialize the database connection
+	if err := database.InitDatabase(); err != nil {
 		log.Fatalf("初始化失败: 数据库连接失败: %v", err)
-		return
 	}
 	log.Println("数据库连接成功。")
-
-	// --- 初始化 Casbin RBAC 权限控制 ---
-	e, err := auth.InitCasbin(DB)
-
-	// --- 初始化默认用户 ---
-	initialization.InitializeDefaultUser(e, DB)
+	// --- 数据库自动迁移 ---
+	if err := database.AutoMigrate(); err != nil {
+		log.Fatalf("初始化失败: 数据库自动迁移失败: %v", err)
+	}
+	log.Println("数据库自动迁移成功。")
 
 	// --- Kubernetes Client Initialization ---
 	// initializeK8sClient remains in main as it's the connection point for k8s
@@ -42,14 +39,13 @@ func main() {
 
 	// --- Application Initialization (Services & Handlers) ---
 	// Call functions from the new initialization package
-	repositories := initialization.InitializeRepositories(DB)
-	services := initialization.InitializeServices(repositories, k8sClient, k8sAvailable, cfg)
+	// repositories := initialization.InitializeRepositories(DB)
+	services := initialization.InitializeServices(k8sClient, k8sAvailable, cfg)
 	appHandlers := initialization.InitializeHandlers(services)
 
 	// --- Gin Router Setup ---
 	// Call function from the new initialization package
-	// 添加 enforcer  到 gin 上下文
-	router := initialization.SetupRouter(e, cfg, appHandlers, k8sAvailable)
+	router := initialization.SetupRouter(cfg, appHandlers, k8sAvailable)
 
 	// --- Start Server ---
 	// startServer remains in main as it's the server lifecycle management

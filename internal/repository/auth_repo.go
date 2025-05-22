@@ -2,6 +2,7 @@ package repository
 
 import (
 	"errors"
+
 	"github.com/ciliverse/cilikube/api/v1/models"
 	"gorm.io/gorm"
 )
@@ -31,7 +32,7 @@ func (r *AuthRepository) CreateUser(username, password, roles, email string) err
 	user := models.User{
 		Username: username,
 		Password: password,
-		Roles:    roles,
+		Role:     roles,
 		Email:    email,
 	}
 	if err := r.DB.Create(&user).Error; err != nil {

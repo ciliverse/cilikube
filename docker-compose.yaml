@@ -1,4 +1,3 @@
-
 services:
   backend:
     image: cilliantech/cilikube:v0.1.0
