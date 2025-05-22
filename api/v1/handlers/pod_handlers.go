@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"bufio"
 	"context"
 	"fmt"
 	"io"
@@ -336,111 +335,6 @@ func (h *PodHandler) WatchPods(c *gin.Context) {
 
 	// The handler function returns here, but the goroutine inside c.Stream continues
 	fmt.Println("WatchPods handler finished setup, streaming started.")
-}
-
-// GetPodLogs ... (保持不变)
-func (h *PodHandler) GetPodLogs(c *gin.Context) {
-	namespace := strings.TrimSpace(c.Param("namespace"))
-	name := strings.TrimSpace(c.Param("name"))
-	container := c.Query("container")
-	//follow := c.Query("follow") == "true"
-	timestamps := c.Query("timestamps") == "true"
-	tailLinesStr := c.Query("tailLines")
-
-	if !utils.ValidateNamespace(namespace) || !utils.ValidateResourceName(name) {
-		respondError(c, http.StatusBadRequest, "无效的命名空间或 Pod 名称格式")
-		return
-	}
-	if container == "" {
-		respondError(c, http.StatusBadRequest, "必须提供 'container' 查询参数")
-		return
-	}
-
-	// Optional: Check container exists
-	pod, err := h.service.Get(namespace, name)
-	if err != nil {
-		if errors.IsNotFound(err) {
-			respondError(c, http.StatusNotFound, "Pod 不存在")
-			return
-		}
-		respondError(c, http.StatusInternalServerError, "获取 Pod 信息失败: "+err.Error())
-		return
-	}
-	containerFound := false
-	for _, cont := range append(pod.Spec.Containers, pod.Spec.InitContainers...) {
-		if cont.Name == container {
-			containerFound = true
-			break
-		}
-	}
-	if !containerFound {
-		respondError(c, http.StatusNotFound, fmt.Sprintf("容器 '%s' 在 Pod '%s' 中未找到", container, name))
-		return
-	}
-
-	logOptions := &corev1.PodLogOptions{
-		Container:  container,
-		Follow:     true,
-		Timestamps: timestamps,
-	}
-
-	if tailLinesStr != "" {
-		tailLines, err := strconv.ParseInt(tailLinesStr, 10, 64)
-		if err != nil || tailLines <= 0 {
-			respondError(c, http.StatusBadRequest, "无效的 'tailLines' 参数")
-			return
-		}
-		logOptions.TailLines = &tailLines
-	}
-
-	logStream, err := h.service.GetPodLogs(namespace, name, logOptions)
-	if err != nil {
-		respondError(c, http.StatusInternalServerError, "获取日志失败: "+err.Error())
-		return
-	}
-	// 处理 logStream.Close() 的错误
-	defer func() {
-		if closeErr := logStream.Close(); closeErr != nil {
-			fmt.Printf("关闭日志流出错: %v\n", closeErr)
-		}
-	}()
-
-	// 设置 SSE 响应头
-	c.Header("Content-Type", "text/event-stream")
-	c.Header("Cache-Control", "no-cache")
-	c.Header("Connection", "keep-alive")
-	c.Header("Transfer-Encoding", "chunked")
-
-	writer := c.Writer
-	flusher, ok := writer.(http.Flusher)
-	if !ok {
-		respondError(c, http.StatusInternalServerError, "当前响应不支持 SSE")
-		return
-	}
-
-	scanner := bufio.NewScanner(logStream)
-	for scanner.Scan() {
-		line := scanner.Text()
-		// 处理 fmt.Fprintf 的错误
-		if _, err := fmt.Fprintf(writer, "data: %s\n\n", line); err != nil {
-			fmt.Printf("写入 SSE 数据出错: %v\n", err)
-			// 客户端可能已断开连接，退出循环
-			break
-		}
-		flusher.Flush()
-
-		// 检查客户端是否断开连接
-		select {
-		case <-c.Request.Context().Done():
-			fmt.Println("客户端断开连接")
-			return
-		default:
-		}
-	}
-
-	if err := scanner.Err(); err != nil {
-		fmt.Printf("读取日志出错: %v\n", err)
-	}
 }
 
 // ExecIntoPod ... (保持不变)
