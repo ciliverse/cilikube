@@ -398,7 +398,12 @@ func (h *PodHandler) GetPodLogs(c *gin.Context) {
 		respondError(c, http.StatusInternalServerError, "获取日志失败: "+err.Error())
 		return
 	}
-	defer logStream.Close()
+	// 处理 logStream.Close() 的错误
+	defer func() {
+		if closeErr := logStream.Close(); closeErr != nil {
+			fmt.Printf("关闭日志流出错: %v\n", closeErr)
+		}
+	}()
 
 	// 设置 SSE 响应头
 	c.Header("Content-Type", "text/event-stream")
@@ -416,8 +421,12 @@ func (h *PodHandler) GetPodLogs(c *gin.Context) {
 	scanner := bufio.NewScanner(logStream)
 	for scanner.Scan() {
 		line := scanner.Text()
-		// 写入 SSE 格式
-		fmt.Fprintf(writer, "data: %s\n\n", line)
+		// 处理 fmt.Fprintf 的错误
+		if _, err := fmt.Fprintf(writer, "data: %s\n\n", line); err != nil {
+			fmt.Printf("写入 SSE 数据出错: %v\n", err)
+			// 客户端可能已断开连接，退出循环
+			break
+		}
 		flusher.Flush()
 
 		// 检查客户端是否断开连接
