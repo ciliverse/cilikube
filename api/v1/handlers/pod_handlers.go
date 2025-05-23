@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"context"
 	"fmt"
 	"io"
 	"net/http"
@@ -13,7 +12,6 @@ import (
 	"github.com/ciliverse/cilikube/internal/service"
 	"github.com/ciliverse/cilikube/pkg/utils" // Assuming utils package exists
 	"github.com/gin-gonic/gin"
-	"github.com/gorilla/websocket"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -22,15 +20,6 @@ import (
 
 type PodHandler struct {
 	service *service.PodService
-}
-
-var upgrader = websocket.Upgrader{
-	ReadBufferSize:  1024,
-	WriteBufferSize: 1024,
-	CheckOrigin: func(r *http.Request) bool {
-		// Allow all origins for dev, **restrict in production**
-		return true
-	},
 }
 
 func NewPodHandler(svc *service.PodService) *PodHandler {
@@ -337,94 +326,6 @@ func (h *PodHandler) WatchPods(c *gin.Context) {
 	fmt.Println("WatchPods handlers finished setup, streaming started.")
 }
 
-// ExecIntoPod ... (保持不变)
-func (h *PodHandler) ExecIntoPod(c *gin.Context) {
-	namespace := strings.TrimSpace(c.Param("namespace"))
-	name := strings.TrimSpace(c.Param("name"))
-	container := c.Query("container")
-	commandStr := c.Query("command")
-	argsStr := c.Query("args")
-
-	enableStdin := c.DefaultQuery("stdin", "true") == "true"
-	enableStdout := c.DefaultQuery("stdout", "true") == "true"
-	enableStderr := c.DefaultQuery("stderr", "true") == "true"
-	enableTty := c.Query("tty") == "true"
-
-	if !utils.ValidateNamespace(namespace) || !utils.ValidateResourceName(name) || container == "" || commandStr == "" {
-		respondError(c, http.StatusBadRequest, "无效的命名空间/Pod名称/容器/命令参数")
-		return
-	}
-
-	ws, err := upgrader.Upgrade(c.Writer, c.Request, nil)
-	if err != nil {
-		fmt.Printf("WebSocket upgrade failed: %v\n", err)
-		// Cannot use respondError here reliably
-		return
-	}
-	defer ws.Close()
-
-	command := []string{commandStr}
-	if argsStr != "" {
-		// Basic splitting, consider more robust parsing if needed
-		args := strings.Split(argsStr, ",")
-		command = append(command, args...)
-	}
-
-	wsStreamHandler := NewWebSocketStreamHandler(ws, enableStdin, enableStdout, enableStderr)
-	defer wsStreamHandler.Close() // Ensure pipes are closed
-
-	execOptions := service.ExecOptions{
-		Namespace:     namespace,
-		PodName:       name,
-		ContainerName: container,
-		Command:       command,
-		Stdin:         wsStreamHandler,
-		Stdout:        wsStreamHandler,
-		Stderr:        wsStreamHandler, // Combine stdout/stderr for simplicity here
-		Tty:           enableTty,
-	}
-
-	ctx, cancel := context.WithCancel(c.Request.Context())
-	defer cancel()
-
-	var execErr error
-	execDone := make(chan struct{})
-	go func() {
-		defer close(execDone)
-		fmt.Printf("Executing command: %v in %s/%s/%s\n", command, namespace, name, container)
-		execErr = h.service.ExecIntoPod(ctx, execOptions)
-		if execErr != nil {
-			// Attempt to send error back via WebSocket
-			errMsg := fmt.Sprintf("\r\n--- Command Execution Failed ---\r\nError: %v\r\n", execErr)
-			wsStreamHandler.WriteMessage(websocket.TextMessage, []byte(errMsg))
-			fmt.Printf("ExecIntoPod error: %v\n", execErr)
-			// Close the WebSocket connection from server-side on error?
-			// ws.Close() // Defer already handles closing
-			cancel() // Cancel context to potentially stop read/write loops
-		} else {
-			fmt.Println("ExecIntoPod finished without error.")
-			// Optionally send a success message or just rely on stream closing
-			// wsStreamHandler.WriteMessage(websocket.TextMessage, []byte("\r\n--- Command Finished ---\r\n"))
-		}
-		// Close the pipes from the exec side to signal EOF to ws loops
-		wsStreamHandler.ClosePipes()
-
-	}()
-
-	// Wait for execution goroutine to finish OR client to disconnect
-	select {
-	case <-execDone:
-		fmt.Println("Exec goroutine completed.")
-		// Maybe wait a tiny bit for final output to be written to WS?
-		// time.Sleep(100 * time.Millisecond)
-	case <-ctx.Done(): // Triggered by client disconnect or cancel() call
-		fmt.Println("Exec context done (client disconnected or error).")
-	}
-
-	fmt.Println("Exec handlers exiting.")
-	// ws.Close() is handled by defer
-}
-
 // GetPodYAML ... (保持不变)
 func (h *PodHandler) GetPodYAML(c *gin.Context) {
 	namespace := strings.TrimSpace(c.Param("namespace"))
@@ -534,155 +435,4 @@ func respondError(c *gin.Context, code int, message string) {
 		"code":    code,
 		"message": message,
 	})
-}
-
-// --- WebSocket Stream Handler Helper (Improved Closing) ---
-type WebSocketStreamHandler struct {
-	ws          *websocket.Conn
-	stdinPipeR  *io.PipeReader
-	stdinPipeW  *io.PipeWriter
-	stdoutPipeR *io.PipeReader // Renamed for clarity
-	stdoutPipeW *io.PipeWriter
-	readDone    chan struct{}
-	writeDone   chan struct{}
-}
-
-func NewWebSocketStreamHandler(ws *websocket.Conn, stdin, stdout, stderr bool) *WebSocketStreamHandler {
-	// Stdin pipe: ws -> pipe -> remotecommand
-	prStdin, pwStdin := io.Pipe()
-	// Stdout pipe: remotecommand -> pipe -> ws
-	prStdout, pwStdout := io.Pipe()
-
-	h := &WebSocketStreamHandler{
-		ws:          ws,
-		stdinPipeR:  prStdin,
-		stdinPipeW:  pwStdin,
-		stdoutPipeR: prStdout, // Read from this pipe in writeLoop
-		stdoutPipeW: pwStdout, // Write to this pipe from remotecommand
-		readDone:    make(chan struct{}),
-		writeDone:   make(chan struct{}),
-	}
-
-	go h.readLoop(stdin)
-	go h.writeLoop() // writeLoop now reads from h.stdoutPipeR
-
-	return h
-}
-
-func (h *WebSocketStreamHandler) Read(p []byte) (n int, err error) {
-	n, err = h.stdinPipeR.Read(p)
-	// fmt.Printf("stdinPipeR Read: n=%d, err=%v\n", n, err)
-	return
-}
-
-func (h *WebSocketStreamHandler) Write(p []byte) (n int, err error) {
-	// This is called by remotecommand (stdout/stderr)
-	n, err = h.stdoutPipeW.Write(p)
-	// fmt.Printf("stdoutPipeW Write: n=%d, err=%v\n", n, err)
-	return
-}
-
-func (h *WebSocketStreamHandler) readLoop(stdinEnabled bool) {
-	defer close(h.readDone)
-	defer h.stdinPipeW.CloseWithError(io.EOF) // Signal EOF to reader when done
-	defer fmt.Println("WS Read loop exited")
-
-	if !stdinEnabled {
-		fmt.Println("WS Read loop: stdin disabled.")
-		return
-	}
-
-	fmt.Println("WS Read loop started")
-	for {
-		msgType, payload, err := h.ws.ReadMessage()
-		if err != nil {
-			// Propagate error to the pipe reader
-			h.stdinPipeW.CloseWithError(fmt.Errorf("WebSocket read error: %w", err))
-			if websocket.IsCloseError(err, websocket.CloseNormalClosure, websocket.CloseGoingAway) {
-				fmt.Println("WebSocket closed normally by client.")
-			} else {
-				fmt.Printf("WebSocket read error: %v\n", err)
-			}
-			return
-		}
-
-		if msgType == websocket.TextMessage || msgType == websocket.BinaryMessage {
-			_, err = h.stdinPipeW.Write(payload)
-			if err != nil {
-				fmt.Printf("Error writing to stdin pipe: %v\n", err)
-				// Close WebSocket? Or just return? Let's return.
-				return
-			}
-		} else if msgType == websocket.CloseMessage {
-			fmt.Println("WS Read loop: Received close message")
-			h.stdinPipeW.CloseWithError(io.EOF) // Normal close
-			return
-		}
-	}
-}
-
-func (h *WebSocketStreamHandler) writeLoop() {
-	defer close(h.writeDone)
-	// No need to close h.stdoutPipeR, reader closes itself on EOF/error
-	defer fmt.Println("WS Write loop exited")
-	fmt.Println("WS Write loop started")
-
-	buf := make([]byte, 4096) // Slightly larger buffer
-	for {
-		// Read from the pipe where remotecommand writes stdout/stderr
-		n, err := h.stdoutPipeR.Read(buf)
-		if n > 0 {
-			// Determine message type (Binary for TTY usually, Text otherwise)
-			// Let's default to Binary for now, maybe adjust based on TTY later.
-			errWrite := h.ws.WriteMessage(websocket.BinaryMessage, buf[:n])
-			if errWrite != nil {
-				fmt.Printf("WebSocket write error: %v\n", errWrite)
-				// If we can't write to WS, we should stop reading the pipe.
-				// Closing the pipe reader will signal the writer (remotecommand)
-				h.stdoutPipeR.Close() // Close the reader side
-				return
-			}
-		}
-		if err != nil {
-			if err == io.EOF {
-				fmt.Println("Stdout/Stderr pipe closed (EOF). Signaling WS close.")
-				// Send a WebSocket close message before exiting
-				h.ws.WriteMessage(websocket.CloseMessage,
-					websocket.FormatCloseMessage(websocket.CloseNormalClosure, "Stream finished"))
-			} else {
-				fmt.Printf("Error reading from stdout/stderr pipe: %v\n", err)
-				h.ws.WriteMessage(websocket.CloseMessage,
-					websocket.FormatCloseMessage(websocket.CloseInternalServerErr, "Pipe read error"))
-			}
-			return // Exit loop on EOF or error
-		}
-	}
-}
-
-// WriteMessage sends an explicit message (e.g., error text) to the WebSocket client
-func (h *WebSocketStreamHandler) WriteMessage(messageType int, data []byte) error {
-	// Consider adding locking if multiple goroutines could call this,
-	// but in this setup, only the main handlers calls it for errors.
-	return h.ws.WriteMessage(messageType, data)
-}
-
-// ClosePipes closes the writing ends of the pipes, typically called by the exec goroutine when done.
-func (h *WebSocketStreamHandler) ClosePipes() {
-	fmt.Println("Closing WS stream handlers pipes")
-	// Closing the writer signals EOF to the reader in the other goroutine
-	h.stdinPipeW.CloseWithError(io.EOF)
-	h.stdoutPipeW.CloseWithError(io.EOF)
-}
-
-// Close closes the WebSocket connection and waits for loops to finish.
-// This should likely be called by the main handlers function (e.g., in defer).
-func (h *WebSocketStreamHandler) Close() {
-	fmt.Println("Closing WebSocket stream handlers")
-	// Closing the WebSocket connection should cause ReadMessage/WriteMessage
-	// in the loops to return errors, thus stopping the loops.
-	h.ws.Close()
-	// Wait for loops to finish cleaning up (optional, but good practice)
-	<-h.readDone
-	<-h.writeDone
-	fmt.Println("WebSocket stream handlers fully closed")
 }
