@@ -347,7 +347,7 @@ func (h *PodHandler) GetPodYAML(c *gin.Context) {
 	}
 
 	c.Header("Content-Type", "application/yaml")
-	c.Data(http.StatusOK, "application/yaml", yamlBytes)
+	respondSuccess(c, http.StatusOK, string(yamlBytes))
 }
 
 // UpdatePodYAML ... (保持不变)
