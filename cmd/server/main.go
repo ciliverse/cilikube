@@ -7,8 +7,10 @@ import (
 	"os"
 
 	// time is still needed for healthz in main
+	"github.com/casbin/casbin/v2"
 	"github.com/ciliverse/cilikube/configs"
 	"github.com/ciliverse/cilikube/internal/initialization" // Import the new package
+	"github.com/ciliverse/cilikube/pkg/auth"
 	"github.com/ciliverse/cilikube/pkg/database"
 	"github.com/ciliverse/cilikube/pkg/k8s" // Your custom k8s client package
 )
@@ -23,15 +25,15 @@ func main() {
 
 	// --- 数据库初始化 ---
 	// Initialize the database connection
-	if err := database.InitDatabase(); err != nil {
-		log.Fatalf("初始化失败: 数据库连接失败: %v", err)
-	}
-	log.Println("数据库连接成功。")
-	// --- 数据库自动迁移 ---
-	if err := database.AutoMigrate(); err != nil {
-		log.Fatalf("初始化失败: 数据库自动迁移失败: %v", err)
-	}
-	log.Println("数据库自动迁移成功。")
+	// if err := database.InitDatabase(); err != nil {
+	// 	log.Fatalf("初始化失败: 数据库连接失败: %v", err)
+	// }
+	// log.Println("数据库连接成功。")
+	// // --- 数据库自动迁移 ---
+	// if err := database.AutoMigrate(); err != nil {
+	// 	log.Fatalf("初始化失败: 数据库自动迁移失败: %v", err)
+	// }
+	// log.Println("数据库自动迁移成功。")
 
 	// --- Kubernetes Client Initialization ---
 	// initializeK8sClient remains in main as it's the connection point for k8s
@@ -43,9 +45,29 @@ func main() {
 	services := initialization.InitializeServices(k8sClient, k8sAvailable, cfg)
 	appHandlers := initialization.InitializeHandlers(services)
 
+	// <--- ADDED: Casbin Initialization ---
+	var e *casbin.Enforcer // 声明 enforcer 变量
+	if cfg.Database.Enabled {
+		// 确保数据库已成功初始化
+		if database.DB != nil {
+			e, err = auth.InitCasbin(database.DB) // 调用 InitCasbin
+			if err != nil {
+				log.Fatalf("初始化 Casbin 失败: %v", err)
+			}
+			log.Println("Casbin 初始化成功。")
+			// (可选) 在这里调用初始化默认用户和 Casbin 角色绑定
+			// initialization.InitializeDefaultUser(e, database.DB)
+		} else {
+			log.Println("警告: 数据库已启用但未成功初始化，跳过 Casbin 初始化。")
+		}
+	} else {
+		log.Println("警告: 数据库未启用，跳过 Casbin 初始化。")
+	}
+	// <--- ADDED: Casbin Initialization End ---
+
 	// --- Gin Router Setup ---
 	// Call function from the new initialization package
-	router := initialization.SetupRouter(cfg, appHandlers, k8sAvailable)
+	router := initialization.SetupRouter(cfg, appHandlers, k8sAvailable, e)
 
 	// --- Start Server ---
 	// startServer remains in main as it's the server lifecycle management
