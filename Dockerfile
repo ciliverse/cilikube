@@ -1,7 +1,7 @@
 # ---- Stage 1: BUILDER ----
 # 使用官方的 Golang Alpine 镜像作为构建环境
 # 你可以根据你的项目选择一个合适的 Go 版本，例如 1.22, 1.23, 1.24 等
-FROM golang:1.24-alpine AS BUILDER
+FROM golang:1.24-alpine AS builder
 
 # 可选: 设置 Go 代理以加速在中国大陆地区的依赖下载
 # RUN go env -w GOPROXY=https://goproxy.cn,direct
@@ -35,7 +35,7 @@ RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-w -s" -o cilikube ./cmd/server/
 # ---- Stage 2: RUNNER ----
 # 使用官方的 Alpine Linux 镜像作为轻量级的运行环境
 # alpine:3.19 是一个较新且稳定的版本 (请检查是否有更新的稳定版)
-FROM alpine:3.19 AS RUNNER
+FROM alpine:3.19 AS runner
 # 对于非常小的镜像，且你的应用是完全静态链接的，也可以考虑：
 # FROM gcr.io/distroless/static-debian11 AS RUNNER
 # FROM scratch AS RUNNER

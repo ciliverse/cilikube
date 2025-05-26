@@ -12,19 +12,19 @@ func RegisterSummaryRoutes(router *gin.RouterGroup, handler *handlers.SummaryHan
 	{
 		summaryGroup.GET("/resources", handler.GetResourceSummary)
 		// *** ADD THIS LINE ***
-		summaryGroup.GET("/backend-dependencies", handler.GetBackendDependencies) // Register the new handler
+		summaryGroup.GET("/backend-dependencies", handler.GetBackendDependencies) // Register the new handlers
 	}
 }
 
 // If you have an authenticated version, add it there too if needed
 /*
-func RegisterSummaryRoutesWithAuth(router *gin.RouterGroup, handler *handlers.SummaryHandler, authMiddleware ...gin.HandlerFunc) {
+func RegisterSummaryRoutesWithAuth(router *gin.RouterGroup, handlers *handlers.SummaryHandler, authMiddleware ...gin.HandlerFunc) {
 	summaryGroup := router.Group("/summary")
     // Apply middleware if needed
     // summaryGroup.Use(authMiddleware...)
 	{
-		summaryGroup.GET("/resources", handler.GetResourceSummary)
-        summaryGroup.GET("/backend-dependencies", handler.GetBackendDependencies)
+		summaryGroup.GET("/resources", handlers.GetResourceSummary)
+        summaryGroup.GET("/backend-dependencies", handlers.GetBackendDependencies)
 	}
 }
 */

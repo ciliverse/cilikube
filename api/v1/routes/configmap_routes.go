@@ -20,6 +20,6 @@ func RegisterConfigMapRoutes(router *gin.RouterGroup, handler *handlers.ConfigMa
 	// // Watch端点
 	// watchGroup := router.Group("/watch/namespaces/:namespace/configmaps")
 	// {
-	// 	watchGroup.GET("", handler.WatchConfigMaps)
+	// 	watchGroup.GET("", handlers.WatchConfigMaps)
 	// }
 }

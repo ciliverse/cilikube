@@ -20,6 +20,6 @@ func RegisterSecretRoutes(router *gin.RouterGroup, handler *handlers.SecretHandl
 	// // Watch端点
 	// watchGroup := router.Group("/watch/namespaces/:namespace/secrets")
 	// {
-	// 	watchGroup.GET("", handler.WatchSecrets)
+	// 	watchGroup.GET("", handlers.WatchSecrets)
 	// }
 }

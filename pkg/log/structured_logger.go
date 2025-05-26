@@ -15,7 +15,8 @@ func Init(production bool) {
 	if !production {
 		config = zap.NewDevelopmentConfig()
 	}
-
+	config.OutputPaths = []string{"stdout"}
+	config.ErrorOutputPaths = []string{"stderr"}
 	config.EncoderConfig.EncodeTime = zapcore.ISO8601TimeEncoder
 	Logger, _ = config.Build()
 }
