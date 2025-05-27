@@ -37,6 +37,7 @@ type InstallerConfig struct {
 }
 
 type DatabaseConfig struct {
+	Enabled  bool   `yaml:"enabled" json:"enabled"`
 	Host     string `yaml:"host" json:"host"`
 	Port     int    `yaml:"port" json:"port"`
 	Username string `yaml:"username" json:"username"`
@@ -153,6 +154,27 @@ func setDefaults() {
 			GlobalConfig.Kubernetes.Kubeconfig = kubeconfig
 		} else {
 			GlobalConfig.Kubernetes.Kubeconfig = filepath.Join(os.Getenv("HOME"), ".kube", "config")
+		}
+	}
+	// 数据库默认值
+	if GlobalConfig.Database.Enabled {
+		if GlobalConfig.Database.Host == "" {
+			GlobalConfig.Database.Host = "localhost"
+		}
+		if GlobalConfig.Database.Port == 0 {
+			GlobalConfig.Database.Port = 3306
+		}
+		if GlobalConfig.Database.Username == "" {
+			GlobalConfig.Database.Username = "root"
+		}
+		if GlobalConfig.Database.Database == "" {
+			GlobalConfig.Database.Database = "cilikube"
+		}
+		if GlobalConfig.Database.Password == "" {
+			GlobalConfig.Database.Password = "cilikube-password-change-in-production"
+		}
+		if GlobalConfig.Database.Charset == "" {
+			GlobalConfig.Database.Charset = "utf8mb4"
 		}
 	}
 }

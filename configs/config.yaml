@@ -21,3 +21,27 @@ installer:
   # Directory to store downloaded files temporarily. Defaults to '.' (server's working dir)
   # downloadDir: "/tmp/cilikube_downloads" # Example using /tmp
   downloadDir: "/tmp/cilikube_downloads" # Use default (current directory)
+
+database:
+  # Database type (sqlite, mysql, postgres, etc.)
+  # type: "sqlite"
+
+  # # SQLite database file path
+  # sqlite:
+  #   file: "cilikube.db"
+
+  # MySQL configuration
+    enabled: false
+    host: "localhost"
+    port: 3306
+    user: "cilikube_user"
+    password: "cilikube_password"
+    database: "cilikube_db"
+
+  # # PostgreSQL configuration
+  # postgres:
+  #   host: "localhost"
+  #   port: 5432
+  #   user: "cilikube_user"
+  #   password: "cilikube_password"
+  #   database: "cilikube_db"
