@@ -5,10 +5,12 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/casbin/casbin/v2"
 	"github.com/ciliverse/cilikube/api/v1/handlers"
 	"github.com/ciliverse/cilikube/api/v1/routes"
 	"github.com/ciliverse/cilikube/configs"
 	"github.com/ciliverse/cilikube/internal/service"
+	"github.com/ciliverse/cilikube/pkg/auth"
 	"github.com/ciliverse/cilikube/pkg/database"
 	"github.com/ciliverse/cilikube/pkg/k8s"
 	"github.com/gin-contrib/cors"
@@ -90,18 +92,30 @@ func InitializeServices(k8sClient *k8s.Client, k8sAvailable bool, cfg *configs.C
 	services.InstallerService = service.NewInstallerService(cfg)
 	log.Println("Installer 服务初始化完成。")
 
-	if err := database.InitDatabase(); err != nil {
-		log.Fatalf("初始化失败: 数据库连接失败: %v", err)
+	if cfg.Database.Enabled {
+		log.Println("数据库已启用，开始初始化...")
+		if err := database.InitDatabase(); err != nil {
+			log.Fatalf("初始化失败: 数据库连接失败: %v", err)
+		}
+		// 只有 InitDatabase 成功 (DB != nil) 才会继续
+		if database.DB != nil {
+			// log.Println("数据库连接成功。") // 这条日志现在只会在真正连接后打印
+			if err := database.AutoMigrate(); err != nil {
+				log.Fatalf("初始化失败: 数据库自动迁移失败: %v", err)
+			}
+
+		} else {
+			// 这种情况理论上不应该发生，除非 InitDatabase 内部逻辑有误
+			log.Println("警告: 数据库已启用但初始化失败，相关服务将无法使用。")
+		}
+	} else {
+		log.Println("警告: 数据库未启用，相关服务将无法使用。")
 	}
-	log.Println("数据库连接成功。")
-	if err := database.AutoMigrate(); err != nil {
-		log.Fatalf("初始化失败: 数据库自动迁移失败: %v", err)
-	}
-	log.Println("数据库自动迁移成功。")
-	// --- Database Initialization ---
+	// Initialize AuthService
 
 	// --- Auth Initialization ---
 	// - 这里初始化 AuthService
+	// - 需要确保 database.DB 已经成功连接
 
 	// Initialize K8s-dependent services (conditionally)
 	if k8sAvailable && k8sClient != nil && k8sClient.Clientset != nil {
@@ -211,7 +225,7 @@ func InitializeHandlers(services *AppServices) *AppHandlers {
 
 // SetupRouter configures the Gin router with middleware and routes.
 // Moved from main.go
-func SetupRouter(cfg *configs.Config, handlers *AppHandlers, k8sAvailable bool) *gin.Engine {
+func SetupRouter(cfg *configs.Config, handlers *AppHandlers, k8sAvailable bool, e *casbin.Enforcer) *gin.Engine {
 	log.Println("设置 Gin 路由器...")
 	// gin.SetMode(gin.ReleaseMode) // Uncomment for production
 	router := gin.Default()
@@ -268,14 +282,20 @@ func SetupRouter(cfg *configs.Config, handlers *AppHandlers, k8sAvailable bool) 
 		// 将与 k8s 相关操作放进 v1 中，将 login
 		// 或者其他不需要受保护的路由 Ignore (这里需要注意的事一定要用v1，否则不会生效)
 		log.Println("初始化 JWT 中间件...")
+		// 添加后会用 JWT 中间件来保护 API 路由
 		// v1.Use(auth.JWTAuthMiddleware())
 
 		// --- RBAC Middleware ---
 		// 注册 RBAC 中间件，这个中间件会在每个受保护的路由上应用
 		// log.Println("初始化 RBAC 中间件...")
-		// v1.Use(auth.NewCasbinBuilder().
-		// 	IgnorePath("/api/v1/auth/login").
-		// 	CasbinMiddlerware(e))
+		if e != nil {
+			log.Println("应用 RBAC 中间件...")
+			v1.Use(auth.NewCasbinBuilder().
+				IgnorePath("/api/v1/auth/login"). // 忽略登录路径
+				CasbinMiddleware(e))              // 应用 Casbin
+		} else {
+			log.Println("Casbin 未初始化，跳过 RBAC 中间件。")
+		}
 
 		// --- Auth Routes ---
 

@@ -16,6 +16,11 @@ var DB *gorm.DB
 
 // InitDatabase 初始化数据库连接
 func InitDatabase() error {
+	if !configs.GlobalConfig.Database.Enabled {
+		log.Println("数据库未启用，无需初始化。")
+		return nil
+	}
+
 	var err error
 
 	dsn := configs.GlobalConfig.GetDSN()
@@ -58,6 +63,13 @@ func InitDatabase() error {
 
 // AutoMigrate 自动迁移数据库表
 func AutoMigrate() error {
+	// 首先检查数据库是否启用并且 DB 实例已成功创建
+	if !configs.GlobalConfig.Database.Enabled || DB == nil {
+		log.Println("数据库未启用或未初始化，跳过迁移。")
+		return nil // 不启用或未初始化，不算错误，直接返回
+	}
+
+	log.Println("开始数据库自动迁移...") // 添加日志
 	err := DB.AutoMigrate(
 		&models.User{},
 	)
@@ -96,6 +108,11 @@ func CreateDefaultAdmin() error {
 
 // CloseDatabase 关闭数据库连接
 func CloseDatabase() error {
+	// 同样检查 DB 是否为 nil
+	if DB == nil {
+		log.Println("数据库未初始化，无需关闭。")
+		return nil
+	}
 	sqlDB, err := DB.DB()
 	if err != nil {
 		return err
