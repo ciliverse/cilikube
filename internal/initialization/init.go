@@ -46,6 +46,7 @@ type AppServices struct {
 	RbacService          *service.RbacService
 	InstallerService     service.InstallerService // Non-k8s service
 	AuthService          *service.AuthService     // auth service
+	ProxyService         *service.ProxyService    // proxy service
 }
 
 // AppHandlers holds all initialized handlers
@@ -69,6 +70,7 @@ type AppHandlers struct {
 	RbacHandler          *handlers.RbacHandler
 	InstallerHandler     *handlers.InstallerHandler // Non-k8s handlers
 	AuthHandler          *handlers.AuthHandler      // auth handler
+	ProxyHandler         *handlers.ProxyHandler     // proxy handler
 }
 
 // InitializeRepository initializes the database repository.
@@ -143,6 +145,7 @@ func InitializeServices(k8sClient *k8s.Client, k8sAvailable bool, cfg *configs.C
 		services.SummaryService = service.NewSummaryService(k8sClient.Clientset)
 		services.EventsService = service.NewEventsService(k8sClient.Clientset)
 		services.RbacService = service.NewRbacService(k8sClient.Clientset)
+		services.ProxyService = service.NewProxyService(k8sClient.Config)
 		log.Println("Kubernetes 相关服务初始化完成。")
 	} else {
 		log.Println("Kubernetes 不可用，跳过相关服务初始化。")
@@ -218,7 +221,9 @@ func InitializeHandlers(services *AppServices) *AppHandlers {
 	if services.RbacService != nil {
 		appHandlers.RbacHandler = handlers.NewRbacHandler(services.RbacService)
 	}
-
+	if services.ProxyService != nil {
+		appHandlers.ProxyHandler = handlers.NewProxyHandler(services.ProxyService)
+	}
 	log.Println("处理器初始化尝试完成 (部分可能因服务未初始化而跳过)。")
 	return appHandlers
 }
@@ -383,6 +388,11 @@ func SetupRouter(cfg *configs.Config, handlers *AppHandlers, k8sAvailable bool, 
 			} else {
 				log.Println("跳过 Rbac 路由注册: Handler 未初始化。")
 			}
+			if handlers.ProxyHandler != nil {
+				routes.KubernetesProxyRoutes(v1, handlers.ProxyHandler)
+			} else {
+				log.Println("警告: Kubernetes Proxy handlers 未初始化，无法注册相关路由。")
+			}
 
 			// Optional check if any K8s routes were registered
 			// This check is still a bit manual, could be more abstract, but works.
@@ -415,6 +425,7 @@ func SetupRouter(cfg *configs.Config, handlers *AppHandlers, k8sAvailable bool, 
 				c.JSON(http.StatusInternalServerError, gin.H{"status": "Installer service unavailable", "details": "Installer handlers not initialized"})
 			})
 		}
+
 	}
 	log.Println("API 路由注册完成。")
 	return router
