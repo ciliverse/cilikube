@@ -68,7 +68,7 @@ func ToPodResponse(pod *corev1.Pod) PodResponse {
 	// Format timestamp for better readability in frontend
 	createdAtFormatted := "N/A"
 	if !pod.CreationTimestamp.IsZero() {
-		createdAtFormatted = pod.CreationTimestamp.Format(time.RFC3339) // Use standard format
+		createdAtFormatted = pod.CreationTimestamp.Format(time.RFC3339)
 	}
 
 	// Determine a more detailed status if possible
@@ -76,89 +76,86 @@ func ToPodResponse(pod *corev1.Pod) PodResponse {
 	reason := pod.Status.Reason
 	message := pod.Status.Message
 
-	// Try to get a better status from conditions or container statuses if phase is Pending/Failed/Unknown
-	if pod.Status.Phase == corev1.PodPending || pod.Status.Phase == corev1.PodFailed || pod.Status.Phase == corev1.PodUnknown {
-		// Check conditions
-		for _, cond := range pod.Status.Conditions {
-			if cond.Type == corev1.PodScheduled && cond.Status == corev1.ConditionFalse {
-				if reason == "" {
-					reason = cond.Reason
-				}
-				if message == "" {
-					message = cond.Message
-				}
-				break
+	// 不管Phase到的是什么， 都试着获取详细信息
+	// 检查Pod条件
+	for _, cond := range pod.Status.Conditions {
+		if cond.Type == corev1.PodScheduled && cond.Status == corev1.ConditionFalse {
+			if reason == "" {
+				reason = cond.Reason
 			}
-			if cond.Type == corev1.PodReasonUnschedulable {
-				if reason == "" {
-					reason = cond.Reason
-				}
-				if message == "" {
-					message = cond.Message
-				}
-				break
+			if message == "" {
+				message = cond.Message
 			}
 		}
-		// Check container statuses for waiting reasons like ImagePullBackOff, ContainerCreating, CrashLoopBackOff
-		for _, cs := range pod.Status.ContainerStatuses {
-			if cs.State.Waiting != nil {
-				if reason == "" {
-					reason = cs.State.Waiting.Reason
-				}
-				if message == "" {
-					message = cs.State.Waiting.Message
-				}
-				// You might want to prioritize certain reasons like CrashLoopBackOff
-				if reason == "CrashLoopBackOff" || reason == "ImagePullBackOff" || reason == "ErrImagePull" {
-					status = cs.State.Waiting.Reason // Override phase with a more specific waiting reason
-				}
-				break // Take the first waiting reason
+		if cond.Type == corev1.PodReasonUnschedulable {
+			if reason == "" {
+				reason = cond.Reason
 			}
-			if cs.State.Terminated != nil {
-				if reason == "" {
-					reason = cs.State.Terminated.Reason
-				}
-				if message == "" {
-					message = cs.State.Terminated.Message
-				}
-				if status != string(corev1.PodFailed) && cs.State.Terminated.ExitCode != 0 {
-					status = "Error" // Or use Terminated Reason
-					if reason == "" {
-						reason = "Terminated"
-					}
-				}
-				break // Take the first terminated reason
+			if message == "" {
+				message = cond.Message
 			}
 		}
-		// Check init container statuses too
-		for _, cs := range pod.Status.InitContainerStatuses {
-			if cs.State.Waiting != nil {
-				if reason == "" {
-					reason = fmt.Sprintf("Init: %s", cs.State.Waiting.Reason)
-				} // Prefix with Init:
-				if message == "" {
-					message = cs.State.Waiting.Message
-				}
-				if cs.State.Waiting.Reason != "PodInitializing" { // PodInitializing is normal
-					status = fmt.Sprintf("Init: %s", cs.State.Waiting.Reason)
-				}
-				break
+	}
+
+	// 检查Init容器状态
+	for _, cs := range pod.Status.InitContainerStatuses {
+		if cs.State.Waiting != nil {
+			// 如果Init容器还在等待，则pod还未就绪
+			if reason == "" {
+				reason = fmt.Sprintf("Init: %s", cs.State.Waiting.Reason)
 			}
-			if cs.State.Terminated != nil {
-				if reason == "" {
-					reason = fmt.Sprintf("Init: %s", cs.State.Terminated.Reason)
-				}
-				if message == "" {
-					message = cs.State.Terminated.Message
-				}
-				if cs.State.Terminated.ExitCode != 0 {
-					status = fmt.Sprintf("Init: %s", cs.State.Terminated.Reason) // Or "Init:Error"
-					if reason == "" {
-						reason = "Init:Terminated"
-					}
-				}
-				break
+			if message == "" {
+				message = cs.State.Waiting.Message
 			}
+			if cs.State.Waiting.Reason != "PodInitializing" {
+				// 排除正常初始化过程
+				status = fmt.Sprintf("Init: %s", cs.State.Waiting.Reason)
+			}
+			break
+		}
+		if cs.State.Terminated != nil && cs.State.Terminated.ExitCode != 0 {
+			// Init容器启动失败
+			if reason == "" {
+				reason = fmt.Sprintf("Init: %s", cs.State.Terminated.Reason)
+			}
+			if message == "" {
+				message = cs.State.Terminated.Message
+			}
+			status = fmt.Sprintf("Init: %s", cs.State.Terminated.Reason)
+			break
+		}
+	}
+
+	//检查普通容器状态
+	for _, cs := range pod.Status.ContainerStatuses {
+		if cs.State.Waiting != nil {
+			// 容器正在等待启动CrashLoopBackOff，ImagePullBackOff，ErrImagePull
+			if reason == "" {
+				reason = cs.State.Waiting.Reason
+			}
+			if message == "" {
+				message = cs.State.Waiting.Message
+			}
+			// 覆盖状态：如果是常见错误原因，直接作为 Pod 状态返回
+			if cs.State.Waiting.Reason == "CrashLoopBackOff" ||
+				cs.State.Waiting.Reason == "ImagePullBackOff" ||
+				cs.State.Waiting.Reason == "ErrImagePull" {
+				status = cs.State.Waiting.Reason
+			}
+			break
+		}
+		if cs.State.Terminated != nil && cs.State.Terminated.ExitCode != 0 {
+			// 容器异常退出
+			if reason == "" {
+				reason = cs.State.Terminated.Reason
+			}
+			if message == "" {
+				message = cs.State.Terminated.Message
+			}
+			if status != string(corev1.PodFailed) {
+				status = "Error"
+			}
+			break
 		}
 	}
 
@@ -169,15 +166,12 @@ func ToPodResponse(pod *corev1.Pod) PodResponse {
 	// 正式容器和初始化容器信息
 	var containers []ContainerNameResponse
 	for _, c := range pod.Spec.Containers {
-		containers = append(containers, ContainerNameResponse{
-			Name: c.Name,
-		})
+		containers = append(containers, ContainerNameResponse{Name: c.Name})
 	}
+
 	var initContainers []ContainerNameResponse
 	for _, c := range pod.Spec.InitContainers {
-		initContainers = append(initContainers, ContainerNameResponse{
-			Name: c.Name,
-		})
+		initContainers = append(initContainers, ContainerNameResponse{Name: c.Name})
 	}
 
 	return PodResponse{
