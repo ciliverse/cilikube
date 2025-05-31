@@ -39,11 +39,11 @@ func main() {
 	}
 
 	// --- Kubernetes 集群管理器初始化 ---
-	// 旧的 initializeK8sClient 函数已被移除。
-	// 我们现在使用 NewClusterManager 来初始化所有在 cfg.Clusters 中定义的集群。
+	// 旧的 initializeK8sClient 函数已被移除
+	// 我们现在使用 NewClusterManager 来初始化所有在 cfg.Clusters 中定义的集群
 	log.Println("初始化 Kubernetes 集群管理器...")
 	k8sClusterManager, k8sClusterAvailabilityStatus := k8s.NewClusterManager(cfg)
-	// k8sClusterAvailabilityStatus 是一个 map[string]bool，告诉我们每个配置的集群是否成功初始化。
+	// k8sClusterAvailabilityStatus 是一个 map[string]bool，告诉每个配置的集群是否成功初始化
 
 	// 判断是否至少有一个 Kubernetes 集群可用。
 	// 这个 anyK8sAvailable 标志可以用于全局健康检查或作为 SetupRouter 的参数。
@@ -65,10 +65,10 @@ func main() {
 
 	// --- 应用初始化 (服务 & 处理器) ---
 	// InitializeServices 和 InitializeHandlers 将需要接收 k8sClusterManager。
-	// 这是一个重要的变化，将在下一步中具体实现这些函数的修改。
+	// 这是一个重要的变化
 
-	// 为了平滑过渡，我们可以尝试获取一个 "初始" 或 "默认活动" 的客户端实例。
-	// 这个客户端可以用于那些尚未完全适配多集群、或者需要一个默认上下文的服务。
+	// 为了平滑过渡，可以尝试获取一个 "初始" 或 "默认活动" 的客户端实例
+	// 这个客户端可以用于那些尚未完全适配多集群、或者需要一个默认上下文的服务
 	// 注意：这仍然是过渡性措施，最终目标是服务和处理器能够按需从 k8sClusterManager 中获取指定集群的客户端。
 	var initialK8sClientForServices *k8s.Client // 这是 *k8s.Client 类型
 	var initialK8sClientIsAvailableForServices bool
@@ -137,7 +137,7 @@ func main() {
 	}
 
 	// --- Gin 路由器设置 ---
-	// SetupRouter 也需要 k8sClusterManager 来正确地将请求路由到目标集群的处理器。
+	// SetupRouter 也需要 k8sClusterManager 来正确地将请求路由到目标集群的处理器
 	// anyK8sClientActuallyAvailable 用于指示是否有任何 K8s 功能可用（例如，影响 /healthz 端点）。
 	router := initialization.SetupRouter(cfg, appHandlers, anyK8sClientActuallyAvailable, e, k8sClusterManager) // 传递 k8sClusterManager
 
@@ -148,7 +148,6 @@ func main() {
 	log.Println("服务器已关闭。")
 }
 
-// loadConfig 函数与您之前提供的版本保持一致。
 // 这里为了完整性再次列出，并确保 filepath 被导入。
 func loadConfig() (*configs.Config, error) {
 	log.Println("加载配置文件...")
@@ -173,11 +172,11 @@ func loadConfig() (*configs.Config, error) {
 			}
 		}
 		// 如果上述未找到，尝试上一级目录的 configs (适用于 cmd/appname/main.go 结构)
-		// 这是一个常见的项目结构，但可能需要根据您的实际情况调整。
+		// 这是一个常见的项目结构，但可能需要根据您的实际情况调整
 		// ../../configs/config.yaml 假设 main.go 在两级子目录下，例如 cmd/your_app/main.go
 		// 如果 main.go 在项目根目录，应该是 ./configs/config.yaml (上面已处理)
 		// 如果 main.go 在一级子目录 (例如 cmd/main.go), 应该是 ../configs/config.yaml
-		// 为了更普适，我们继续之前的逻辑，但优先使用绝对路径或明确的环境变量/命令行参数。
+		// 为了更普适继续之前的逻辑但优先使用绝对路径或明确的环境变量/命令行参数。
 		// 这里的路径查找逻辑可能需要根据您的项目实际结构进行微调。
 		// 如果上面的 wd/configs/config.yaml 不存在，则执行到这里。
 		// 维持您之前代码中的相对路径作为最后的备选方案
@@ -212,4 +211,4 @@ func loadConfig() (*configs.Config, error) {
 }
 
 // 旧的 initializeK8sClient 函数已从 main.go 中移除，
-// 其功能被 pkg/k8s/manager.go 中的 initializeSingleK8sClient 和 NewClusterManager 替代。
+// 其功能被 pkg/k8s/manager.go 中的 initializeSingleK8sClient 和 NewClusterManager 替代
