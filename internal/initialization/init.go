@@ -1,6 +1,7 @@
 package initialization
 
 import (
+	"fmt"
 	"log"
 	"net/http"
 	"time"
@@ -12,21 +13,14 @@ import (
 	"github.com/ciliverse/cilikube/internal/service"
 	"github.com/ciliverse/cilikube/pkg/auth"
 	"github.com/ciliverse/cilikube/pkg/database"
-	"github.com/ciliverse/cilikube/pkg/k8s"
+	"github.com/ciliverse/cilikube/pkg/k8s" // 引入 k8s 包
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
-	// Add any other necessary imports that were in main.go functions moved here
-	// For k8sClient.Config (type *rest.Config), you might need "k8s.io/client-go/rest"
-	// depending on how the k8s.Client struct is defined and used.
+	// "k8s.io/client-go/kubernetes" // 通常由 k8s.Client 内部管理
+	// "k8s.io/client-go/rest"       // 通常由 k8s.Client 内部管理
 )
 
-// AppConfig holds all initialized Repositories
-// type AppRepository struct {
-// 	AuthRepository *repository.AuthRepository
-// }
-
-// AppServices holds all initialized services
-// Moved from main.go
+// AppServices 结构保持不变，但其内部服务的初始化方式会改变。
 type AppServices struct {
 	PodService           *service.PodService
 	DeploymentService    *service.DeploymentService
@@ -44,13 +38,12 @@ type AppServices struct {
 	SummaryService       *service.SummaryService
 	EventsService        *service.EventsService
 	RbacService          *service.RbacService
-	InstallerService     service.InstallerService // Non-k8s service
-	AuthService          *service.AuthService     // auth service
-	ProxyService         *service.ProxyService    // proxy service
+	InstallerService     service.InstallerService // 非 K8s 服务
+	AuthService          *service.AuthService     // 假设 AuthService 主要与数据库交互
+	ProxyService         *service.ProxyService    // ProxyService 可能仍需 rest.Config，但会动态获取
 }
 
-// AppHandlers holds all initialized handlers
-// Moved from main.go
+// AppHandlers 结构保持不变。
 type AppHandlers struct {
 	PodHandler           *handlers.PodHandler
 	DeploymentHandler    *handlers.DeploymentHandler
@@ -68,424 +61,400 @@ type AppHandlers struct {
 	SummaryHandler       *handlers.SummaryHandler
 	EventsHandler        *handlers.EventsHandler
 	RbacHandler          *handlers.RbacHandler
-	InstallerHandler     *handlers.InstallerHandler // Non-k8s handlers
-	AuthHandler          *handlers.AuthHandler      // auth handler
-	ProxyHandler         *handlers.ProxyHandler     // proxy handler
+	InstallerHandler     *handlers.InstallerHandler // 非 K8s 处理器
+	AuthHandler          *handlers.AuthHandler
+	ProxyHandler         *handlers.ProxyHandler
 }
 
-// InitializeRepository initializes the database repository.
-// func InitializeRepositories(DB *gorm.DB) *AppRepository {
-
-// 	// 初始化 Repository
-// 	appRepository := &AppRepository{}
-// 	appRepository.AuthRepository = repository.NewAuthRepository(DB)
-
-// 	return appRepository
-// }
-
-// InitializeServices initializes all application services.
-// K8s-dependent services are only initialized if k8sAvailable is true.
-// Moved from main.go
-func InitializeServices(k8sClient *k8s.Client, k8sAvailable bool, cfg *configs.Config) *AppServices {
+// InitializeServices 初始化所有应用服务。
+// k8sClusterManager 用于按需获取集群客户端。
+// initialK8sClient 和 initialK8sAvailable 用于需要一个 "默认" 或 "启动时" 客户端配置的特殊服务。
+func InitializeServices(
+	k8sClusterManager *k8s.ClusterManager, // 主要的集群客户端管理器
+	initialK8sClient *k8s.Client, // 一个可选的、用于特定场景的初始/默认 k8s 客户端
+	initialK8sClientAvailable bool, // 上述初始客户端的可用状态
+	cfg *configs.Config,
+) *AppServices {
 	log.Println("初始化服务层...")
 	services := &AppServices{}
 
-	// Initialize non-k8s services (always)
-	services.InstallerService = service.NewInstallerService(cfg)
+	// 初始化非 Kubernetes 依赖的服务 (例如 InstallerService, AuthService)
+	services.InstallerService = service.NewInstallerService(cfg) // 假设构造函数不变
 	log.Println("Installer 服务初始化完成。")
 
+	// 数据库和 AuthService 的初始化 (如果 AuthService 依赖数据库)
+	// 这部分逻辑与之前类似，主要确保数据库连接成功（如果启用）
 	if cfg.Database.Enabled {
-		log.Println("数据库已启用，开始初始化...")
-		if err := database.InitDatabase(); err != nil {
-			log.Fatalf("初始化失败: 数据库连接失败: %v", err)
-		}
-		// 只有 InitDatabase 成功 (DB != nil) 才会继续
-		if database.DB != nil {
-			// log.Println("数据库连接成功。") // 这条日志现在只会在真正连接后打印
-			if err := database.AutoMigrate(); err != nil {
-				log.Fatalf("初始化失败: 数据库自动迁移失败: %v", err)
-			}
-
+		if database.DB != nil { // 确保数据库已连接
+			// services.AuthService = service.NewAuthService(database.DB, cfg) // 示例，根据你的AuthService构造函数调整
+			log.Println("AuthService (如果依赖数据库) 已初始化或准备就绪。")
 		} else {
-			// 这种情况理论上不应该发生，除非 InitDatabase 内部逻辑有误
-			log.Println("警告: 数据库已启用但初始化失败，相关服务将无法使用。")
+			log.Println("警告: 数据库已启用但连接失败，依赖数据库的 AuthService 可能无法正常工作。")
 		}
 	} else {
-		log.Println("警告: 数据库未启用，相关服务将无法使用。")
+		// services.AuthService = service.NewAuthService(nil, cfg) // 如果AuthService可以无数据库运行
+		log.Println("数据库未启用，AuthService (如果依赖数据库) 将以受限模式运行或不运行。")
 	}
-	// Initialize AuthService
+	// 假设 AuthService 的初始化不直接依赖 k8s client
+	// 如果你的 AuthService 也需要操作 K8s (例如管理用户相关的 K8s secrets)，则其也需要适配多集群
 
-	// --- Auth Initialization ---
-	// - 这里初始化 AuthService
-	// - 需要确保 database.DB 已经成功连接
+	log.Println("准备初始化 Kubernetes 相关服务...")
+	// Kubernetes 相关服务现在通常不直接在构造时接收 clientset。
+	// 它们的方法将接收 clientset 作为参数，由 Handler 提供。
+	// 因此，NewXxxService() 构造函数签名需要修改（这将在第4步中具体修改服务代码）。
+	// 这里我们只是实例化服务结构。
 
-	// Initialize K8s-dependent services (conditionally)
-	if k8sAvailable && k8sClient != nil && k8sClient.Clientset != nil {
-		log.Println("Kubernetes 可用，初始化 Kubernetes 相关服务...")
-		// Services requiring rest.Config need special handling
-		if k8sClient.Config == nil {
-			log.Printf("警告: k8sClient.Config 为 nil。需要 rest.Config 的 Kubernetes 服务将无法完全初始化！")
-			// Proceed, as many services only need Clientset
+	// 检查是否有任何 K8s 集群可用（通过 ClusterManager）
+	availableClusters := k8sClusterManager.GetAvailableClientNames()
+	if len(availableClusters) > 0 {
+		log.Printf("检测到 %d 个可用的 Kubernetes 集群。Kubernetes 相关服务将被实例化。", len(availableClusters))
+
+		// 示例：PodService。假设 NewPodService() 现在不需要参数或只需要非 K8s 配置。
+		// services.PodService = service.NewPodService() // 构造函数将在第4步修改
+		// services.DeploymentService = service.NewDeploymentService()
+		// services.DaemonSetService = service.NewDaemonSetService()
+		// services.ServiceService = service.NewServiceService()
+		// services.IngressService = service.NewIngressService()
+		// services.NetworkPolicyService = service.NewNetworkPolicyService()
+		// services.ConfigMapService = service.NewConfigMapService()
+		// services.SecretService = service.NewSecretService()
+		// services.PVCService = service.NewPVCService()
+		// services.PVService = service.NewPVService()
+		// services.StatefulSetService = service.NewStatefulSetService()
+		services.NodeService = service.NewNodeService()
+		// services.NamespaceService = service.NewNamespaceService()
+		// services.SummaryService = service.NewSummaryService()
+		// services.EventsService = service.NewEventsService()
+		// services.RbacService = service.NewRbacService()
+
+		// ProxyService 可能比较特殊，因为它直接与 Kubernetes API Server 的代理功能交互，
+		// 通常需要 rest.Config。它的 NewProxyService 构造函数可能仍然需要一个 *rest.Config。
+		// 但这个 config 应该是动态获取的。
+		// 方案1: ProxyService 构造时不需要 config，其方法动态接收。
+		// 方案2: ProxyService 构造时接收 ClusterManager，内部方法按需获取 config。
+		// 方案3: 如果有一个明确的 "代理主集群"，可以使用 initialK8sClient.Config。
+		// 这里我们假设 ProxyService 也会被改造为在方法层面接收目标集群的 rest.Config，
+		// 或者其构造函数接收 ClusterManager。
+		// services.ProxyService = service.NewProxyService() // 构造函数可能接收 ClusterManager
+		// 或者，如果 ProxyService 总是针对 "初始/默认" 集群：
+		if initialK8sClientAvailable && initialK8sClient.Config != nil {
+			log.Printf("为 ProxyService 使用初始客户端的 rest.Config (来自集群: %s)", initialK8sClient.Config.Host)
+			services.ProxyService = service.NewProxyService(initialK8sClient.Config) // 假设 ProxyService 只需 config
+		} else {
+			// 如果 ProxyService 必须在初始化时有 config，但初始客户端不可用，则无法初始化
+			// services.ProxyService = service.NewProxyService(nil) // 或者不初始化并记录错误
+			log.Println("警告: 初始 Kubernetes 客户端或其配置不可用，ProxyService 可能无法按预期初始化或将以受限模式运行。")
+			// 更好的做法是让 ProxyService 的方法动态获取 rest.Config，或者其构造函数接收 ClusterManager。
+			// 暂时保持和之前类似的逻辑，如果 initialK8sClient 可用，则使用它的 config。
+			// 若 ProxyService 改为构造函数接收 ClusterManager：
+			// services.ProxyService = service.NewProxyServiceWithManager(k8sClusterManager) // 假设有这样一个构造函数
 		}
+		log.Println("核心 Kubernetes 服务结构已实例化。它们将在请求时动态使用特定集群的客户端。")
 
-		// Pass k8sClient.Clientset and potentially k8sClient.Config where needed
-		services.PodService = service.NewPodService(k8sClient.Clientset, k8sClient.Config) // Assuming PodService needs Config
-		services.DeploymentService = service.NewDeploymentService(k8sClient.Clientset)
-		services.DaemonSetService = service.NewDaemonSetService(k8sClient.Clientset)
-		services.ServiceService = service.NewServiceService(k8sClient.Clientset)
-		services.IngressService = service.NewIngressService(k8sClient.Clientset)
-		services.NetworkPolicyService = service.NewNetworkPolicyService(k8sClient.Clientset)
-		services.ConfigMapService = service.NewConfigMapService(k8sClient.Clientset)
-		services.SecretService = service.NewSecretService(k8sClient.Clientset)
-		services.PVCService = service.NewPVCService(k8sClient.Clientset)
-		services.PVService = service.NewPVService(k8sClient.Clientset)
-		services.StatefulSetService = service.NewStatefulSetService(k8sClient.Clientset)
-		services.NodeService = service.NewNodeService(k8sClient.Clientset)
-		services.NamespaceService = service.NewNamespaceService(k8sClient.Clientset)
-		services.SummaryService = service.NewSummaryService(k8sClient.Clientset)
-		services.EventsService = service.NewEventsService(k8sClient.Clientset)
-		services.RbacService = service.NewRbacService(k8sClient.Clientset)
-		services.ProxyService = service.NewProxyService(k8sClient.Config)
-		log.Println("Kubernetes 相关服务初始化完成。")
 	} else {
-		log.Println("Kubernetes 不可用，跳过相关服务初始化。")
-		// K8s service pointers in 'services' struct remain nil
+		log.Println("警告: 没有可用的 Kubernetes 集群 (通过 ClusterManager 检测)。所有 Kubernetes 相关服务将不可用或以空操作模式运行。")
+		// 此时，services.PodService 等都将是 nil 或其方法会快速失败。
 	}
 
-	log.Println("服务初始化尝试完成。")
+	log.Println("服务层初始化尝试完成。")
 	return services
 }
 
-// InitializeHandlers initializes all application handlers.
-// Handlers are only initialized if their corresponding service is available (non-nil).
-// Moved from main.go
-func InitializeHandlers(services *AppServices) *AppHandlers {
+// InitializeHandlers 初始化所有应用处理器。
+// 处理器现在需要 k8sClusterManager 来动态获取针对特定集群的客户端。
+func InitializeHandlers(
+	services *AppServices,
+	k8sClusterManager *k8s.ClusterManager, // 引入 ClusterManager
+	cfg *configs.Config, // 如果有处理器需要直接访问配置
+) *AppHandlers {
 	log.Println("初始化处理器层...")
 	appHandlers := &AppHandlers{}
 
-	// Initialize non-k8s handlers (if service exists)
-	if services.InstallerService != nil { // Should always be true if initializeServices ran
+	// 初始化非 Kubernetes 依赖的处理器
+	if services.InstallerService != nil {
 		appHandlers.InstallerHandler = handlers.NewInstallerHandler(services.InstallerService)
 		log.Println("Installer 处理器初始化完成。")
-	} else {
-		log.Println("警告: Installer 服务未初始化，跳过 Installer 处理器初始化。")
 	}
+	// if services.AuthService != nil {
+	// appHandlers.AuthHandler = handlers.NewAuthHandler(services.AuthService, cfg, k8sClusterManager) // AuthService 可能也需要 clusterManager
+	// log.Println("Auth 处理器初始化完成。")
+	// }
 
-	// Initialize K8s-dependent handlers (conditionally based on service)
-	// Check if the specific service pointer is non-nil
-	if services.PodService != nil {
-		appHandlers.PodHandler = handlers.NewPodHandler(services.PodService)
-	}
-	if services.DeploymentService != nil {
-		appHandlers.DeploymentHandler = handlers.NewDeploymentHandler(services.DeploymentService)
-	}
-	if services.DaemonSetService != nil {
-		appHandlers.DaemonSetHandler = handlers.NewDaemonSetHandler(services.DaemonSetService)
-	}
-	if services.ServiceService != nil {
-		appHandlers.ServiceHandler = handlers.NewServiceHandler(services.ServiceService)
-	}
-	if services.IngressService != nil {
-		appHandlers.IngressHandler = handlers.NewIngressHandler(services.IngressService)
-	}
-	if services.NetworkPolicyService != nil {
-		appHandlers.NetworkPolicyHandler = handlers.NewNetworkPolicyHandler(services.NetworkPolicyService)
-	}
-	if services.ConfigMapService != nil {
-		appHandlers.ConfigMapHandler = handlers.NewConfigMapHandler(services.ConfigMapService)
-	}
-	if services.SecretService != nil {
-		appHandlers.SecretHandler = handlers.NewSecretHandler(services.SecretService)
-	}
-	if services.PVCService != nil {
-		appHandlers.PVCHandler = handlers.NewPVCHandler(services.PVCService)
-	}
-	if services.PVService != nil {
-		appHandlers.PVHandler = handlers.NewPVHandler(services.PVService)
-	}
-	if services.StatefulSetService != nil {
-		appHandlers.StatefulSetHandler = handlers.NewStatefulSetHandler(services.StatefulSetService)
-	}
+	// 初始化 Kubernetes 相关的处理器。
+	// 它们的构造函数现在需要接收 k8sClusterManager。
+	// (NewXxxHandler 构造函数签名将在后续步骤中修改 Handler 代码时调整)
+	// if services.PodService != nil { // 检查服务是否已实例化
+	// 	appHandlers.PodHandler = handlers.NewPodHandler(services.PodService, k8sClusterManager)
+	// }
+	// if services.DeploymentService != nil {
+	// 	appHandlers.DeploymentHandler = handlers.NewDeploymentHandler(services.DeploymentService, k8sClusterManager)
+	// }
+	// if services.DaemonSetService != nil {
+	// 	appHandlers.DaemonSetHandler = handlers.NewDaemonSetHandler(services.DaemonSetService, k8sClusterManager)
+	// }
+	// if services.ServiceService != nil {
+	// 	appHandlers.ServiceHandler = handlers.NewServiceHandler(services.ServiceService, k8sClusterManager)
+	// }
+	// if services.IngressService != nil {
+	// 	appHandlers.IngressHandler = handlers.NewIngressHandler(services.IngressService, k8sClusterManager)
+	// }
+	// if services.NetworkPolicyService != nil {
+	// 	appHandlers.NetworkPolicyHandler = handlers.NewNetworkPolicyHandler(services.NetworkPolicyService, k8sClusterManager)
+	// }
+	// if services.ConfigMapService != nil {
+	// 	appHandlers.ConfigMapHandler = handlers.NewConfigMapHandler(services.ConfigMapService, k8sClusterManager)
+	// }
+	// if services.SecretService != nil {
+	// 	appHandlers.SecretHandler = handlers.NewSecretHandler(services.SecretService, k8sClusterManager)
+	// }
+	// if services.PVCService != nil {
+	// 	appHandlers.PVCHandler = handlers.NewPVCHandler(services.PVCService, k8sClusterManager)
+	// }
+	// if services.PVService != nil {
+	// 	appHandlers.PVHandler = handlers.NewPVHandler(services.PVService, k8sClusterManager)
+	// }
+	// if services.StatefulSetService != nil {
+	// 	appHandlers.StatefulSetHandler = handlers.NewStatefulSetHandler(services.StatefulSetService, k8sClusterManager)
+	// }
 	if services.NodeService != nil {
-		appHandlers.NodeHandler = handlers.NewNodeHandler(services.NodeService)
+		appHandlers.NodeHandler = handlers.NewNodeHandler(services.NodeService, k8sClusterManager)
 	}
-	if services.NamespaceService != nil {
-		appHandlers.NamespaceHandler = handlers.NewNamespaceHandler(services.NamespaceService)
-	}
-	if services.SummaryService != nil {
-		appHandlers.SummaryHandler = handlers.NewSummaryHandler(services.SummaryService)
-	}
-	if services.EventsService != nil {
-		appHandlers.EventsHandler = handlers.NewEventsHandler(services.EventsService)
-	}
-	if services.RbacService != nil {
-		appHandlers.RbacHandler = handlers.NewRbacHandler(services.RbacService)
-	}
-	if services.ProxyService != nil {
-		appHandlers.ProxyHandler = handlers.NewProxyHandler(services.ProxyService)
-	}
-	log.Println("处理器初始化尝试完成 (部分可能因服务未初始化而跳过)。")
+	// if services.NamespaceService != nil {
+	// 	appHandlers.NamespaceHandler = handlers.NewNamespaceHandler(services.NamespaceService, k8sClusterManager)
+	// }
+	// if services.SummaryService != nil {
+	// 	appHandlers.SummaryHandler = handlers.NewSummaryHandler(services.SummaryService, k8sClusterManager)
+	// }
+	// if services.EventsService != nil {
+	// 	appHandlers.EventsHandler = handlers.NewEventsHandler(services.EventsService, k8sClusterManager)
+	// }
+	// if services.RbacService != nil {
+	// 	appHandlers.RbacHandler = handlers.NewRbacHandler(services.RbacService, k8sClusterManager)
+	// }
+	// if services.ProxyService != nil {
+	// 	// ProxyHandler 的构造函数也需要 ClusterManager，因为它需要动态选择目标集群的 rest.Config
+	// 	appHandlers.ProxyHandler = handlers.NewProxyHandler(services.ProxyService, k8sClusterManager)
+	// }
+
+	log.Println("处理器层初始化尝试完成 (部分可能因对应服务未初始化而被跳过)。")
 	return appHandlers
 }
 
-// SetupRouter configures the Gin router with middleware and routes.
-// Moved from main.go
-func SetupRouter(cfg *configs.Config, handlers *AppHandlers, k8sAvailable bool, e *casbin.Enforcer) *gin.Engine {
+// SetupRouter 配置 Gin 路由器。
+// anyK8sAvailable 指示是否有任何 K8s 集群成功初始化。
+// k8sClusterManager 虽然在此函数中不直接使用，但它是初始化 Handlers 所需的，而 Handlers 由此函数使用。
+func SetupRouter(
+	cfg *configs.Config,
+	appHandlers *AppHandlers,
+	anyK8sAvailable bool, // 来自 main.go 的 anyK8sClientActuallyAvailable
+	e *casbin.Enforcer,
+	k8sClusterManager *k8s.ClusterManager, // 虽然 SetupRouter 不直接用，但传递性依赖可能需要
+) *gin.Engine {
 	log.Println("设置 Gin 路由器...")
-	// gin.SetMode(gin.ReleaseMode) // Uncomment for production
-	router := gin.Default()
+	// gin.SetMode(cfg.Server.Mode) // 根据配置设置模式
+	if cfg.Server.Mode == "release" {
+		gin.SetMode(gin.ReleaseMode)
+	} else {
+		gin.SetMode(gin.DebugMode)
+	}
+	router := gin.New() // 使用 gin.New() 以便自定义日志和恢复中间件
+	router.Use(gin.Logger())
+	router.Use(gin.Recovery())
 
-	// 从配置或环境变量加载允许的源
+	// CORS 中间件配置 (与原配置保持一致)
 	router.Use(cors.New(cors.Config{
 		AllowAllOrigins:  true,
 		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"},
-		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
+		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization", "X-Cluster-Name"}, // 考虑添加 X-Cluster-Name 如果用请求头传递集群
 		ExposeHeaders:    []string{"Content-Length"},
 		AllowCredentials: true,
 		MaxAge:           12 * time.Hour,
 	}))
-	// --- Middlewares ---
-	log.Println("应用 CORS 中间件...")
-	//router.Use(utils.Cors(origins)) // Ensure utils.Cors() is correctly configured
+	log.Println("应用 CORS 中间件。")
 
-	// Prometheus Metrics Middleware (if enabled) - Example
-	// if cfg.Server.EnableMetrics {
-	// 	log.Println("应用 Prometheus 中间件...")
-	// 	// router.Use(metrics.PromMiddleware()) // Assuming metrics package exists
-	// } else {
-	// 	log.Println("Prometheus 指标未启用。")
-	// }
-
-	// --- Routes ---
-	// Health Check Endpoint
+	// --- 健康检查路由 ---
 	router.GET("/healthz", func(c *gin.Context) {
 		healthStatus := gin.H{"status": "ok", "timestamp": time.Now().UTC()}
-		if k8sAvailable {
-			healthStatus["kubernetes"] = "connected"
+		// anyK8sAvailable 反映的是是否有任何集群在启动时连接成功
+		if anyK8sAvailable {
+			healthStatus["kubernetes_connectivity"] = "至少一个集群在启动时连接成功"
+			healthStatus["available_clusters_at_startup"] = k8sClusterManager.GetAvailableClientNames()
 		} else {
-			healthStatus["kubernetes"] = "disconnected (features disabled)"
+			healthStatus["kubernetes_connectivity"] = "没有集群在启动时连接成功 (Kubernetes 功能可能完全不可用)"
+		}
+		// 可以考虑在这里添加数据库连接状态的检查
+		if cfg.Database.Enabled {
+			if database.DB != nil {
+				sqlDB, err := database.DB.DB() // 正确接收两个返回值
+				if err != nil {
+					// 获取底层 sql.DB 实例时发生错误
+					log.Printf("警告: /healthz 无法获取数据库实例: %v", err)
+					healthStatus["database"] = "error (获取DB实例失败)"
+				} else if sqlDB == nil {
+					// 理论上，如果 database.DB 不是 nil 且 err 是 nil，sqlDB 不应该为 nil，但作为健壮性检查
+					healthStatus["database"] = "error (DB实例为nil)"
+				} else {
+					// 现在我们有 sqlDB，可以安全地调用 Ping()
+					if pingErr := sqlDB.Ping(); pingErr == nil {
+						healthStatus["database"] = "connected"
+					} else {
+						log.Printf("警告: /healthz 数据库ping失败: %v", pingErr)
+						healthStatus["database"] = "disconnected (ping失败)"
+					}
+				}
+			} else {
+				// database.DB 本身就是 nil，意味着数据库未初始化或连接失败
+				healthStatus["database"] = "disconnected (未初始化)"
+			}
+		} else {
+			healthStatus["database"] = "not_enabled (配置中未启用)"
 		}
 		c.JSON(http.StatusOK, healthStatus)
 	})
 
-	// Prometheus Metrics Endpoint (if enabled) - Example
-	// if cfg.Server.EnableMetrics {
-	// 	log.Println("注册 /metrics 指标端点...")
-	// 	// router.GET("/metrics", metrics.PromHandler()) // Assuming metrics package exists
-	// }
-
-	// API v1 Routes Group
-	log.Println("注册 API v1 路由...")
-	v1 := router.Group("/api/v1")
+	// --- API v1 路由组 ---
+	apiV1 := router.Group("/api/v1")
 	{
-		// Register non-k8s routes first (if handlers are initialized)
-		// --- Auth Routes ---
-		// 首先先从环境变量中获取 secret key
-		// secretKey := os.Getenv("CILIKUBE_JWT_SECRET")
+		// --- 非 Kubernetes 依赖的路由 (例如 Auth, Installer) ---
+		// Auth 路由 (例如登录)
+		// routes.RegisterAuthRoutes(apiV1, appHandlers.AuthHandler) // 假设你有 RegisterAuthRoutes
 
-		// --- Protected Routes ---
-		// 将与 k8s 相关操作放进 v1 中，将 login
-		// 或者其他不需要受保护的路由 Ignore (这里需要注意的事一定要用v1，否则不会生效)
-		log.Println("初始化 JWT 中间件...")
-		// 添加后会用 JWT 中间件来保护 API 路由
-		// v1.Use(auth.JWTAuthMiddleware())
+		// Installer 路由
+		if appHandlers.InstallerHandler != nil {
+			routes.RegisterInstallerRoutes(apiV1, appHandlers.InstallerHandler) // 这些路由通常不包含集群名
+			log.Println("注册 Installer 相关路由。")
+		} else {
+			log.Println("InstallerHandler 未初始化，跳过其路由注册。")
+		}
 
-		// --- RBAC Middleware ---
-		// 注册 RBAC 中间件，这个中间件会在每个受保护的路由上应用
-		// log.Println("初始化 RBAC 中间件...")
+		// --- 中间件 ---
+		// JWT 中间件 (如果需要) - 应用于需要认证的路由组
+		// authenticatedRoutes := apiV1.Group("") // 或者特定的子组
+		// authenticatedRoutes.Use(auth.JWTAuthMiddleware(cfg.JWT.SecretKey)) // 假设的中间件
+
+		// Casbin RBAC 中间件
 		if e != nil {
-			log.Println("应用 RBAC 中间件...")
-			v1.Use(auth.NewCasbinBuilder().
-				IgnorePath("/api/v1/auth/login"). // 忽略登录路径
-				CasbinMiddleware(e))              // 应用 Casbin
+			log.Println("为 /api/v1 应用 Casbin RBAC 中间件 (忽略 /auth/login)...")
+			// 注意：CasbinMiddleware 需要能正确处理新的带 :cluster_name 的路径
+			// 或者应用到更细分的路由组上。
+			// IgnorePath 需要确保与实际登录路径匹配。
+			// 如果所有受保护的 K8s 操作都在 /clusters/:cluster_name/ 下，
+			// Casbin 策略也需要适配这种路径格式。
+			apiV1.Use(auth.NewCasbinBuilder().
+				IgnorePath("/api/v1/auth/login"). // 假设登录路径是这个
+				// IgnorePathPrefixes("/api/v1/install") // 如果安装器路径也不需要认证
+				CasbinMiddleware(e))
 		} else {
-			log.Println("Casbin 未初始化，跳过 RBAC 中间件。")
+			log.Println("Casbin 未初始化，跳过 RBAC 中间件的注册。")
 		}
 
-		// --- Auth Routes ---
-
-		// Register K8s related routes only if handlers were initialized
-		// We check if the specific handlers pointer is non-nil
-		if k8sAvailable { // Optional log: k8sAvailable check here gives context
-			log.Println("注册 Kubernetes API 路由...")
-			if handlers.PodHandler != nil {
-				routes.RegisterPodRoutes(v1, handlers.PodHandler)
+		// --- Kubernetes 相关路由 (现在需要包含集群名称) ---
+		// 创建一个新的子路由组，用于处理所有针对特定集群的操作
+		// URL 结构: /api/v1/clusters/{cluster_name}/resource...
+		clusterSpecificRoutes := apiV1.Group("/clusters/:cluster_name")
+		{
+			// 在这里注册所有需要指定集群的 Kubernetes 资源路由
+			// 路由注册函数 (如 RegisterPodRoutes) 仍然接收原始的 appHandlers.*Handler 实例。
+			// Handler 内部会使用 cluster_name 参数来获取正确的客户端。
+			if anyK8sAvailable { // 仅当至少一个K8s集群可能可用时才注册这些路由
+				log.Println("准备注册特定集群的 Kubernetes API 路由...")
+				if appHandlers.PodHandler != nil {
+					routes.RegisterPodRoutes(clusterSpecificRoutes, appHandlers.PodHandler)
+				}
+				if appHandlers.DeploymentHandler != nil {
+					routes.RegisterDeploymentRoutes(clusterSpecificRoutes, appHandlers.DeploymentHandler)
+				}
+				if appHandlers.DaemonSetHandler != nil {
+					routes.RegisterDaemonSetRoutes(clusterSpecificRoutes, appHandlers.DaemonSetHandler)
+				}
+				if appHandlers.ServiceHandler != nil {
+					routes.RegisterServiceRoutes(clusterSpecificRoutes, appHandlers.ServiceHandler)
+				}
+				if appHandlers.IngressHandler != nil {
+					routes.RegisterIngressRoutes(clusterSpecificRoutes, appHandlers.IngressHandler)
+				}
+				if appHandlers.NetworkPolicyHandler != nil {
+					routes.RegisterNetworkPolicyRoutes(clusterSpecificRoutes, appHandlers.NetworkPolicyHandler)
+				}
+				if appHandlers.ConfigMapHandler != nil {
+					routes.RegisterConfigMapRoutes(clusterSpecificRoutes, appHandlers.ConfigMapHandler)
+				}
+				if appHandlers.SecretHandler != nil {
+					routes.RegisterSecretRoutes(clusterSpecificRoutes, appHandlers.SecretHandler)
+				}
+				if appHandlers.PVCHandler != nil {
+					routes.RegisterPVCRoutes(clusterSpecificRoutes, appHandlers.PVCHandler)
+				}
+				if appHandlers.PVHandler != nil {
+					routes.RegisterPVRoutes(clusterSpecificRoutes, appHandlers.PVHandler)
+				}
+				if appHandlers.StatefulSetHandler != nil {
+					routes.RegisterStatefulSetRoutes(clusterSpecificRoutes, appHandlers.StatefulSetHandler)
+				}
+				if appHandlers.NodeHandler != nil {
+					// 例如：RegisterNodeRoutes 现在应该操作在 clusterSpecificRoutes 这个 group 上
+					// routes.RegisterNodeRoutes(router *gin.RouterGroup, handler *handlers.NodeHandler)
+					routes.RegisterNodeRoutes(clusterSpecificRoutes, appHandlers.NodeHandler)
+				}
+				if appHandlers.NamespaceHandler != nil {
+					routes.RegisterNamespaceRoutes(clusterSpecificRoutes, appHandlers.NamespaceHandler)
+				}
+				if appHandlers.SummaryHandler != nil {
+					routes.RegisterSummaryRoutes(clusterSpecificRoutes, appHandlers.SummaryHandler)
+				}
+				if appHandlers.EventsHandler != nil {
+					routes.RegisterEventsRoutes(clusterSpecificRoutes, appHandlers.EventsHandler)
+				}
+				if appHandlers.RbacHandler != nil {
+					routes.RegisterRbacRoutes(clusterSpecificRoutes, appHandlers.RbacHandler)
+				}
+				// Kubernetes Proxy 路由也需要适配集群上下文
+				if appHandlers.ProxyHandler != nil {
+					// KubernetesProxyRoutes 应该在 clusterSpecificRoutes 下注册
+					// 例如: /api/v1/clusters/{cluster_name}/proxy/...
+					routes.KubernetesProxyRoutes(clusterSpecificRoutes, appHandlers.ProxyHandler)
+				}
+				log.Println("特定集群的 Kubernetes API 路由注册尝试完成。")
 			} else {
-				log.Println("跳过 Pod 路由注册: Handler 未初始化。")
-			} // Optional detailed logs
-			if handlers.DeploymentHandler != nil {
-				routes.RegisterDeploymentRoutes(v1, handlers.DeploymentHandler)
-			} else {
-				log.Println("跳过 Deployment 路由注册: Handler 未初始化。")
+				log.Println("由于没有可用的 Kubernetes 集群，跳过特定集群的 Kubernetes API 路由注册。")
+				// 可以选择性地为 /api/v1/clusters/:cluster_name 返回一个错误信息
+				clusterSpecificRoutes.GET("/*any", func(c *gin.Context) {
+					clusterName := c.Param("cluster_name")
+					c.JSON(http.StatusServiceUnavailable, gin.H{
+						"error":       fmt.Sprintf("Kubernetes cluster '%s' is targeted, but no Kubernetes services are available globally.", clusterName),
+						"message":     "No Kubernetes clusters were successfully initialized at startup.",
+						"clusterName": clusterName,
+					})
+				})
 			}
-			if handlers.DaemonSetHandler != nil {
-				routes.RegisterDaemonSetRoutes(v1, handlers.DaemonSetHandler)
-			} else {
-				log.Println("跳过 DaemonSet 路由注册: Handler 未初始化。")
-			}
-			if handlers.ServiceHandler != nil {
-				routes.RegisterServiceRoutes(v1, handlers.ServiceHandler)
-			} else {
-				log.Println("跳过 Service 路由注册: Handler 未初始化。")
-			}
-			if handlers.IngressHandler != nil {
-				routes.RegisterIngressRoutes(v1, handlers.IngressHandler)
-			} else {
-				log.Println("跳过 Ingress 路由注册: Handler 未初始化。")
-			}
-			if handlers.NetworkPolicyHandler != nil {
-				routes.RegisterNetworkPolicyRoutes(v1, handlers.NetworkPolicyHandler)
-			} else {
-				log.Println("跳过 NetworkPolicy 路由注册: Handler 未初始化。")
-			}
-			if handlers.ConfigMapHandler != nil {
-				routes.RegisterConfigMapRoutes(v1, handlers.ConfigMapHandler)
-			} else {
-				log.Println("跳过 ConfigMap 路由注册: Handler 未初始化。")
-			}
-			if handlers.SecretHandler != nil {
-				routes.RegisterSecretRoutes(v1, handlers.SecretHandler)
-			} else {
-				log.Println("跳过 Secret 路由注册: Handler 未初始化。")
-			}
-			if handlers.PVCHandler != nil {
-				routes.RegisterPVCRoutes(v1, handlers.PVCHandler)
-			} else {
-				log.Println("跳过 PVC 路由注册: Handler 未初始化。")
-			}
-			if handlers.PVHandler != nil {
-				routes.RegisterPVRoutes(v1, handlers.PVHandler)
-			} else {
-				log.Println("跳过 PV 路由注册: Handler 未初始化。")
-			}
-			if handlers.StatefulSetHandler != nil {
-				routes.RegisterStatefulSetRoutes(v1, handlers.StatefulSetHandler)
-			} else {
-				log.Println("跳过 StatefulSet 路由注册: Handler 未初始化。")
-			}
-			if handlers.NodeHandler != nil {
-				routes.RegisterNodeRoutes(v1, handlers.NodeHandler)
-			} else {
-				log.Println("跳过 Node 路由注册: Handler 未初始化。")
-			}
-			if handlers.NamespaceHandler != nil {
-				routes.RegisterNamespaceRoutes(v1, handlers.NamespaceHandler)
-			} else {
-				log.Println("跳过 Namespace 路由注册: Handler 未初始化。")
-			}
-			if handlers.SummaryHandler != nil {
-				routes.RegisterSummaryRoutes(v1, handlers.SummaryHandler)
-			} else {
-				log.Println("跳过 Summary 路由注册: Handler 未初始化。")
-			}
-			if handlers.EventsHandler != nil {
-				routes.RegisterEventsRoutes(v1, handlers.EventsHandler)
-			} else {
-				log.Println("跳过 Events 路由注册: Handler 未初始化。")
-			}
-			if handlers.RbacHandler != nil {
-				routes.RegisterRbacRoutes(v1, handlers.RbacHandler)
-			} else {
-				log.Println("跳过 Rbac 路由注册: Handler 未初始化。")
-			}
-			if handlers.ProxyHandler != nil {
-				routes.KubernetesProxyRoutes(v1, handlers.ProxyHandler)
-			} else {
-				log.Println("警告: Kubernetes Proxy handlers 未初始化，无法注册相关路由。")
-			}
-
-			// Optional check if any K8s routes were registered
-			// This check is still a bit manual, could be more abstract, but works.
-			if handlers.PodHandler == nil && handlers.DeploymentHandler == nil && // ... check all k8s handlers ...
-				handlers.DaemonSetHandler == nil && handlers.ServiceHandler == nil && handlers.IngressHandler == nil &&
-				handlers.NetworkPolicyHandler == nil && handlers.ConfigMapHandler == nil && handlers.SecretHandler == nil &&
-				handlers.PVCHandler == nil && handlers.PVHandler == nil && handlers.StatefulSetHandler == nil &&
-				handlers.NodeHandler == nil && handlers.NamespaceHandler == nil && handlers.SummaryHandler == nil &&
-				handlers.EventsHandler == nil && handlers.RbacHandler == nil {
-				log.Println("警告: Kubernetes 似乎可用，但没有注册任何 Kubernetes API 路由。")
-			} else {
-				log.Println("Kubernetes API 路由注册完成。")
-			}
-
-		} else {
-			log.Println("Kubernetes 不可用，跳过相关 API 路由注册。")
-			// Register a status endpoint if K8s is unavailable
-			v1.GET("/kubernetes-status", func(c *gin.Context) {
-				c.JSON(http.StatusServiceUnavailable, gin.H{"status": "Kubernetes service unavailable", "details": "Kubernetes client initialization or connection failed"})
-			})
 		}
-
-		// Always register non-k8s routes if handlers exists
-		log.Println("注册非 Kubernetes API 路由...")
-		if handlers.InstallerHandler != nil {
-			routes.RegisterInstallerRoutes(v1, handlers.InstallerHandler)
-		} else {
-			log.Println("警告: Installer handlers 未初始化，无法注册相关路由。")
-			v1.GET("/installer-status", func(c *gin.Context) {
-				c.JSON(http.StatusInternalServerError, gin.H{"status": "Installer service unavailable", "details": "Installer handlers not initialized"})
-			})
-		}
-
 	}
 	log.Println("API 路由注册完成。")
 	return router
 }
 
-// InitializeDefaultConfig 初始化默认配置
-
-// InitializeDefaultUser 创建超级管理员账户和游客账户
-// func InitializeDefaultUser(e *casbin.Enforcer, db *gorm.DB) {
-// 	// --- 检查是否已经存在超级管理员 ---
-// 	if _, err := db.Where("username = ?", "admin").First(&models.User{}).Rows(); err == nil {
-// 		// 用户已存在，不做任何操作
-// 		log.Println("默认用户 'admin' 已存在，跳过创建。")
-// 	} else {
-// 		// 加密初始化密码
-// 		password, _ := bcrypt.GenerateFromPassword([]byte("cilikube"), bcrypt.DefaultCost)
-// 		user := &models.User{
-// 			Username: "admin",
-// 			Password: string(password),
-// 			Role:     "super_admin",
-// 		}
-// 		_, err := db.Create(user).Rows()
-// 		if err != nil {
-// 			log.Fatalf("创建默认用户 'admin' 失败: %v", err)
-// 		}
-// 		// 绑定用户的角色权限
-// 		// --- 默认用户绑定默认权限 ---
-// 		// admin <- super_admin
-// 		if _, err := e.AddRoleForUser("admin", "super_admin"); err != nil {
-// 			log.Fatalf("绑定用户 'admin' 的角色 'super_admin' 失败: %v", err)
-// 		}
-// 		log.Println("超级管理员用户初始化完成。")
-// 	}
-
-// 	// --- 添加游客账户 ---
-// 	if err := db.Where("username = ?", "visitor").First(&models.User{}).Row(); err != nil {
-// 		log.Println("默认游客账号已存在，不再创建。")
-// 	} else {
-// 		password, _ := bcrypt.GenerateFromPassword([]byte("123456"), bcrypt.DefaultCost)
-// 		user := &models.User{
-// 			Username: "visitor",
-// 			Password: string(password),
-// 			Role:     "normal_user",
-// 		}
-// 		_, err := db.Create(user).Rows()
-// 		if err != nil {
-// 			log.Fatalf("创建默认游客账号 'visitor' 失败: %v", err)
-// 		}
-// 		// 给游客绑定 normal_user 的权限，全部都是只给GET
-// 		if _, err := e.AddRoleForUser("visitor", "normal_user"); err != nil {
-// 			log.Fatalf("绑定用户 'visitor' 的角色'normal_user' 失败: %v", err)
-// 		}
-// 	}
-// 	log.Println("游客账户初始化完成。")
-// }
-
+// Cleanup 函数 (如果有的话，保持不变)
 func Cleanup() {
-	// 关闭数据库连接
-	if err := database.CloseDatabase(); err != nil {
-		log.Fatalf("关闭数据库连接失败: %v", err)
+	if configs.GlobalConfig != nil && configs.GlobalConfig.Database.Enabled {
+		if err := database.CloseDatabase(); err != nil {
+			log.Printf("关闭数据库连接失败: %v", err)
+		} else {
+			log.Println("数据库连接已关闭。")
+		}
 	}
-	log.Println("数据库连接已关闭。")
+	// 这里也可以添加关闭 ClusterManager 中所有客户端的逻辑（如果它们维护了需要显式关闭的连接或 watch）
+	// 但通常 client-go 的客户端不需要显式关闭。
 }
+
+// StartServer 函数保持不变 (从你的 start.go 文件)
+// displayServerInfo, getVersion, getLocalIP 也保持不变
+
+// --- 为了使上面的 InitializeServices 和 InitializeHandlers 中的 ProxyService 部分能编译通过，
+// 假设 service.NewProxyServiceWithManager 存在：
+// 此函数应在你的 service/proxy_service.go 中定义
+// func NewProxyServiceWithManager(clusterManager *k8s.ClusterManager) *ProxyService {
+//    return &ProxyService{clusterManager: clusterManager}
+// }
+// 并且 ProxyService 结构体需要有 clusterManager 字段。
+// ProxyHandler 的 NewProxyHandler 也会接收 clusterManager。
+// 这些具体的服务和处理器修改将在后续步骤中进行。

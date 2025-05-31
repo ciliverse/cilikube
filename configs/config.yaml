@@ -3,24 +3,21 @@ server:
   port: "8080"
   read_timeout: 15
   write_timeout: 30
-  activeCluster: "default"
+  activeCluster: "default" # 这个值现在将对应下面 clusters 列表中的一个条目
 
-kubernetes:
+kubernetes: # 这个顶层配置在多集群模式下作为备用或特定用途
   kubeconfig: "default"
-
 
 installer:
   # Optional: Specify a path if minikube isn't guaranteed to be in the system PATH
   # after the simulated install. The backend will try PATH first, then this path.
-  # minikubePath: "/usr/local/bin/minikube" # Example
-  minikubePath: "/usr/local/bin/minikube" # Rely on PATH lookup by default
+  minikubePath: "/usr/local/bin/minikube" # Example
 
   # Driver for minikube (docker is common, others: hyperkit, virtualbox, vmware, podman, etc.)
   minikubeDriver: "docker"
 
   # Directory to store downloaded files temporarily. Defaults to '.' (server's working dir)
-  # downloadDir: "/tmp/cilikube_downloads" # Example using /tmp
-  downloadDir: "/tmp/cilikube_downloads" # Use default (current directory)
+  downloadDir: "/tmp/cilikube_downloads" # Example using /tmp
 
 database:
   # Database type (sqlite, mysql, postgres, etc.)
@@ -31,12 +28,12 @@ database:
   #   file: "cilikube.db"
 
   # MySQL configuration
-    enabled: false
-    host: "localhost"
-    port: 3306
-    user: "cilikube_user"
-    password: "cilikube_password"
-    database: "cilikube_db"
+  enabled: false # 根据你之前的日志，这里是 false
+  host: "localhost"
+  port: 3306
+  # user: "cilikube_user" # 如果 enabled 为 false，这些可以注释掉或保留
+  # password: "cilikube_password"
+  # database: "cilikube_db"
 
   # # PostgreSQL configuration
   # postgres:
@@ -45,3 +42,27 @@ database:
   #   user: "cilikube_user"
   #   password: "cilikube_password"
   #   database: "cilikube_db"
+
+# --- 新增/修改的部分 ---
+# 定义你的 Kubernetes 集群列表
+clusters:
+  - name: "default"          # 集群的唯一名称，与 server.activeCluster 匹配
+    config_path: "default"   # 使用 "default" 来让应用查找标准 kubeconfig 路径
+                             # (~/.kube/config 或 KUBECONFIG 环境变量)
+    is_active: true          # 激活此集群配置
+
+  # 如果你有其他集群，可以在这里继续添加，例如：
+  # - name: "dev-cluster"
+  #   config_path: "/path/to/your/dev-cluster-kubeconfig.yaml"
+  #   is_active: true
+  # - name: "prod-cluster-in-gke" # 示例：GKE集群使用in-cluster配置（如果应用部署在其中）
+  #   config_path: "in-cluster"
+  #   is_active: false # 假设暂时不激活这个
+# --- 新增/修改的部分结束 ---
+
+# 你可能还有其他配置项，如 jwt 等，请确保它们保留在原位
+# 例如:
+# jwt:
+#   secret_key: "your-default-secret-key-please-change-in-production"
+#   expire_duration: 24h
+#   issuer: "cilikube"
