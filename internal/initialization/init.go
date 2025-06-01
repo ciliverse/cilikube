@@ -20,7 +20,6 @@ import (
 	// "k8s.io/client-go/rest"       // 通常由 k8s.Client 内部管理
 )
 
-// AppServices 结构保持不变，但其内部服务的初始化方式会改变。
 type AppServices struct {
 	PodService           *service.PodService
 	DeploymentService    *service.DeploymentService
@@ -39,11 +38,10 @@ type AppServices struct {
 	EventsService        *service.EventsService
 	RbacService          *service.RbacService
 	InstallerService     service.InstallerService // 非 K8s 服务
-	AuthService          *service.AuthService     // 假设 AuthService 主要与数据库交互
-	ProxyService         *service.ProxyService    // ProxyService 可能仍需 rest.Config，但会动态获取
+	AuthService          *service.AuthService
+	ProxyService         *service.ProxyService // ProxyService 可能仍需 rest.Config，但会动态获取
 }
 
-// AppHandlers 结构保持不变。
 type AppHandlers struct {
 	PodHandler           *handlers.PodHandler
 	DeploymentHandler    *handlers.DeploymentHandler
@@ -66,24 +64,19 @@ type AppHandlers struct {
 	ProxyHandler         *handlers.ProxyHandler
 }
 
-// InitializeServices 初始化所有应用服务。
-// k8sClusterManager 用于按需获取集群客户端。
-// initialK8sClient 和 initialK8sAvailable 用于需要一个 "默认" 或 "启动时" 客户端配置的特殊服务。
 func InitializeServices(
 	k8sClusterManager *k8s.ClusterManager, // 主要的集群客户端管理器
 	initialK8sClient *k8s.Client, // 一个可选的、用于特定场景的初始/默认 k8s 客户端
-	initialK8sClientAvailable bool, // 上述初始客户端的可用状态
+	initialK8sClientAvailable bool,
 	cfg *configs.Config,
 ) *AppServices {
 	log.Println("初始化服务层...")
 	services := &AppServices{}
 
 	// 初始化非 Kubernetes 依赖的服务 (例如 InstallerService, AuthService)
-	services.InstallerService = service.NewInstallerService(cfg) // 假设构造函数不变
+	services.InstallerService = service.NewInstallerService(cfg)
 	log.Println("Installer 服务初始化完成。")
 
-	// 数据库和 AuthService 的初始化 (如果 AuthService 依赖数据库)
-	// 这部分逻辑与之前类似，主要确保数据库连接成功（如果启用）
 	if cfg.Database.Enabled {
 		if database.DB != nil { // 确保数据库已连接
 			// services.AuthService = service.NewAuthService(database.DB, cfg) // 示例，根据你的AuthService构造函数调整
@@ -95,14 +88,8 @@ func InitializeServices(
 		// services.AuthService = service.NewAuthService(nil, cfg) // 如果AuthService可以无数据库运行
 		log.Println("数据库未启用，AuthService (如果依赖数据库) 将以受限模式运行或不运行。")
 	}
-	// 假设 AuthService 的初始化不直接依赖 k8s client
-	// 如果你的 AuthService 也需要操作 K8s (例如管理用户相关的 K8s secrets)，则其也需要适配多集群
 
 	log.Println("准备初始化 Kubernetes 相关服务...")
-	// Kubernetes 相关服务现在通常不直接在构造时接收 clientset。
-	// 它们的方法将接收 clientset 作为参数，由 Handler 提供。
-	// 因此，NewXxxService() 构造函数签名需要修改（这将在第4步中具体修改服务代码）。
-	// 这里我们只是实例化服务结构。
 
 	// 检查是否有任何 K8s 集群可用（通过 ClusterManager）
 	availableClusters := k8sClusterManager.GetAvailableClientNames()
@@ -127,41 +114,25 @@ func InitializeServices(
 		// services.EventsService = service.NewEventsService()
 		// services.RbacService = service.NewRbacService()
 
-		// ProxyService 可能比较特殊，因为它直接与 Kubernetes API Server 的代理功能交互，
-		// 通常需要 rest.Config。它的 NewProxyService 构造函数可能仍然需要一个 *rest.Config。
-		// 但这个 config 应该是动态获取的。
-		// 方案1: ProxyService 构造时不需要 config，其方法动态接收。
-		// 方案2: ProxyService 构造时接收 ClusterManager，内部方法按需获取 config。
-		// 方案3: 如果有一个明确的 "代理主集群"，可以使用 initialK8sClient.Config。
-		// 这里我们假设 ProxyService 也会被改造为在方法层面接收目标集群的 rest.Config，
-		// 或者其构造函数接收 ClusterManager。
-		// services.ProxyService = service.NewProxyService() // 构造函数可能接收 ClusterManager
-		// 或者，如果 ProxyService 总是针对 "初始/默认" 集群：
 		if initialK8sClientAvailable && initialK8sClient.Config != nil {
 			log.Printf("为 ProxyService 使用初始客户端的 rest.Config (来自集群: %s)", initialK8sClient.Config.Host)
 			services.ProxyService = service.NewProxyService(initialK8sClient.Config) // 假设 ProxyService 只需 config
 		} else {
-			// 如果 ProxyService 必须在初始化时有 config，但初始客户端不可用，则无法初始化
-			// services.ProxyService = service.NewProxyService(nil) // 或者不初始化并记录错误
+
 			log.Println("警告: 初始 Kubernetes 客户端或其配置不可用，ProxyService 可能无法按预期初始化或将以受限模式运行。")
-			// 更好的做法是让 ProxyService 的方法动态获取 rest.Config，或者其构造函数接收 ClusterManager。
-			// 暂时保持和之前类似的逻辑，如果 initialK8sClient 可用，则使用它的 config。
-			// 若 ProxyService 改为构造函数接收 ClusterManager：
-			// services.ProxyService = service.NewProxyServiceWithManager(k8sClusterManager) // 假设有这样一个构造函数
+
 		}
 		log.Println("核心 Kubernetes 服务结构已实例化。它们将在请求时动态使用特定集群的客户端。")
 
 	} else {
 		log.Println("警告: 没有可用的 Kubernetes 集群 (通过 ClusterManager 检测)。所有 Kubernetes 相关服务将不可用或以空操作模式运行。")
-		// 此时，services.PodService 等都将是 nil 或其方法会快速失败。
+
 	}
 
 	log.Println("服务层初始化尝试完成。")
 	return services
 }
 
-// InitializeHandlers 初始化所有应用处理器。
-// 处理器现在需要 k8sClusterManager 来动态获取针对特定集群的客户端。
 func InitializeHandlers(
 	services *AppServices,
 	k8sClusterManager *k8s.ClusterManager, // 引入 ClusterManager
@@ -181,7 +152,7 @@ func InitializeHandlers(
 	// }
 
 	// 初始化 Kubernetes 相关的处理器。
-	// 它们的构造函数现在需要接收 k8sClusterManager。
+
 	// (NewXxxHandler 构造函数签名将在后续步骤中修改 Handler 代码时调整)
 	// if services.PodService != nil { // 检查服务是否已实例化
 	// 	appHandlers.PodHandler = handlers.NewPodHandler(services.PodService, k8sClusterManager)
@@ -241,7 +212,7 @@ func InitializeHandlers(
 }
 
 // SetupRouter 配置 Gin 路由器。
-// anyK8sAvailable 指示是否有任何 K8s 集群成功初始化。
+// anyK8sAvailable 指示是否有任何 K8s 集群成功初始化
 // k8sClusterManager 虽然在此函数中不直接使用，但它是初始化 Handlers 所需的，而 Handlers 由此函数使用。
 func SetupRouter(
 	cfg *configs.Config,
@@ -317,11 +288,11 @@ func SetupRouter(
 	{
 		// --- 非 Kubernetes 依赖的路由 (例如 Auth, Installer) ---
 		// Auth 路由 (例如登录)
-		// routes.RegisterAuthRoutes(apiV1, appHandlers.AuthHandler) // 假设你有 RegisterAuthRoutes
+		// routes.RegisterAuthRoutes(apiV1, appHandlers.AuthHandler)
 
 		// Installer 路由
 		if appHandlers.InstallerHandler != nil {
-			routes.RegisterInstallerRoutes(apiV1, appHandlers.InstallerHandler) // 这些路由通常不包含集群名
+			routes.RegisterInstallerRoutes(apiV1, appHandlers.InstallerHandler)
 			log.Println("注册 Installer 相关路由。")
 		} else {
 			log.Println("InstallerHandler 未初始化，跳过其路由注册。")
@@ -354,8 +325,8 @@ func SetupRouter(
 		clusterSpecificRoutes := apiV1.Group("/clusters/:cluster_name")
 		{
 			// 在这里注册所有需要指定集群的 Kubernetes 资源路由
-			// 路由注册函数 (如 RegisterPodRoutes) 仍然接收原始的 appHandlers.*Handler 实例。
-			// Handler 内部会使用 cluster_name 参数来获取正确的客户端。
+			// 路由注册函数 (如 RegisterPodRoutes) 仍然接收原始的 appHandlers.*Handler 实例
+			// Handler 内部会使用 cluster_name 参数来获取正确的客户端
 			if anyK8sAvailable { // 仅当至少一个K8s集群可能可用时才注册这些路由
 				log.Println("准备注册特定集群的 Kubernetes API 路由...")
 				if appHandlers.PodHandler != nil {
@@ -445,16 +416,3 @@ func Cleanup() {
 	// 这里也可以添加关闭 ClusterManager 中所有客户端的逻辑（如果它们维护了需要显式关闭的连接或 watch）
 	// 但通常 client-go 的客户端不需要显式关闭。
 }
-
-// StartServer 函数保持不变 (从你的 start.go 文件)
-// displayServerInfo, getVersion, getLocalIP 也保持不变
-
-// --- 为了使上面的 InitializeServices 和 InitializeHandlers 中的 ProxyService 部分能编译通过，
-// 假设 service.NewProxyServiceWithManager 存在：
-// 此函数应在你的 service/proxy_service.go 中定义
-// func NewProxyServiceWithManager(clusterManager *k8s.ClusterManager) *ProxyService {
-//    return &ProxyService{clusterManager: clusterManager}
-// }
-// 并且 ProxyService 结构体需要有 clusterManager 字段。
-// ProxyHandler 的 NewProxyHandler 也会接收 clusterManager。
-// 这些具体的服务和处理器修改将在后续步骤中进行。

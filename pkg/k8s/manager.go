@@ -17,7 +17,7 @@ type ClusterManager struct {
 }
 
 // NewClusterManager 根据提供的配置初始化所有已定义的、活动的集群客户端。
-// 返回 ClusterManager 实例和一个记录各集群初始化状态的 map (clusterName -> bool)。
+
 func NewClusterManager(appConfig *configs.Config) (*ClusterManager, map[string]bool) {
 	manager := &ClusterManager{
 		clients: make(map[string]*Client),
@@ -26,8 +26,7 @@ func NewClusterManager(appConfig *configs.Config) (*ClusterManager, map[string]b
 
 	if len(appConfig.Clusters) == 0 {
 		log.Println("警告: 配置文件中没有定义任何集群 (config.Clusters 列表为空)。")
-		// 此时可以考虑是否尝试使用 appConfig.Kubernetes.Kubeconfig 作为备用或默认集群
-		// 但为了清晰的多集群管理，我们主要依赖 Clusters 列表。
+
 		// 如果需要备用逻辑，可以在这里添加。例如：
 		// if appConfig.Kubernetes.Kubeconfig != "" {
 		//     log.Printf("尝试使用顶层 kubernetes.kubeconfig (%s) 初始化一个名为 'default_fallback' 的集群", appConfig.Kubernetes.Kubeconfig)
@@ -83,7 +82,7 @@ func NewClusterManager(appConfig *configs.Config) (*ClusterManager, map[string]b
 
 // initializeSingleK8sClient 是一个辅助函数，用于为单个集群配置初始化 k8s.Client。
 // kubeconfigPath 可以是文件路径，也可以是 "in-cluster"。
-// clusterName 用于日志记录。
+
 func initializeSingleK8sClient(kubeconfigPath string, clusterNameForLog string) (*Client, bool) {
 	var clientLogName string
 	if clusterNameForLog == "" {
@@ -124,8 +123,8 @@ func initializeSingleK8sClient(kubeconfigPath string, clusterNameForLog string) 
 	return k8sClientInstance, true
 }
 
-// GetClient 根据集群名称检索已初始化的 Kubernetes 客户端。
-// 如果找不到或客户端未成功初始化，将返回错误。
+// GetClient 根据集群名称检索已初始化的 Kubernetes 客户端
+
 func (cm *ClusterManager) GetClient(clusterName string) (*Client, error) {
 	cm.lock.RLock()
 	defer cm.lock.RUnlock()
@@ -135,7 +134,7 @@ func (cm *ClusterManager) GetClient(clusterName string) (*Client, error) {
 		return nil, fmt.Errorf("未找到名为 '%s' 的集群客户端，或者该客户端未在启动时成功初始化", clusterName)
 	}
 	// 这里可以根据需要添加额外的健康检查逻辑，但通常在获取时假定初始化成功的客户端是可用的。
-	// 调用方应处理使用客户端时可能发生的网络错误等。
+
 	return client, nil
 }
 
@@ -152,14 +151,13 @@ func (cm *ClusterManager) GetAllClients() map[string]*Client {
 	return clientsCopy
 }
 
-// GetAvailableClientNames 返回所有成功初始化并被认为可用的集群名称列表。
+// GetAvailableClientNames 返回所有成功初始化并被认为可用的集群名称列表
 func (cm *ClusterManager) GetAvailableClientNames() []string {
 	cm.lock.RLock()
 	defer cm.lock.RUnlock()
 	names := make([]string, 0, len(cm.clients))
 	for name := range cm.clients {
-		// 这里的 "可用" 指的是初始化时成功。可以结合 clusterAvailability 状态图。
-		// 为简单起见，如果它在 cm.clients 中，就认为它在启动时是可用的。
+
 		names = append(names, name)
 	}
 	return names

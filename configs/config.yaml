@@ -58,10 +58,8 @@ clusters:
   # - name: "prod-cluster-in-gke" # 示例：GKE集群使用in-cluster配置（如果应用部署在其中）
   #   config_path: "in-cluster"
   #   is_active: false # 假设暂时不激活这个
-# --- 新增/修改的部分结束 ---
 
-# 你可能还有其他配置项，如 jwt 等，请确保它们保留在原位
-# 例如:
+
 # jwt:
 #   secret_key: "your-default-secret-key-please-change-in-production"
 #   expire_duration: 24h

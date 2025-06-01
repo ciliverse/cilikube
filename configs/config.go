@@ -11,23 +11,21 @@ import (
 
 type Config struct {
 	Server     ServerConfig     `yaml:"server" json:"server"`
-	Kubernetes KubernetesConfig `yaml:"kubernetes" json:"kubernetes"` // 在多集群场景下，此字段可能作为备用或特定用途
+	Kubernetes KubernetesConfig `yaml:"kubernetes" json:"kubernetes"`
 	Installer  InstallerConfig  `yaml:"installer" json:"installer"`
 	Database   DatabaseConfig   `yaml:"database" json:"database"`
 	JWT        JWTConfig        `yaml:"jwt" json:"jwt"`
-	Clusters   []ClusterInfo    `yaml:"clusters" json:"clusters"` // 主要的多集群配置来源
+	Clusters   []ClusterInfo    `yaml:"clusters" json:"clusters"`
 }
 
 type ServerConfig struct {
 	Port          string `yaml:"port" json:"port"`
 	ReadTimeout   int    `yaml:"read_timeout" json:"read_timeout"`
 	WriteTimeout  int    `yaml:"write_timeout" json:"write_timeout"`
-	Mode          string `yaml:"mode" json:"mode"`                   // debug, release
-	ActiveCluster string `yaml:"activeCluster" json:"activeCluster"` // 可用于UI默认显示或特定场景下的默认操作集群
+	Mode          string `yaml:"mode" json:"mode"` // debug, release
+	ActiveCluster string `yaml:"activeCluster" json:"activeCluster"`
 }
 
-// KubernetesConfig 在多集群模式下，可以考虑作为 "管理集群" 或 "默认上下文" 的配置，
-// 但主要操作会通过 Clusters 列表中的配置进行。
 type KubernetesConfig struct {
 	Kubeconfig string `yaml:"kubeconfig" json:"kubeconfig"`
 }
@@ -54,8 +52,6 @@ type JWTConfig struct {
 	Issuer         string        `yaml:"issuer" json:"issuer"`
 }
 
-// ClusterInfo 定义了每个被管理集群的连接信息。
-// 未来可以根据需求扩展此结构，例如添加集群描述、标签、所属区域、环境等。
 type ClusterInfo struct {
 	Name string `yaml:"name" json:"name"` // 集群的唯一标识名称，将用于API路径或参数
 	// ConfigPath 可以是 kubeconfig 文件的绝对路径，或者是 "in-cluster"（如果管理平台本身部署在目标集群内并希望使用服务账户）
@@ -115,9 +111,6 @@ func loadYAMLConfig(path string) (*Config, error) {
 	return cfg, nil
 }
 
-// setDefaults 保持了你原有的默认值设置逻辑。
-// 对于多集群，确保 Kubernetes.Kubeconfig 的默认逻辑仍然合理，
-// 或者明确其在多集群环境下的作用（例如，作为可选的管理集群配置）。
 func setDefaults() {
 	if GlobalConfig.Server.Port == "" {
 		GlobalConfig.Server.Port = "8080"
@@ -162,9 +155,6 @@ func setDefaults() {
 		GlobalConfig.Installer.DownloadDir = "."
 	}
 
-	// Kubernetes.Kubeconfig 的默认值设定。在多集群场景下，
-	// 这个路径如果存在，可能用于初始化一个 "默认" 或 "管理" 上下文的客户端。
-	// 但主要操作将依赖于 `Config.Clusters` 中定义的路径。
 	if GlobalConfig.Kubernetes.Kubeconfig == "" || GlobalConfig.Kubernetes.Kubeconfig == "default" {
 		if kubeconfigEnv := os.Getenv("KUBECONFIG"); kubeconfigEnv != "" {
 			GlobalConfig.Kubernetes.Kubeconfig = kubeconfigEnv
@@ -180,7 +170,6 @@ func setDefaults() {
 		}
 	}
 
-	// 数据库默认值 (与原逻辑保持一致)
 	if GlobalConfig.Database.Enabled {
 		if GlobalConfig.Database.Host == "" {
 			GlobalConfig.Database.Host = "localhost"
@@ -203,9 +192,6 @@ func setDefaults() {
 		}
 	}
 
-	// 针对 Clusters 列表中的条目，也可以在这里设置一些默认值，如果需要的话。
-	// 例如，如果某个 ClusterInfo 的 ConfigPath 为空，可以尝试赋予其一个默认行为或路径。
-	// 但通常 ClusterInfo 中的字段期望被显式配置。
 	// for i := range GlobalConfig.Clusters {
 	//    if GlobalConfig.Clusters[i].Name == "" {
 	//        log.Printf("警告: 第 %d 个集群配置缺少名称，这可能导致问题。", i+1)
