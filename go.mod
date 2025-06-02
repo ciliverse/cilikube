@@ -11,6 +11,7 @@ require (
 	github.com/prometheus/client_golang v1.22.0
 	github.com/stretchr/testify v1.10.0
 	go.uber.org/zap v1.27.0
+	golang.org/x/crypto v0.38.0
 	golang.org/x/mod v0.24.0
 	gopkg.in/yaml.v3 v3.0.1
 	gorm.io/driver/mysql v1.5.7
@@ -75,12 +76,10 @@ require (
 	github.com/ugorji/go/codec v1.2.12 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	golang.org/x/arch v0.16.0 // indirect
-	golang.org/x/crypto v0.38.0 // indirect
 	golang.org/x/exp v0.0.0-20250506013437-ce4c2cf36ca6 // indirect
 	golang.org/x/sync v0.14.0 // indirect
 	google.golang.org/protobuf v1.36.6 // indirect
 	gopkg.in/evanphx/json-patch.v4 v4.12.0 // indirect
-	gorm.io/datatypes v1.2.5 // indirect
 	gorm.io/driver/postgres v1.5.11 // indirect
 	gorm.io/driver/sqlserver v1.5.4 // indirect
 	gorm.io/plugin/dbresolver v1.6.0 // indirect

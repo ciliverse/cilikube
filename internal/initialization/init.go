@@ -109,7 +109,7 @@ func InitializeServices(
 		// services.PVService = service.NewPVService()
 		// services.StatefulSetService = service.NewStatefulSetService()
 		services.NodeService = service.NewNodeService()
-		// services.NamespaceService = service.NewNamespaceService()
+		services.NamespaceService = service.NewNamespaceService()
 		// services.SummaryService = service.NewSummaryService()
 		// services.EventsService = service.NewEventsService()
 		// services.RbacService = service.NewRbacService()
@@ -190,9 +190,9 @@ func InitializeHandlers(
 	if services.NodeService != nil {
 		appHandlers.NodeHandler = handlers.NewNodeHandler(services.NodeService, k8sClusterManager)
 	}
-	// if services.NamespaceService != nil {
-	// 	appHandlers.NamespaceHandler = handlers.NewNamespaceHandler(services.NamespaceService, k8sClusterManager)
-	// }
+	if services.NamespaceService != nil {
+		appHandlers.NamespaceHandler = handlers.NewNamespaceHandler(services.NamespaceService, k8sClusterManager)
+	}
 	// if services.SummaryService != nil {
 	// 	appHandlers.SummaryHandler = handlers.NewSummaryHandler(services.SummaryService, k8sClusterManager)
 	// }

@@ -10,16 +10,17 @@ import (
 )
 
 type NamespaceService struct {
-	client kubernetes.Interface
+	// 不再持有 client 字段
 }
 
-func NewNamespaceService(client kubernetes.Interface) *NamespaceService {
-	return &NamespaceService{client: client}
+// 构造函数不再接收 kubernetes.Interface 参数
+func NewNamespaceService() *NamespaceService {
+	return &NamespaceService{}
 }
 
 // 获取单个Namespace
-func (s *NamespaceService) Get(name string) (*corev1.Namespace, error) {
-	return s.client.CoreV1().Namespaces().Get(
+func (s *NamespaceService) Get(client kubernetes.Interface, name string) (*corev1.Namespace, error) {
+	return client.CoreV1().Namespaces().Get(
 		context.TODO(),
 		name,
 		metav1.GetOptions{},
@@ -27,8 +28,8 @@ func (s *NamespaceService) Get(name string) (*corev1.Namespace, error) {
 }
 
 // 创建Namespace
-func (s *NamespaceService) Create(namespace *corev1.Namespace) (*corev1.Namespace, error) {
-	return s.client.CoreV1().Namespaces().Create(
+func (s *NamespaceService) Create(client kubernetes.Interface, namespace *corev1.Namespace) (*corev1.Namespace, error) {
+	return client.CoreV1().Namespaces().Create(
 		context.TODO(),
 		namespace,
 		metav1.CreateOptions{},
@@ -36,8 +37,8 @@ func (s *NamespaceService) Create(namespace *corev1.Namespace) (*corev1.Namespac
 }
 
 // 更新Namespace
-func (s *NamespaceService) Update(namespace *corev1.Namespace) (*corev1.Namespace, error) {
-	return s.client.CoreV1().Namespaces().Update(
+func (s *NamespaceService) Update(client kubernetes.Interface, namespace *corev1.Namespace) (*corev1.Namespace, error) {
+	return client.CoreV1().Namespaces().Update(
 		context.TODO(),
 		namespace,
 		metav1.UpdateOptions{},
@@ -45,8 +46,8 @@ func (s *NamespaceService) Update(namespace *corev1.Namespace) (*corev1.Namespac
 }
 
 // 删除Namespace
-func (s *NamespaceService) Delete(name string) error {
-	return s.client.CoreV1().Namespaces().Delete(
+func (s *NamespaceService) Delete(client kubernetes.Interface, name string) error {
+	return client.CoreV1().Namespaces().Delete(
 		context.TODO(),
 		name,
 		metav1.DeleteOptions{},
@@ -54,8 +55,8 @@ func (s *NamespaceService) Delete(name string) error {
 }
 
 // 列表查询（支持分页和标签过滤）
-func (s *NamespaceService) List(selector string, limit int64) (*corev1.NamespaceList, error) {
-	return s.client.CoreV1().Namespaces().List(
+func (s *NamespaceService) List(client kubernetes.Interface, selector string, limit int64) (*corev1.NamespaceList, error) {
+	return client.CoreV1().Namespaces().List(
 		context.TODO(),
 		metav1.ListOptions{
 			LabelSelector: selector,
@@ -65,8 +66,8 @@ func (s *NamespaceService) List(selector string, limit int64) (*corev1.Namespace
 }
 
 // Watch机制实现
-func (s *NamespaceService) Watch(selector string) (watch.Interface, error) {
-	return s.client.CoreV1().Namespaces().Watch(
+func (s *NamespaceService) Watch(client kubernetes.Interface, selector string) (watch.Interface, error) {
+	return client.CoreV1().Namespaces().Watch(
 		context.TODO(),
 		metav1.ListOptions{
 			LabelSelector:  selector,

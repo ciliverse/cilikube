@@ -10,6 +10,7 @@ import (
 
 	"github.com/ciliverse/cilikube/internal/service"
 	"github.com/ciliverse/cilikube/pkg/k8s"
+	"github.com/ciliverse/cilikube/pkg/utils"
 	"github.com/gin-gonic/gin"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors" // Import for errors.IsNotFound
@@ -27,53 +28,8 @@ func NewNodeHandler(nodeService *service.NodeService, cm *k8s.ClusterManager) *N
 	}
 }
 
-// Standard API response helper
-func apiSuccess(c *gin.Context, data interface{}, message string) {
-	if message == "" {
-		message = "success"
-	}
-	c.JSON(http.StatusOK, gin.H{
-		"code":    http.StatusOK,
-		"data":    data,
-		"message": message,
-	})
-}
-
-func apiError(c *gin.Context, statusCode int, message string, details ...string) {
-	detailStr := ""
-	if len(details) > 0 {
-		detailStr = details[0]
-	}
-	log.Printf("API Error: Status %d, Message: %s, Details: %s, Path: %s", statusCode, message, detailStr, c.Request.URL.Path)
-	c.JSON(statusCode, gin.H{
-		"code":    statusCode,
-		"data":    nil,
-		"message": message,
-		"details": detailStr,
-	})
-}
-
-func (h *NodeHandler) getK8sClient(c *gin.Context) (*k8s.Client, bool) {
-	clusterName := c.Param("cluster_name")
-	if clusterName == "" {
-		apiError(c, http.StatusBadRequest, "路径中缺少 'cluster_name' 参数")
-		return nil, false
-	}
-
-	k8sClient, err := h.clusterManager.GetClient(clusterName)
-	if err != nil {
-		apiError(c, http.StatusNotFound, fmt.Sprintf("名为 '%s' 的集群未找到或不可用", clusterName), err.Error())
-		return nil, false
-	}
-	if k8sClient.Clientset == nil {
-		apiError(c, http.StatusInternalServerError, fmt.Sprintf("集群 '%s' 的客户端内部 Clientset 为空", clusterName))
-		return nil, false
-	}
-	return k8sClient, true
-}
-
 func (h *NodeHandler) ListNodes(c *gin.Context) {
-	k8sClient, ok := h.getK8sClient(c)
+	k8sClient, ok := k8s.GetK8sClientFromContext(c, h.clusterManager)
 	if !ok {
 		return
 	}
@@ -84,53 +40,53 @@ func (h *NodeHandler) ListNodes(c *gin.Context) {
 
 	limit, convErr := strconv.ParseInt(limitStr, 10, 64)
 	if convErr != nil {
-		apiError(c, http.StatusBadRequest, "无效的 'limit' 参数", convErr.Error())
+		utils.ApiError(c, http.StatusBadRequest, "无效的 'limit' 参数", convErr.Error())
 		return
 	}
 
 	nodeList, serviceErr := h.service.List(k8sClient.Clientset, labelSelector, limit, continueToken)
 	if serviceErr != nil {
-		apiError(c, http.StatusInternalServerError, "列出 Node 失败", serviceErr.Error())
+		utils.ApiError(c, http.StatusInternalServerError, "列出 Node 失败", serviceErr.Error())
 		return
 	}
-	apiSuccess(c, nodeList, "节点列表获取成功")
+	utils.ApiSuccess(c, nodeList, "节点列表获取成功")
 }
 
 func (h *NodeHandler) GetNode(c *gin.Context) {
-	k8sClient, ok := h.getK8sClient(c)
+	k8sClient, ok := k8s.GetK8sClientFromContext(c, h.clusterManager)
 	if !ok {
 		return
 	}
 	nodeName := c.Param("name")
 	if nodeName == "" {
-		apiError(c, http.StatusBadRequest, "路径中缺少 Node 名称")
+		utils.ApiError(c, http.StatusBadRequest, "路径中缺少 Node 名称")
 		return
 	}
 	node, serviceErr := h.service.Get(k8sClient.Clientset, nodeName)
 	if serviceErr != nil {
 		if errors.IsNotFound(serviceErr) {
-			apiError(c, http.StatusNotFound, fmt.Sprintf("Node '%s' 未找到", nodeName), serviceErr.Error())
+			utils.ApiError(c, http.StatusNotFound, fmt.Sprintf("Node '%s' 未找到", nodeName), serviceErr.Error())
 		} else {
-			apiError(c, http.StatusInternalServerError, fmt.Sprintf("获取 Node '%s' 失败", nodeName), serviceErr.Error())
+			utils.ApiError(c, http.StatusInternalServerError, fmt.Sprintf("获取 Node '%s' 失败", nodeName), serviceErr.Error())
 		}
 		return
 	}
-	apiSuccess(c, node, "Node 获取成功")
+	utils.ApiSuccess(c, node, "Node 获取成功")
 }
 
 func (h *NodeHandler) CreateNode(c *gin.Context) {
-	k8sClient, ok := h.getK8sClient(c)
+	k8sClient, ok := k8s.GetK8sClientFromContext(c, h.clusterManager)
 	if !ok {
 		return
 	}
 	var node corev1.Node
 	if err := c.ShouldBindJSON(&node); err != nil {
-		apiError(c, http.StatusBadRequest, "无效的请求体", err.Error())
+		utils.ApiError(c, http.StatusBadRequest, "无效的请求体", err.Error())
 		return
 	}
 	createdNode, serviceErr := h.service.Create(k8sClient.Clientset, &node)
 	if serviceErr != nil {
-		apiError(c, http.StatusInternalServerError, "创建 Node 失败", serviceErr.Error())
+		utils.ApiError(c, http.StatusInternalServerError, "创建 Node 失败", serviceErr.Error())
 		return
 	}
 	// For create, use http.StatusCreated
@@ -142,54 +98,54 @@ func (h *NodeHandler) CreateNode(c *gin.Context) {
 }
 
 func (h *NodeHandler) UpdateNode(c *gin.Context) {
-	k8sClient, ok := h.getK8sClient(c)
+	k8sClient, ok := k8s.GetK8sClientFromContext(c, h.clusterManager)
 	if !ok {
 		return
 	}
 	nodeName := c.Param("name")
 	if nodeName == "" {
-		apiError(c, http.StatusBadRequest, "路径中缺少 Node 名称")
+		utils.ApiError(c, http.StatusBadRequest, "路径中缺少 Node 名称")
 		return
 	}
 	var node corev1.Node
 	if err := c.ShouldBindJSON(&node); err != nil {
-		apiError(c, http.StatusBadRequest, "无效的请求体", err.Error())
+		utils.ApiError(c, http.StatusBadRequest, "无效的请求体", err.Error())
 		return
 	}
 	if node.Name != "" && node.Name != nodeName { // Ensure consistency
-		apiError(c, http.StatusBadRequest, "请求体中的 Node 名称与路径参数不匹配")
+		utils.ApiError(c, http.StatusBadRequest, "请求体中的 Node 名称与路径参数不匹配")
 		return
 	}
 	node.Name = nodeName // Set name from path param to be sure
 
 	updatedNode, serviceErr := h.service.Update(k8sClient.Clientset, &node)
 	if serviceErr != nil {
-		apiError(c, http.StatusInternalServerError, fmt.Sprintf("更新 Node '%s' 失败", nodeName), serviceErr.Error())
+		utils.ApiError(c, http.StatusInternalServerError, fmt.Sprintf("更新 Node '%s' 失败", nodeName), serviceErr.Error())
 		return
 	}
-	apiSuccess(c, updatedNode, fmt.Sprintf("Node '%s' 更新成功", nodeName))
+	utils.ApiSuccess(c, updatedNode, fmt.Sprintf("Node '%s' 更新成功", nodeName))
 }
 
 func (h *NodeHandler) DeleteNode(c *gin.Context) {
-	k8sClient, ok := h.getK8sClient(c)
+	k8sClient, ok := k8s.GetK8sClientFromContext(c, h.clusterManager)
 	if !ok {
 		return
 	}
 	nodeName := c.Param("name")
 	if nodeName == "" {
-		apiError(c, http.StatusBadRequest, "路径中缺少 Node 名称")
+		utils.ApiError(c, http.StatusBadRequest, "路径中缺少 Node 名称")
 		return
 	}
 	serviceErr := h.service.Delete(k8sClient.Clientset, nodeName)
 	if serviceErr != nil {
-		apiError(c, http.StatusInternalServerError, fmt.Sprintf("删除 Node '%s' 失败", nodeName), serviceErr.Error())
+		utils.ApiError(c, http.StatusInternalServerError, fmt.Sprintf("删除 Node '%s' 失败", nodeName), serviceErr.Error())
 		return
 	}
-	apiSuccess(c, gin.H{"name": nodeName}, fmt.Sprintf("Node '%s' 删除请求已接受", nodeName))
+	utils.ApiSuccess(c, gin.H{"name": nodeName}, fmt.Sprintf("Node '%s' 删除请求已接受", nodeName))
 }
 
 func (h *NodeHandler) WatchNodes(c *gin.Context) {
-	k8sClient, ok := h.getK8sClient(c)
+	k8sClient, ok := k8s.GetK8sClientFromContext(c, h.clusterManager)
 	if !ok {
 		return
 	}
@@ -202,7 +158,7 @@ func (h *NodeHandler) WatchNodes(c *gin.Context) {
 
 	watcher, serviceErr := h.service.Watch(k8sClient.Clientset, labelSelector, resourceVersion, timeoutSeconds)
 	if serviceErr != nil {
-		apiError(c, http.StatusInternalServerError, "启动 Node watch 失败", serviceErr.Error())
+		utils.ApiError(c, http.StatusInternalServerError, "启动 Node watch 失败", serviceErr.Error())
 		return
 	}
 	defer watcher.Stop()
@@ -213,7 +169,7 @@ func (h *NodeHandler) WatchNodes(c *gin.Context) {
 
 	flusher, flushOK := c.Writer.(http.Flusher)
 	if !flushOK {
-		apiError(c, http.StatusInternalServerError, "Streaming 不被支持 (HTTP Flusher 不可用)")
+		utils.ApiError(c, http.StatusInternalServerError, "Streaming 不被支持 (HTTP Flusher 不可用)")
 		return
 	}
 
