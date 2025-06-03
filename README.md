@@ -673,10 +673,12 @@ Follow the WeChat Official Account 希里安 (cilliantech) to get the latest pro
 
 关注公众号 希里安，获取项目最新动态和技术分享！
 
-## ❤️ Thanks To All the Contributors | 感谢所有贡献者
+## ❤️ Thanks To All The Contributors | 感谢所有贡献者
 <a href="https://github.com/ciliverse/cilikube/graphs/contributors">
   <img src="https://contrib.rocks/image?repo=ciliverse/cilikube" />
 </a>
+
+感谢所有为 CiliKube 贡献代码和建议的开发者们！你们的努力让这个项目变得更好。
 
 
 ## 📞 Contact | 联系方式
