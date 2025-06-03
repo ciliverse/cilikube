@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"github.com/ciliverse/cilikube/pkg/k8s"
 	"net/http"
 	"strings"
 
@@ -75,11 +76,12 @@ func ToPVResponse(pv *corev1.PersistentVolume) PVResponse {
 // --- Handler ---
 
 type PVHandler struct {
-	service *service.PVService
+	service        *service.PVService
+	clusterManager *k8s.ClusterManager
 }
 
-func NewPVHandler(svc *service.PVService) *PVHandler {
-	return &PVHandler{service: svc}
+func NewPVHandler(svc *service.PVService, cm *k8s.ClusterManager) *PVHandler {
+	return &PVHandler{service: svc, clusterManager: cm}
 }
 
 // ListPVs godoc
@@ -94,12 +96,17 @@ func NewPVHandler(svc *service.PVService) *PVHandler {
 // @Failure 500 {object} handlers.ErrorResponse "Internal Server Error"
 // @Router /api/v1/persistentvolumes [get]
 func (h *PVHandler) ListPVs(c *gin.Context) {
+	k8sClient, ok := k8s.GetK8sClientFromContext(c, h.clusterManager)
+	if !ok {
+		return
+	}
+
 	labelSelector := c.Query("labelSelector")
 	// Limit query param, default to a reasonable number, e.g., 500
 	// Frontend pagination will handle displaying pageSize items from this list.
 	limit := utils.ParseInt(c.DefaultQuery("limit", "500"), 500)
 
-	pvList, err := h.service.List(labelSelector, int64(limit))
+	pvList, err := h.service.List(k8sClient.Clientset, labelSelector, int64(limit))
 	if err != nil {
 		respondError(c, http.StatusInternalServerError, "获取PV列表失败: "+err.Error())
 		return
@@ -133,13 +140,18 @@ func (h *PVHandler) ListPVs(c *gin.Context) {
 // @Failure 500 {object} handlers.ErrorResponse "Internal Server Error"
 // @Router /api/v1/persistentvolumes/{name} [get]
 func (h *PVHandler) GetPV(c *gin.Context) {
+	k8sClient, ok := k8s.GetK8sClientFromContext(c, h.clusterManager)
+	if !ok {
+		return
+	}
+
 	name := strings.TrimSpace(c.Param("name"))
 	if !utils.ValidateResourceName(name) { // Assuming you have this validation
 		respondError(c, http.StatusBadRequest, "无效的PV名称格式")
 		return
 	}
 
-	pv, err := h.service.Get(name)
+	pv, err := h.service.Get(k8sClient.Clientset, name)
 	if err != nil {
 		if errors.IsNotFound(err) {
 			respondError(c, http.StatusNotFound, "PV不存在")
@@ -164,6 +176,11 @@ func (h *PVHandler) GetPV(c *gin.Context) {
 // @Failure 500 {object} handlers.ErrorResponse "Internal Server Error"
 // @Router /api/v1/persistentvolumes [post]
 func (h *PVHandler) CreatePV(c *gin.Context) {
+	k8sClient, ok := k8s.GetK8sClientFromContext(c, h.clusterManager)
+	if !ok {
+		return
+	}
+
 	var pv corev1.PersistentVolume
 	// Bind JSON or YAML depending on Content-Type? Gin might handle JSON by default.
 	// For YAML, you might need custom binding or check Content-Type.
@@ -181,7 +198,7 @@ func (h *PVHandler) CreatePV(c *gin.Context) {
 		pv.APIVersion = "v1"
 	} // Default if missing
 
-	createdPV, err := h.service.Create(&pv)
+	createdPV, err := h.service.Create(k8sClient.Clientset, &pv)
 	if err != nil {
 		if errors.IsAlreadyExists(err) {
 			respondError(c, http.StatusConflict, "PV已存在")
@@ -213,6 +230,11 @@ func (h *PVHandler) CreatePV(c *gin.Context) {
 // @Failure 500 {object} handlers.ErrorResponse "Internal Server Error"
 // @Router /api/v1/persistentvolumes/{name} [put]
 func (h *PVHandler) UpdatePV(c *gin.Context) {
+	k8sClient, ok := k8s.GetK8sClientFromContext(c, h.clusterManager)
+	if !ok {
+		return
+	}
+
 	name := strings.TrimSpace(c.Param("name"))
 	if !utils.ValidateResourceName(name) {
 		respondError(c, http.StatusBadRequest, "无效的PV名称格式")
@@ -239,7 +261,7 @@ func (h *PVHandler) UpdatePV(c *gin.Context) {
 		pv.APIVersion = "v1"
 	}
 
-	updatedPV, err := h.service.Update(&pv) // Service needs to handle potential conflicts
+	updatedPV, err := h.service.Update(k8sClient.Clientset, &pv) // Service needs to handle potential conflicts
 	if err != nil {
 		if errors.IsNotFound(err) {
 			respondError(c, http.StatusNotFound, "PV不存在")
@@ -272,13 +294,18 @@ func (h *PVHandler) UpdatePV(c *gin.Context) {
 // @Failure 500 {object} handlers.ErrorResponse "Internal Server Error"
 // @Router /api/v1/persistentvolumes/{name} [delete]
 func (h *PVHandler) DeletePV(c *gin.Context) {
+	k8sClient, ok := k8s.GetK8sClientFromContext(c, h.clusterManager)
+	if !ok {
+		return
+	}
+
 	name := strings.TrimSpace(c.Param("name"))
 	if !utils.ValidateResourceName(name) {
 		respondError(c, http.StatusBadRequest, "无效的PV名称格式")
 		return
 	}
 
-	err := h.service.Delete(name)
+	err := h.service.Delete(k8sClient.Clientset, name)
 	if err != nil {
 		if errors.IsNotFound(err) {
 			// Consider returning 204 even if not found, idempotent delete

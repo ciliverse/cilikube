@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"github.com/ciliverse/cilikube/pkg/k8s"
 	"io"
 	"net/http"
 
@@ -16,16 +17,22 @@ import (
 
 // DaemonSetHandler ...
 type DaemonSetHandler struct {
-	service *service.DaemonSetService
+	service        *service.DaemonSetService
+	clusterManager *k8s.ClusterManager
 }
 
 // NewDaemonSetHandler ...
-func NewDaemonSetHandler(svc *service.DaemonSetService) *DaemonSetHandler {
-	return &DaemonSetHandler{service: svc}
+func NewDaemonSetHandler(svc *service.DaemonSetService, cm *k8s.ClusterManager) *DaemonSetHandler {
+	return &DaemonSetHandler{service: svc, clusterManager: cm}
 }
 
 // ListDaemonSets ...
 func (h *DaemonSetHandler) ListDaemonSets(c *gin.Context) {
+	k8sClient, ok := k8s.GetK8sClientFromContext(c, h.clusterManager)
+	if !ok {
+		return
+	}
+
 	namespace := c.Param("namespace")
 	// 1. 参数校验
 	if !utils.ValidateNamespace(namespace) {
@@ -34,7 +41,7 @@ func (h *DaemonSetHandler) ListDaemonSets(c *gin.Context) {
 	}
 
 	// 2. 调用服务层获取DaemonSet列表
-	daemonsets, err := h.service.List(namespace, c.Query("selector"))
+	daemonsets, err := h.service.List(k8sClient.Clientset, namespace, c.Query("selector"))
 	if err != nil {
 		respondError(c, http.StatusInternalServerError, "获取DaemonSet列表失败: "+err.Error())
 		return
@@ -46,6 +53,11 @@ func (h *DaemonSetHandler) ListDaemonSets(c *gin.Context) {
 
 // CreateDaemonSet ...
 func (h *DaemonSetHandler) CreateDaemonSet(c *gin.Context) {
+	k8sClient, ok := k8s.GetK8sClientFromContext(c, h.clusterManager)
+	if !ok {
+		return
+	}
+
 	namespace := c.Param("namespace")
 	var req models.CreateDaemonSetRequest
 
@@ -71,7 +83,7 @@ func (h *DaemonSetHandler) CreateDaemonSet(c *gin.Context) {
 		Spec: req.Spec,
 	}
 
-	createdDaemonset, err := h.service.Create(namespace, daemonset)
+	createdDaemonset, err := h.service.Create(k8sClient.Clientset, namespace, daemonset)
 	if err != nil {
 		respondError(c, http.StatusInternalServerError, "创建DaemonSet失败: "+err.Error())
 		return
@@ -83,6 +95,11 @@ func (h *DaemonSetHandler) CreateDaemonSet(c *gin.Context) {
 
 // GetDaemonSet ...
 func (h *DaemonSetHandler) GetDaemonSet(c *gin.Context) {
+	k8sClient, ok := k8s.GetK8sClientFromContext(c, h.clusterManager)
+	if !ok {
+		return
+	}
+
 	namespace := c.Param("namespace")
 	name := c.Param("name")
 	// 1. 参数校验
@@ -97,7 +114,7 @@ func (h *DaemonSetHandler) GetDaemonSet(c *gin.Context) {
 	}
 
 	// 2. 调用服务层获取DaemonSet详情
-	daemonset, err := h.service.Get(namespace, name)
+	daemonset, err := h.service.Get(k8sClient.Clientset, namespace, name)
 	if err != nil {
 		if errors.IsNotFound(err) {
 			respondError(c, http.StatusNotFound, "DaemonSet不存在")
@@ -113,6 +130,11 @@ func (h *DaemonSetHandler) GetDaemonSet(c *gin.Context) {
 
 // UpdateDaemonSet ...
 func (h *DaemonSetHandler) UpdateDaemonSet(c *gin.Context) {
+	k8sClient, ok := k8s.GetK8sClientFromContext(c, h.clusterManager)
+	if !ok {
+		return
+	}
+
 	namespace := c.Param("namespace")
 	name := c.Param("name")
 	var req models.UpdateDaemonSetRequest
@@ -144,7 +166,7 @@ func (h *DaemonSetHandler) UpdateDaemonSet(c *gin.Context) {
 		Spec: req.Spec,
 	}
 
-	updatedDaemonset, err := h.service.Update(namespace, daemonset)
+	updatedDaemonset, err := h.service.Update(k8sClient.Clientset, namespace, daemonset)
 	if err != nil {
 		respondError(c, http.StatusInternalServerError, "更新DaemonSet失败: "+err.Error())
 		return
@@ -156,6 +178,11 @@ func (h *DaemonSetHandler) UpdateDaemonSet(c *gin.Context) {
 
 // DeleteDaemonSet ...
 func (h *DaemonSetHandler) DeleteDaemonSet(c *gin.Context) {
+	k8sClient, ok := k8s.GetK8sClientFromContext(c, h.clusterManager)
+	if !ok {
+		return
+	}
+
 	namespace := c.Param("namespace")
 	name := c.Param("name")
 
@@ -171,7 +198,7 @@ func (h *DaemonSetHandler) DeleteDaemonSet(c *gin.Context) {
 	}
 
 	// 2. 调用服务层删除DaemonSet
-	if err := h.service.Delete(namespace, name); err != nil {
+	if err := h.service.Delete(k8sClient.Clientset, namespace, name); err != nil {
 		if errors.IsNotFound(err) {
 			respondError(c, http.StatusNotFound, "DaemonSet不存在")
 			return
@@ -186,6 +213,11 @@ func (h *DaemonSetHandler) DeleteDaemonSet(c *gin.Context) {
 
 // WatchDaemonSets ...
 func (h *DaemonSetHandler) WatchDaemonSets(c *gin.Context) {
+	k8sClient, ok := k8s.GetK8sClientFromContext(c, h.clusterManager)
+	if !ok {
+		return
+	}
+
 	namespace := c.Param("namespace")
 	// 1. 参数校验
 	if !utils.ValidateNamespace(namespace) {
@@ -194,7 +226,7 @@ func (h *DaemonSetHandler) WatchDaemonSets(c *gin.Context) {
 	}
 
 	// 2. 调用服务层Watch DaemonSets
-	watcher, err := h.service.Watch(namespace, c.Query("selector"))
+	watcher, err := h.service.Watch(k8sClient.Clientset, namespace, c.Query("selector"))
 	if err != nil {
 		respondError(c, http.StatusInternalServerError, "Watch DaemonSets失败: "+err.Error())
 		return

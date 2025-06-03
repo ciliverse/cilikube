@@ -2,24 +2,26 @@ package service
 
 import (
 	"context"
+	"k8s.io/client-go/kubernetes"
 
 	appsv1 "k8s.io/api/apps/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/watch"
-	"k8s.io/client-go/kubernetes"
 )
 
+// StatefulSetService 结构体不再持有 client 字段
 type StatefulSetService struct {
-	client kubernetes.Interface
+	// 不需要 client kubernetes.Interface 字段了
 }
 
-func NewStatefulSetService(client kubernetes.Interface) *StatefulSetService {
-	return &StatefulSetService{client: client}
+// NewStatefulSetService 构造函数不再接收 kubernetes.Interface 参数
+func NewStatefulSetService() *StatefulSetService {
+	return &StatefulSetService{}
 }
 
 // 获取单个StatefulSet
-func (s *StatefulSetService) Get(namespace, name string) (*appsv1.StatefulSet, error) {
-	return s.client.AppsV1().StatefulSets(namespace).Get(
+func (s *StatefulSetService) Get(clientSet kubernetes.Interface, namespace, name string) (*appsv1.StatefulSet, error) {
+	return clientSet.AppsV1().StatefulSets(namespace).Get(
 		context.TODO(),
 		name,
 		metav1.GetOptions{},
@@ -27,13 +29,13 @@ func (s *StatefulSetService) Get(namespace, name string) (*appsv1.StatefulSet, e
 }
 
 // 创建StatefulSet
-func (s *StatefulSetService) Create(namespace string, statefulSet *appsv1.StatefulSet) (*appsv1.StatefulSet, error) {
+func (s *StatefulSetService) Create(clientSet kubernetes.Interface, namespace string, statefulSet *appsv1.StatefulSet) (*appsv1.StatefulSet, error) {
 
 	if statefulSet.Namespace != "" && statefulSet.Namespace != namespace {
 		return nil, NewValidationError("statefulSet namespace conflicts with path parameter")
 	}
 
-	return s.client.AppsV1().StatefulSets(namespace).Create(
+	return clientSet.AppsV1().StatefulSets(namespace).Create(
 		context.TODO(),
 		statefulSet,
 		metav1.CreateOptions{},
@@ -41,8 +43,8 @@ func (s *StatefulSetService) Create(namespace string, statefulSet *appsv1.Statef
 }
 
 // 更新StatefulSet
-func (s *StatefulSetService) Update(namespace string, statefulSet *appsv1.StatefulSet) (*appsv1.StatefulSet, error) {
-	return s.client.AppsV1().StatefulSets(namespace).Update(
+func (s *StatefulSetService) Update(clientSet kubernetes.Interface, namespace string, statefulSet *appsv1.StatefulSet) (*appsv1.StatefulSet, error) {
+	return clientSet.AppsV1().StatefulSets(namespace).Update(
 		context.TODO(),
 		statefulSet,
 		metav1.UpdateOptions{},
@@ -50,8 +52,8 @@ func (s *StatefulSetService) Update(namespace string, statefulSet *appsv1.Statef
 }
 
 // 删除StatefulSet
-func (s *StatefulSetService) Delete(namespace, name string) error {
-	return s.client.AppsV1().StatefulSets(namespace).Delete(
+func (s *StatefulSetService) Delete(clientSet kubernetes.Interface, namespace, name string) error {
+	return clientSet.AppsV1().StatefulSets(namespace).Delete(
 		context.TODO(),
 		name,
 		metav1.DeleteOptions{},
@@ -59,8 +61,8 @@ func (s *StatefulSetService) Delete(namespace, name string) error {
 }
 
 // 列表查询（支持分页和标签过滤）
-func (s *StatefulSetService) List(namespace, selector string, limit int64) (*appsv1.StatefulSetList, error) {
-	return s.client.AppsV1().StatefulSets(namespace).List(
+func (s *StatefulSetService) List(clientSet kubernetes.Interface, namespace, selector string, limit int64) (*appsv1.StatefulSetList, error) {
+	return clientSet.AppsV1().StatefulSets(namespace).List(
 		context.TODO(),
 		metav1.ListOptions{
 			LabelSelector: selector,
@@ -70,8 +72,8 @@ func (s *StatefulSetService) List(namespace, selector string, limit int64) (*app
 }
 
 // Watch机制实现
-func (s *StatefulSetService) Watch(namespace, selector string) (watch.Interface, error) {
-	return s.client.AppsV1().StatefulSets(namespace).Watch(
+func (s *StatefulSetService) Watch(clientSet kubernetes.Interface, namespace, selector string) (watch.Interface, error) {
+	return clientSet.AppsV1().StatefulSets(namespace).Watch(
 		context.TODO(),
 		metav1.ListOptions{
 			LabelSelector:  selector,

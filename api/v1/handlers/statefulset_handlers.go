@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"github.com/ciliverse/cilikube/pkg/k8s"
 	"io"
 	"net/http"
 
@@ -15,16 +16,22 @@ import (
 
 // StatefulSetHandler ...
 type StatefulSetHandler struct {
-	service *service.StatefulSetService
+	service        *service.StatefulSetService
+	clusterManager *k8s.ClusterManager
 }
 
 // NewStatefulSetHandler ...
-func NewStatefulSetHandler(svc *service.StatefulSetService) *StatefulSetHandler {
-	return &StatefulSetHandler{service: svc}
+func NewStatefulSetHandler(svc *service.StatefulSetService, cm *k8s.ClusterManager) *StatefulSetHandler {
+	return &StatefulSetHandler{service: svc, clusterManager: cm}
 }
 
 // ListStatefulSets ...
 func (h *StatefulSetHandler) ListStatefulSets(c *gin.Context) {
+	k8sClient, ok := k8s.GetK8sClientFromContext(c, h.clusterManager)
+	if !ok {
+		return
+	}
+
 	namespace := c.Param("namespace")
 	// 1. 参数校验
 	if !utils.ValidateNamespace(namespace) {
@@ -33,7 +40,7 @@ func (h *StatefulSetHandler) ListStatefulSets(c *gin.Context) {
 	}
 
 	// 2. 调用服务层获取StatefulSet列表
-	statefulSets, err := h.service.List(namespace, c.Query("selector"), 0)
+	statefulSets, err := h.service.List(k8sClient.Clientset, namespace, c.Query("selector"), 0)
 	if err != nil {
 		respondError(c, http.StatusInternalServerError, "获取StatefulSet列表失败: "+err.Error())
 		return
@@ -45,6 +52,11 @@ func (h *StatefulSetHandler) ListStatefulSets(c *gin.Context) {
 
 // CreateStatefulSet ...
 func (h *StatefulSetHandler) CreateStatefulSet(c *gin.Context) {
+	k8sClient, ok := k8s.GetK8sClientFromContext(c, h.clusterManager)
+	if !ok {
+		return
+	}
+
 	namespace := c.Param("namespace")
 	var req models.CreateStatefulSetRequest
 
@@ -70,7 +82,7 @@ func (h *StatefulSetHandler) CreateStatefulSet(c *gin.Context) {
 		Spec: req.Spec,
 	}
 
-	createdStatefulSet, err := h.service.Create(namespace, statefulSet)
+	createdStatefulSet, err := h.service.Create(k8sClient.Clientset, namespace, statefulSet)
 	if err != nil {
 		respondError(c, http.StatusInternalServerError, "创建StatefulSet失败: "+err.Error())
 		return
@@ -82,6 +94,11 @@ func (h *StatefulSetHandler) CreateStatefulSet(c *gin.Context) {
 
 // GetStatefulSet ...
 func (h *StatefulSetHandler) GetStatefulSet(c *gin.Context) {
+	k8sClient, ok := k8s.GetK8sClientFromContext(c, h.clusterManager)
+	if !ok {
+		return
+	}
+
 	namespace := c.Param("namespace")
 	name := c.Param("name")
 	// 1. 参数校验
@@ -96,7 +113,7 @@ func (h *StatefulSetHandler) GetStatefulSet(c *gin.Context) {
 	}
 
 	// 2. 调用服务层获取StatefulSet详情
-	statefulSet, err := h.service.Get(namespace, name)
+	statefulSet, err := h.service.Get(k8sClient.Clientset, namespace, name)
 	if err != nil {
 		if errors.IsNotFound(err) {
 			respondError(c, http.StatusNotFound, "StatefulSet不存在")
@@ -112,6 +129,11 @@ func (h *StatefulSetHandler) GetStatefulSet(c *gin.Context) {
 
 // UpdateStatefulSet ...
 func (h *StatefulSetHandler) UpdateStatefulSet(c *gin.Context) {
+	k8sClient, ok := k8s.GetK8sClientFromContext(c, h.clusterManager)
+	if !ok {
+		return
+	}
+
 	namespace := c.Param("namespace")
 	name := c.Param("name")
 	var req models.UpdateStatefulSetRequest
@@ -143,7 +165,7 @@ func (h *StatefulSetHandler) UpdateStatefulSet(c *gin.Context) {
 		Spec: req.Spec,
 	}
 
-	updatedStatefulSet, err := h.service.Update(namespace, statefulSet)
+	updatedStatefulSet, err := h.service.Update(k8sClient.Clientset, namespace, statefulSet)
 	if err != nil {
 		respondError(c, http.StatusInternalServerError, "更新StatefulSet失败: "+err.Error())
 		return
@@ -155,6 +177,11 @@ func (h *StatefulSetHandler) UpdateStatefulSet(c *gin.Context) {
 
 // DeleteStatefulSet ...
 func (h *StatefulSetHandler) DeleteStatefulSet(c *gin.Context) {
+	k8sClient, ok := k8s.GetK8sClientFromContext(c, h.clusterManager)
+	if !ok {
+		return
+	}
+
 	namespace := c.Param("namespace")
 	name := c.Param("name")
 
@@ -170,7 +197,7 @@ func (h *StatefulSetHandler) DeleteStatefulSet(c *gin.Context) {
 	}
 
 	// 2. 调用服务层删除StatefulSet
-	if err := h.service.Delete(namespace, name); err != nil {
+	if err := h.service.Delete(k8sClient.Clientset, namespace, name); err != nil {
 		if errors.IsNotFound(err) {
 			respondError(c, http.StatusNotFound, "StatefulSet不存在")
 			return
@@ -185,6 +212,11 @@ func (h *StatefulSetHandler) DeleteStatefulSet(c *gin.Context) {
 
 // WatchStatefulSets ...
 func (h *StatefulSetHandler) WatchStatefulSets(c *gin.Context) {
+	k8sClient, ok := k8s.GetK8sClientFromContext(c, h.clusterManager)
+	if !ok {
+		return
+	}
+
 	namespace := c.Param("namespace")
 	// 1. 参数校验
 	if !utils.ValidateNamespace(namespace) {
@@ -193,7 +225,7 @@ func (h *StatefulSetHandler) WatchStatefulSets(c *gin.Context) {
 	}
 
 	// 2. 调用服务层Watch StatefulSets
-	watcher, err := h.service.Watch(namespace, c.Query("selector"))
+	watcher, err := h.service.Watch(k8sClient.Clientset, namespace, c.Query("selector"))
 	if err != nil {
 		respondError(c, http.StatusInternalServerError, "Watch StatefulSets失败: "+err.Error())
 		return
