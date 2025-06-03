@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"github.com/ciliverse/cilikube/pkg/k8s"
 	"net/http"
 	"strings"
 
@@ -13,11 +14,12 @@ import (
 )
 
 type SecretHandler struct {
-	service *service.SecretService
+	service        *service.SecretService
+	clusterManager *k8s.ClusterManager
 }
 
-func NewSecretHandler(svc *service.SecretService) *SecretHandler {
-	return &SecretHandler{service: svc}
+func NewSecretHandler(svc *service.SecretService, cm *k8s.ClusterManager) *SecretHandler {
+	return &SecretHandler{service: svc, clusterManager: cm}
 }
 
 // ListSecrets godoc
@@ -34,6 +36,11 @@ func NewSecretHandler(svc *service.SecretService) *SecretHandler {
 // @Failure 500 {object} handlers.ErrorResponse "Internal Server Error"
 // @Router /api/v1/namespaces/{namespace}/secrets [get]
 func (h *SecretHandler) ListSecrets(c *gin.Context) {
+	k8sClient, ok := k8s.GetK8sClientFromContext(c, h.clusterManager)
+	if !ok {
+		return
+	}
+
 	namespace := strings.TrimSpace(c.Param("namespace"))
 	if !utils.ValidateNamespace(namespace) {
 		respondError(c, http.StatusBadRequest, "无效的命名空间格式")
@@ -43,7 +50,7 @@ func (h *SecretHandler) ListSecrets(c *gin.Context) {
 	labelSelector := c.Query("labelSelector")
 	limit := utils.ParseInt(c.DefaultQuery("limit", "100"), 100)
 
-	secretList, err := h.service.List(namespace, labelSelector, int64(limit))
+	secretList, err := h.service.List(k8sClient.Clientset, namespace, labelSelector, int64(limit))
 	if err != nil {
 		respondError(c, http.StatusInternalServerError, "获取Secret列表失败: "+err.Error())
 		return
@@ -74,6 +81,11 @@ func (h *SecretHandler) ListSecrets(c *gin.Context) {
 // @Failure 500 {object} handlers.ErrorResponse "Internal Server Error"
 // @Router /api/v1/namespaces/{namespace}/secrets/{name} [get]
 func (h *SecretHandler) GetSecret(c *gin.Context) {
+	k8sClient, ok := k8s.GetK8sClientFromContext(c, h.clusterManager)
+	if !ok {
+		return
+	}
+
 	namespace := strings.TrimSpace(c.Param("namespace"))
 	name := strings.TrimSpace(c.Param("name"))
 	if !utils.ValidateNamespace(namespace) || !utils.ValidateResourceName(name) {
@@ -81,7 +93,7 @@ func (h *SecretHandler) GetSecret(c *gin.Context) {
 		return
 	}
 
-	secret, err := h.service.Get(namespace, name)
+	secret, err := h.service.Get(k8sClient.Clientset, namespace, name)
 	if err != nil {
 		if errors.IsNotFound(err) {
 			respondError(c, http.StatusNotFound, "Secret不存在")
@@ -108,6 +120,11 @@ func (h *SecretHandler) GetSecret(c *gin.Context) {
 // @Failure 500 {object} handlers.ErrorResponse "Internal Server Error"
 // @Router /api/v1/namespaces/{namespace}/secrets [post]
 func (h *SecretHandler) CreateSecret(c *gin.Context) {
+	k8sClient, ok := k8s.GetK8sClientFromContext(c, h.clusterManager)
+	if !ok {
+		return
+	}
+
 	namespace := strings.TrimSpace(c.Param("namespace"))
 	if !utils.ValidateNamespace(namespace) {
 		respondError(c, http.StatusBadRequest, "无效的命名空间格式")
@@ -133,7 +150,7 @@ func (h *SecretHandler) CreateSecret(c *gin.Context) {
 	// If not, you might need manual decoding here based on how the frontend sends it.
 	// However, K8s usually handles encoding StringData into Data automatically. Prefer using StringData for text.
 
-	createdSecret, err := h.service.Create(namespace, &secret)
+	createdSecret, err := h.service.Create(k8sClient.Clientset, namespace, &secret)
 	if err != nil {
 		if errors.IsAlreadyExists(err) {
 			respondError(c, http.StatusConflict, "Secret已存在")
@@ -165,6 +182,11 @@ func (h *SecretHandler) CreateSecret(c *gin.Context) {
 // @Failure 500 {object} handlers.ErrorResponse "Internal Server Error"
 // @Router /api/v1/namespaces/{namespace}/secrets/{name} [put]
 func (h *SecretHandler) UpdateSecret(c *gin.Context) {
+	k8sClient, ok := k8s.GetK8sClientFromContext(c, h.clusterManager)
+	if !ok {
+		return
+	}
+
 	namespace := strings.TrimSpace(c.Param("namespace"))
 	name := strings.TrimSpace(c.Param("name"))
 	if !utils.ValidateNamespace(namespace) || !utils.ValidateResourceName(name) {
@@ -189,7 +211,7 @@ func (h *SecretHandler) UpdateSecret(c *gin.Context) {
 		secret.APIVersion = "v1"
 	}
 
-	updatedSecret, err := h.service.Update(namespace, &secret)
+	updatedSecret, err := h.service.Update(k8sClient.Clientset, namespace, &secret)
 	if err != nil {
 		if errors.IsNotFound(err) {
 			respondError(c, http.StatusNotFound, "Secret不存在")
@@ -223,6 +245,11 @@ func (h *SecretHandler) UpdateSecret(c *gin.Context) {
 // @Failure 500 {object} handlers.ErrorResponse "Internal Server Error"
 // @Router /api/v1/namespaces/{namespace}/secrets/{name} [delete]
 func (h *SecretHandler) DeleteSecret(c *gin.Context) {
+	k8sClient, ok := k8s.GetK8sClientFromContext(c, h.clusterManager)
+	if !ok {
+		return
+	}
+
 	namespace := strings.TrimSpace(c.Param("namespace"))
 	name := strings.TrimSpace(c.Param("name"))
 	if !utils.ValidateNamespace(namespace) || !utils.ValidateResourceName(name) {
@@ -230,7 +257,7 @@ func (h *SecretHandler) DeleteSecret(c *gin.Context) {
 		return
 	}
 
-	err := h.service.Delete(namespace, name)
+	err := h.service.Delete(k8sClient.Clientset, namespace, name)
 	if err != nil {
 		if errors.IsNotFound(err) {
 			c.Status(http.StatusNoContent)
