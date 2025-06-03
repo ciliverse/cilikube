@@ -99,7 +99,7 @@ func InitializeServices(
 		// 示例：PodService。假设 NewPodService() 现在不需要参数或只需要非 K8s 配置。
 		// services.PodService = service.NewPodService() // 构造函数将在第4步修改
 		services.DeploymentService = service.NewDeploymentService()
-		// services.DaemonSetService = service.NewDaemonSetService()
+		services.DaemonSetService = service.NewDaemonSetService()
 		// services.ServiceService = service.NewServiceService()
 		// services.IngressService = service.NewIngressService()
 		// services.NetworkPolicyService = service.NewNetworkPolicyService()
@@ -160,9 +160,9 @@ func InitializeHandlers(
 	if services.DeploymentService != nil {
 		appHandlers.DeploymentHandler = handlers.NewDeploymentHandler(services.DeploymentService, k8sClusterManager)
 	}
-	// if services.DaemonSetService != nil {
-	// 	appHandlers.DaemonSetHandler = handlers.NewDaemonSetHandler(services.DaemonSetService, k8sClusterManager)
-	// }
+	if services.DaemonSetService != nil {
+		appHandlers.DaemonSetHandler = handlers.NewDaemonSetHandler(services.DaemonSetService, k8sClusterManager)
+	}
 	// if services.ServiceService != nil {
 	// 	appHandlers.ServiceHandler = handlers.NewServiceHandler(services.ServiceService, k8sClusterManager)
 	// }

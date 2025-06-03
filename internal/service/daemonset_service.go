@@ -2,25 +2,27 @@ package service
 
 import (
 	"context"
+	"k8s.io/client-go/kubernetes"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/watch"
-	"k8s.io/client-go/kubernetes"
 )
 
+// DaemonSetService 结构体不再持有 client 字段
 type DaemonSetService struct {
-	client kubernetes.Interface
+	// 不需要 client kubernetes.Interface 字段了
 }
 
-func NewDaemonSetService(client kubernetes.Interface) *DaemonSetService {
-	return &DaemonSetService{client: client}
+// NewDaemonSetService 构造函数不再接收 kubernetes.Interface 参数
+func NewDaemonSetService() *DaemonSetService {
+	return &DaemonSetService{}
 }
 
 // 获取单个DaemonSet
-func (s *DaemonSetService) Get(namespace, name string) (*appsv1.DaemonSet, error) {
-	return s.client.AppsV1().DaemonSets(namespace).Get(
+func (s *DaemonSetService) Get(clientSet kubernetes.Interface, namespace, name string) (*appsv1.DaemonSet, error) {
+	return clientSet.AppsV1().DaemonSets(namespace).Get(
 		context.TODO(),
 		name,
 		metav1.GetOptions{},
@@ -28,12 +30,12 @@ func (s *DaemonSetService) Get(namespace, name string) (*appsv1.DaemonSet, error
 }
 
 // 创建DaemonSet
-func (s *DaemonSetService) Create(namespace string, daemonset *appsv1.DaemonSet) (*appsv1.DaemonSet, error) {
+func (s *DaemonSetService) Create(clientSet kubernetes.Interface, namespace string, daemonset *appsv1.DaemonSet) (*appsv1.DaemonSet, error) {
 	if daemonset.Namespace != "" && daemonset.Namespace != namespace {
 		return nil, NewValidationError("daemonset namespace conflicts with path parameter")
 	}
 
-	return s.client.AppsV1().DaemonSets(namespace).Create(
+	return clientSet.AppsV1().DaemonSets(namespace).Create(
 		context.TODO(),
 		daemonset,
 		metav1.CreateOptions{},
@@ -41,8 +43,8 @@ func (s *DaemonSetService) Create(namespace string, daemonset *appsv1.DaemonSet)
 }
 
 // 更新DaemonSet（包含冲突检测）
-func (s *DaemonSetService) Update(namespace string, daemonset *appsv1.DaemonSet) (*appsv1.DaemonSet, error) {
-	return s.client.AppsV1().DaemonSets(namespace).Update(
+func (s *DaemonSetService) Update(clientSet kubernetes.Interface, namespace string, daemonset *appsv1.DaemonSet) (*appsv1.DaemonSet, error) {
+	return clientSet.AppsV1().DaemonSets(namespace).Update(
 		context.TODO(),
 		daemonset,
 		metav1.UpdateOptions{},
@@ -50,8 +52,8 @@ func (s *DaemonSetService) Update(namespace string, daemonset *appsv1.DaemonSet)
 }
 
 // 删除DaemonSet
-func (s *DaemonSetService) Delete(namespace, name string) error {
-	return s.client.AppsV1().DaemonSets(namespace).Delete(
+func (s *DaemonSetService) Delete(clientSet kubernetes.Interface, namespace, name string) error {
+	return clientSet.AppsV1().DaemonSets(namespace).Delete(
 		context.TODO(),
 		name,
 		metav1.DeleteOptions{},
@@ -59,11 +61,11 @@ func (s *DaemonSetService) Delete(namespace, name string) error {
 }
 
 // 列表查询（支持分页和标签过滤）
-func (s *DaemonSetService) List(namespace, selector string) (*appsv1.DaemonSetList, error) {
+func (s *DaemonSetService) List(clientSet kubernetes.Interface, namespace, selector string) (*appsv1.DaemonSetList, error) {
 	if namespace == "" {
 		namespace = corev1.NamespaceAll
 	}
-	return s.client.AppsV1().DaemonSets(namespace).List(
+	return clientSet.AppsV1().DaemonSets(namespace).List(
 		context.TODO(),
 		metav1.ListOptions{
 			LabelSelector: selector,
@@ -72,8 +74,8 @@ func (s *DaemonSetService) List(namespace, selector string) (*appsv1.DaemonSetLi
 }
 
 // Watch机制实现
-func (s *DaemonSetService) Watch(namespace, selector string) (watch.Interface, error) {
-	return s.client.AppsV1().DaemonSets(namespace).Watch(
+func (s *DaemonSetService) Watch(clientSet kubernetes.Interface, namespace, selector string) (watch.Interface, error) {
+	return clientSet.AppsV1().DaemonSets(namespace).Watch(
 		context.TODO(),
 		metav1.ListOptions{
 			LabelSelector:  selector,
