@@ -11,17 +11,19 @@ import (
 	"k8s.io/client-go/kubernetes"
 )
 
+// DeploymentService 结构体不再持有 client 字段
 type DeploymentService struct {
-	client kubernetes.Interface
+	// 不需要 client kubernetes.Interface 字段了
 }
 
-func NewDeploymentService(client kubernetes.Interface) *DeploymentService {
-	return &DeploymentService{client: client}
+// NewDeploymentService 构造函数不再接收 kubernetes.Interface 参数
+func NewDeploymentService() *DeploymentService {
+	return &DeploymentService{}
 }
 
 // 获取单个Deployment
-func (s *DeploymentService) Get(namespace, name string) (*appsv1.Deployment, error) {
-	return s.client.AppsV1().Deployments(namespace).Get(
+func (s *DeploymentService) Get(clientSet kubernetes.Interface, namespace, name string) (*appsv1.Deployment, error) {
+	return clientSet.AppsV1().Deployments(namespace).Get(
 		context.TODO(),
 		name,
 		metav1.GetOptions{},
@@ -29,13 +31,13 @@ func (s *DeploymentService) Get(namespace, name string) (*appsv1.Deployment, err
 }
 
 // 创建Deployment
-func (s *DeploymentService) Create(namespace string, deployment *appsv1.Deployment) (*appsv1.Deployment, error) {
+func (s *DeploymentService) Create(clientSet kubernetes.Interface, namespace string, deployment *appsv1.Deployment) (*appsv1.Deployment, error) {
 
 	if deployment.Namespace != "" && deployment.Namespace != namespace {
 		return nil, NewValidationError("deployment namespace conflicts with path parameter")
 	}
 
-	return s.client.AppsV1().Deployments(namespace).Create(
+	return clientSet.AppsV1().Deployments(namespace).Create(
 		context.TODO(),
 		deployment,
 		metav1.CreateOptions{},
@@ -43,7 +45,7 @@ func (s *DeploymentService) Create(namespace string, deployment *appsv1.Deployme
 }
 
 // 更新Deployment（包含冲突检测）
-func (s *DeploymentService) Update(namespace, name string, deployment *appsv1.Deployment) (*appsv1.Deployment, error) {
+func (s *DeploymentService) Update(clientSet kubernetes.Interface, namespace, name string, deployment *appsv1.Deployment) (*appsv1.Deployment, error) {
 	// --- 严格校验 ---
 	// 1. 名称必须匹配
 	if deployment.Name != name {
@@ -58,7 +60,7 @@ func (s *DeploymentService) Update(namespace, name string, deployment *appsv1.De
 	// 3. Kind 和 APIVersion (可选但推荐)
 	// ...
 
-	return s.client.AppsV1().Deployments(namespace).Update(
+	return clientSet.AppsV1().Deployments(namespace).Update(
 		context.TODO(),
 		deployment,
 		metav1.UpdateOptions{},
@@ -66,8 +68,8 @@ func (s *DeploymentService) Update(namespace, name string, deployment *appsv1.De
 }
 
 // 删除Deployment
-func (s *DeploymentService) Delete(namespace, name string) error {
-	return s.client.AppsV1().Deployments(namespace).Delete(
+func (s *DeploymentService) Delete(clientSet kubernetes.Interface, namespace, name string) error {
+	return clientSet.AppsV1().Deployments(namespace).Delete(
 		context.TODO(),
 		name,
 		metav1.DeleteOptions{},
@@ -75,16 +77,16 @@ func (s *DeploymentService) Delete(namespace, name string) error {
 }
 
 // ListDeployments 列出所有Deployment
-func (s *DeploymentService) List(namespace string) (*appsv1.DeploymentList, error) {
-	return s.client.AppsV1().Deployments(namespace).List(
+func (s *DeploymentService) List(clientSet kubernetes.Interface, namespace string) (*appsv1.DeploymentList, error) {
+	return clientSet.AppsV1().Deployments(namespace).List(
 		context.TODO(),
 		metav1.ListOptions{},
 	)
 }
 
 // ListDeploymentsByLabels 根据标签过滤列出Deployment
-func (s *DeploymentService) ListByLabels(namespace, selector string) (*appsv1.DeploymentList, error) {
-	return s.client.AppsV1().Deployments(namespace).List(
+func (s *DeploymentService) ListByLabels(clientSet kubernetes.Interface, namespace, selector string) (*appsv1.DeploymentList, error) {
+	return clientSet.AppsV1().Deployments(namespace).List(
 		context.TODO(),
 		metav1.ListOptions{
 			LabelSelector: selector,
@@ -93,8 +95,8 @@ func (s *DeploymentService) ListByLabels(namespace, selector string) (*appsv1.De
 }
 
 // WatchDeployments 实现Watch机制
-func (s *DeploymentService) Watch(namespace, selector string) (watch.Interface, error) {
-	return s.client.AppsV1().Deployments(namespace).Watch(
+func (s *DeploymentService) Watch(clientSet kubernetes.Interface, namespace, selector string) (watch.Interface, error) {
+	return clientSet.AppsV1().Deployments(namespace).Watch(
 		context.TODO(),
 		metav1.ListOptions{
 			LabelSelector:  selector,
@@ -105,8 +107,8 @@ func (s *DeploymentService) Watch(namespace, selector string) (watch.Interface, 
 }
 
 // PatchDeployment 实现Patch机制
-// func (s *DeploymentService) Patch(namespace, name string, patchData []byte) (*appsv1.Deployment, error) {
-// 	return s.client.AppsV1().Deployments(namespace).Patch(
+// func (s *DeploymentService) Patch(clientSet kubernetes.Interface, namespace, name string, patchData []byte) (*appsv1.Deployment, error) {
+// 	return clientSet.AppsV1().Deployments(namespace).Patch(
 // 		context.TODO(),
 // 		name,
 // 		types.StrategicMergePatchType,
@@ -116,8 +118,8 @@ func (s *DeploymentService) Watch(namespace, selector string) (watch.Interface, 
 // }
 
 // ReplaceDeployment 实现Replace机制
-func (s *DeploymentService) Replace(namespace, name string, deployment *appsv1.Deployment) (*appsv1.Deployment, error) {
-	return s.client.AppsV1().Deployments(namespace).Update(
+func (s *DeploymentService) Replace(clientSet kubernetes.Interface, namespace, name string, deployment *appsv1.Deployment) (*appsv1.Deployment, error) {
+	return clientSet.AppsV1().Deployments(namespace).Update(
 		context.TODO(),
 		deployment,
 		metav1.UpdateOptions{},
@@ -127,14 +129,14 @@ func (s *DeploymentService) Replace(namespace, name string, deployment *appsv1.D
 // RollbackDeployment 实现Deployment回滚
 
 // ScaleDeployment 实现Deployment扩缩容
-func (s *DeploymentService) Scale(namespace, name string, replicas int32) (*appsv1.Deployment, error) {
-	deployment, err := s.Get(namespace, name)
+func (s *DeploymentService) Scale(clientSet kubernetes.Interface, namespace, name string, replicas int32) (*appsv1.Deployment, error) {
+	deployment, err := s.Get(clientSet, namespace, name)
 	if err != nil {
 		return nil, err
 	}
 
 	deployment.Spec.Replicas = &replicas
-	return s.client.AppsV1().Deployments(namespace).Update(
+	return clientSet.AppsV1().Deployments(namespace).Update(
 		context.TODO(),
 		deployment,
 		metav1.UpdateOptions{},
@@ -142,14 +144,14 @@ func (s *DeploymentService) Scale(namespace, name string, replicas int32) (*apps
 }
 
 // PauseDeployment 实现Deployment暂停
-func (s *DeploymentService) Pause(namespace, name string) (*appsv1.Deployment, error) {
-	deployment, err := s.Get(namespace, name)
+func (s *DeploymentService) Pause(clientSet kubernetes.Interface, namespace, name string) (*appsv1.Deployment, error) {
+	deployment, err := s.Get(clientSet, namespace, name)
 	if err != nil {
 		return nil, err
 	}
 
 	deployment.Spec.Paused = true
-	return s.client.AppsV1().Deployments(namespace).Update(
+	return clientSet.AppsV1().Deployments(namespace).Update(
 		context.TODO(),
 		deployment,
 		metav1.UpdateOptions{},
@@ -157,14 +159,14 @@ func (s *DeploymentService) Pause(namespace, name string) (*appsv1.Deployment, e
 }
 
 // ResumeDeployment 实现Deployment恢复
-func (s *DeploymentService) Resume(namespace, name string) (*appsv1.Deployment, error) {
-	deployment, err := s.Get(namespace, name)
+func (s *DeploymentService) Resume(clientSet kubernetes.Interface, namespace, name string) (*appsv1.Deployment, error) {
+	deployment, err := s.Get(clientSet, namespace, name)
 	if err != nil {
 		return nil, err
 	}
 
 	deployment.Spec.Paused = false
-	return s.client.AppsV1().Deployments(namespace).Update(
+	return clientSet.AppsV1().Deployments(namespace).Update(
 		context.TODO(),
 		deployment,
 		metav1.UpdateOptions{},
@@ -172,15 +174,15 @@ func (s *DeploymentService) Resume(namespace, name string) (*appsv1.Deployment, 
 }
 
 // PodList 实现获取Deployment关联的Pod列表查询（支持分页和标签过滤）
-func (s *DeploymentService) PodList(namespace, deploymentName string, limit int64) (*corev1.PodList, error) {
+func (s *DeploymentService) PodList(clientSet kubernetes.Interface, namespace, deploymentName string, limit int64) (*corev1.PodList, error) {
 	// 1. 获取 Deployment
-	deployment, err := s.Get(namespace, deploymentName)
+	deployment, err := s.Get(clientSet, namespace, deploymentName)
 	if err != nil {
 		return nil, err
 	}
 
 	// 2. 获取 ReplicaSet（Deployment 控制器会创建 ReplicaSet）
-	rsList, err := s.client.AppsV1().ReplicaSets(namespace).List(
+	rsList, err := clientSet.AppsV1().ReplicaSets(namespace).List(
 		context.TODO(),
 		metav1.ListOptions{
 			LabelSelector: labels.SelectorFromSet(deployment.Spec.Selector.MatchLabels).String(),
@@ -219,7 +221,7 @@ func (s *DeploymentService) PodList(namespace, deploymentName string, limit int6
 	}
 
 	// 9. 查询 Pod 列表
-	return s.client.CoreV1().Pods(namespace).List(
+	return clientSet.CoreV1().Pods(namespace).List(
 		context.TODO(),
 		metav1.ListOptions{
 			LabelSelector: allSelectors.String(),

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/ciliverse/cilikube/api/v1/models"
 	"github.com/ciliverse/cilikube/internal/service"
+	"github.com/ciliverse/cilikube/pkg/k8s"
 	"github.com/ciliverse/cilikube/pkg/utils"
 	"github.com/gin-gonic/gin"
 	"io"
@@ -18,16 +19,22 @@ import (
 
 // DeploymentHandler ...
 type DeploymentHandler struct {
-	service *service.DeploymentService
+	service        *service.DeploymentService
+	clusterManager *k8s.ClusterManager
 }
 
 // NewDeploymentHandler ...
-func NewDeploymentHandler(svc *service.DeploymentService) *DeploymentHandler {
-	return &DeploymentHandler{service: svc}
+func NewDeploymentHandler(svc *service.DeploymentService, cm *k8s.ClusterManager) *DeploymentHandler {
+	return &DeploymentHandler{service: svc, clusterManager: cm}
 }
 
 // ListDeployments ...
 func (h *DeploymentHandler) ListDeployments(c *gin.Context) {
+	k8sClient, ok := k8s.GetK8sClientFromContext(c, h.clusterManager)
+	if !ok {
+		return
+	}
+
 	namespace := c.Param("namespace")
 	// 1. 参数校验
 	if !utils.ValidateNamespace(namespace) {
@@ -36,7 +43,7 @@ func (h *DeploymentHandler) ListDeployments(c *gin.Context) {
 	}
 
 	// 2. 调用服务层获取Deployment列表
-	deployments, err := h.service.List(namespace)
+	deployments, err := h.service.List(k8sClient.Clientset, namespace)
 	if err != nil {
 		respondError(c, http.StatusInternalServerError, "获取Deployment列表失败: "+err.Error())
 		return
@@ -54,6 +61,11 @@ func (h *DeploymentHandler) ListDeployments(c *gin.Context) {
 
 // CreateDeployment ...
 func (h *DeploymentHandler) CreateDeployment(c *gin.Context) {
+	k8sClient, ok := k8s.GetK8sClientFromContext(c, h.clusterManager)
+	if !ok {
+		return
+	}
+
 	namespace := c.Param("namespace")
 	// 参数校验
 	if !utils.ValidateNamespace(namespace) {
@@ -88,7 +100,7 @@ func (h *DeploymentHandler) CreateDeployment(c *gin.Context) {
 	}
 
 	// 调用服务层创建Deployment
-	createdDeployment, err := h.service.Create(namespace, deployment)
+	createdDeployment, err := h.service.Create(k8sClient.Clientset, namespace, deployment)
 	if err != nil {
 		if errors.IsAlreadyExists(err) {
 			respondError(c, http.StatusConflict, "Deployment已存在")
@@ -103,6 +115,11 @@ func (h *DeploymentHandler) CreateDeployment(c *gin.Context) {
 
 // GetDeployment ...
 func (h *DeploymentHandler) GetDeployment(c *gin.Context) {
+	k8sClient, ok := k8s.GetK8sClientFromContext(c, h.clusterManager)
+	if !ok {
+		return
+	}
+
 	namespace := c.Param("namespace")
 	name := c.Param("name")
 	// 1. 参数校验
@@ -117,7 +134,7 @@ func (h *DeploymentHandler) GetDeployment(c *gin.Context) {
 	}
 
 	// 2. 调用服务层获取Deployment详情
-	deployment, err := h.service.Get(namespace, name)
+	deployment, err := h.service.Get(k8sClient.Clientset, namespace, name)
 	if err != nil {
 		if errors.IsNotFound(err) {
 			respondError(c, http.StatusNotFound, "Deployment不存在")
@@ -134,6 +151,11 @@ func (h *DeploymentHandler) GetDeployment(c *gin.Context) {
 
 // UpdateDeployment ...
 func (h *DeploymentHandler) UpdateDeployment(c *gin.Context) {
+	k8sClient, ok := k8s.GetK8sClientFromContext(c, h.clusterManager)
+	if !ok {
+		return
+	}
+
 	namespace := c.Param("namespace")
 	name := c.Param("name")
 	// 参数校验
@@ -174,7 +196,7 @@ func (h *DeploymentHandler) UpdateDeployment(c *gin.Context) {
 	}
 
 	// 调用服务层更新Deployment
-	resultDeployment, err := h.service.Update(namespace, name, updateDeployment)
+	resultDeployment, err := h.service.Update(k8sClient.Clientset, namespace, name, updateDeployment)
 	if err != nil {
 		if errors.IsNotFound(err) {
 			respondError(c, http.StatusNotFound, "Deployment不存在 (可能在更新期间被删除)")
@@ -193,6 +215,11 @@ func (h *DeploymentHandler) UpdateDeployment(c *gin.Context) {
 
 // DeleteDeployment ...
 func (h *DeploymentHandler) DeleteDeployment(c *gin.Context) {
+	k8sClient, ok := k8s.GetK8sClientFromContext(c, h.clusterManager)
+	if !ok {
+		return
+	}
+
 	namespace := c.Param("namespace")
 	name := c.Param("name")
 	// 1. 参数校验
@@ -206,7 +233,7 @@ func (h *DeploymentHandler) DeleteDeployment(c *gin.Context) {
 		return
 	}
 
-	if err := h.service.Delete(namespace, name); err != nil {
+	if err := h.service.Delete(k8sClient.Clientset, namespace, name); err != nil {
 		if errors.IsNotFound(err) {
 			respondError(c, http.StatusNotFound, "Deployment不存在")
 			return
@@ -221,6 +248,11 @@ func (h *DeploymentHandler) DeleteDeployment(c *gin.Context) {
 
 // WatchDeployments ...
 func (h *DeploymentHandler) WatchDeployments(c *gin.Context) {
+	k8sClient, ok := k8s.GetK8sClientFromContext(c, h.clusterManager)
+	if !ok {
+		return
+	}
+
 	// 参数获取校验
 	namespace := strings.TrimSpace(c.Param("namespace"))
 	if !utils.ValidateNamespace(namespace) {
@@ -230,7 +262,7 @@ func (h *DeploymentHandler) WatchDeployments(c *gin.Context) {
 	labelSelector := c.Query("labelSelector")
 
 	// 创建 Deployment Watcher
-	watcher, err := h.service.Watch(namespace, labelSelector)
+	watcher, err := h.service.Watch(k8sClient.Clientset, namespace, labelSelector)
 	if err != nil {
 		respondError(c, http.StatusInternalServerError, "开始监听Deployment失败: "+err.Error())
 		return
@@ -270,6 +302,11 @@ func (h *DeploymentHandler) WatchDeployments(c *gin.Context) {
 
 // ScaleDeployment ...
 func (h *DeploymentHandler) ScaleDeployment(c *gin.Context) {
+	k8sClient, ok := k8s.GetK8sClientFromContext(c, h.clusterManager)
+	if !ok {
+		return
+	}
+
 	namespace := c.Param("namespace")
 	name := c.Param("name")
 
@@ -292,7 +329,7 @@ func (h *DeploymentHandler) ScaleDeployment(c *gin.Context) {
 	}
 
 	// 2. 调用服务层修改Deployment的副本数
-	deployment, err := h.service.Scale(namespace, name, req.Replicas)
+	deployment, err := h.service.Scale(k8sClient.Clientset, namespace, name, req.Replicas)
 	if err != nil {
 		if errors.IsNotFound(err) {
 			respondError(c, http.StatusNotFound, "Deployment不存在")
@@ -308,6 +345,11 @@ func (h *DeploymentHandler) ScaleDeployment(c *gin.Context) {
 
 // GetDeploymentPods ...
 func (h *DeploymentHandler) GetDeploymentPods(c *gin.Context) {
+	k8sClient, ok := k8s.GetK8sClientFromContext(c, h.clusterManager)
+	if !ok {
+		return
+	}
+
 	namespace := c.Param("namespace")
 	name := c.Param("name")
 
@@ -328,7 +370,7 @@ func (h *DeploymentHandler) GetDeploymentPods(c *gin.Context) {
 		limit = 500 // Fallback
 	}
 
-	pods, err := h.service.PodList(namespace, name, limit)
+	pods, err := h.service.PodList(k8sClient.Clientset, namespace, name, limit)
 	if err != nil {
 		respondError(c, http.StatusInternalServerError, "获取Pod列表失败: "+err.Error())
 		return
