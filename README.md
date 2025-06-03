@@ -53,10 +53,7 @@ CiliKube originated from the author's practical project while learning full-stac
 
 CiliKube 起源于作者学习 Web 全栈开发的实践项目。在学习过程中，作者深入探索了 Kubernetes，并获得了相关认证。这个项目不仅是学习成果的体现，更希望成为一把“钥匙 (Key)”，帮助更多像作者一样的学习者打开开源世界的大门，参与贡献，共同成长。
 
-## 📚 Documentation | 文档
-![alt text](docs/docs.png)
-*   Official Documentation: [cilikube.cillian.website](https://cilikube.cillian.website)
-*   官方文档: [cilikube.cillian.website](https://cilikube.cillian.website) 
+
 
 
 ## 🌐 Online Demo | 在线预览
@@ -69,6 +66,39 @@ CiliKube 起源于作者学习 Web 全栈开发的实践项目。在学习过程
 *   演示账号:
     *   用户名: admin
     *   密码: 12345678
+
+## 🎨 Feature Preview | 功能预览
+
+### **即将上线全新Antd组件web界面，敬请期待！**
+
+![alt text](docs/newui.png)
+![alt text](docs/antd-2.png)
+
+### **原始UI**
+![alt text](docs/login.png)
+![alt text](docs/first.png)
+![alt text](docs/minikube2.png)
+![alt text](docs/techstack.png)
+![alt text](docs/monitor1.png)
+![alt text](docs/monitor2.png)
+![alt text](docs/dashboard.png)
+![alt text](docs/nav.png)
+![alt text](docs/cluster.png)
+![alt text](docs/ingress.png)
+![alt text](docs/namespace.png)
+![alt text](docs/svc.png)
+![alt text](docs/deployment.png)
+![alt text](docs/pod.png)
+![alt text](docs/shell.png)
+![alt text](docs/pv.png)
+![alt text](docs/pvc.png)
+![alt text](docs/secret.png)
+![alt text](docs/configmap.png)
+
+## 📚 Documentation | 文档
+![alt text](docs/docs.png)
+*   Official Documentation: [cilikube.cillian.website](https://cilikube.cillian.website)
+*   官方文档: [cilikube.cillian.website](https://cilikube.cillian.website) 
 
 ## 🚀 Tech Stack | 技术栈
 
@@ -535,29 +565,6 @@ Tips: 如果你想在 Kubernetes 集群中运行 CiliKube，可以选择 Helm �
 * **GitHub仓库:** [github.com/ciliverse/cilikube](https://github.com/ciliverse/cilikube)
 
 在官方文档中，你可能会找到关于后端部署、数据库配置（如果需要）、以及未来可能支持的更多部署选项的详细信息。
-
-## 🎨 Feature Preview | 功能预览
-![alt text](docs/login.png)
-![alt text](docs/first.png)
-![alt text](docs/minikube2.png)
-![alt text](docs/techstack.png)
-![alt text](docs/monitor1.png)
-![alt text](docs/monitor2.png)
-![alt text](docs/dashboard.png)
-![alt text](docs/nav.png)
-![alt text](docs/cluster.png)
-![alt text](docs/ingress.png)
-![alt text](docs/namespace.png)
-![alt text](docs/svc.png)
-![alt text](docs/deployment.png)
-![alt text](docs/pod.png)
-![alt text](docs/shell.png)
-![alt text](docs/pv.png)
-![alt text](docs/pvc.png)
-![alt text](docs/secret.png)
-![alt text](docs/configmap.png)
-
-
 
 
 ## 🤝 Contribution Guide | 贡献指南
