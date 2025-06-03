@@ -85,29 +85,31 @@ package service
 
 import (
 	"context"
+	"k8s.io/client-go/kubernetes"
 
 	corev1 "k8s.io/api/core/v1"
 	// "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes"
 )
 
+// PVCService 结构体不再持有 client 字段
 type PVCService struct {
-	client kubernetes.Interface
+	// 不需要 client kubernetes.Interface 字段了
 }
 
-func NewPVCService(client kubernetes.Interface) *PVCService {
-	return &PVCService{client: client}
+// NewPVCService 构造函数不再接收 kubernetes.Interface 参数
+func NewPVCService() *PVCService {
+	return &PVCService{}
 }
 
 // Get retrieves a single PersistentVolumeClaim by namespace and name.
-func (s *PVCService) Get(namespace, name string) (*corev1.PersistentVolumeClaim, error) {
-	return s.client.CoreV1().PersistentVolumeClaims(namespace).Get(context.TODO(), name, metav1.GetOptions{})
+func (s *PVCService) Get(clientSet kubernetes.Interface, namespace, name string) (*corev1.PersistentVolumeClaim, error) {
+	return clientSet.CoreV1().PersistentVolumeClaims(namespace).Get(context.TODO(), name, metav1.GetOptions{})
 }
 
 // List retrieves a list of PersistentVolumeClaims in a specific namespace.
 // Supports label selector filtering and limit.
-func (s *PVCService) List(namespace, labelSelector string, limit int64) (*corev1.PersistentVolumeClaimList, error) {
+func (s *PVCService) List(clientSet kubernetes.Interface, namespace, labelSelector string, limit int64) (*corev1.PersistentVolumeClaimList, error) {
 	listOptions := metav1.ListOptions{}
 	if labelSelector != "" {
 		listOptions.LabelSelector = labelSelector
@@ -116,11 +118,11 @@ func (s *PVCService) List(namespace, labelSelector string, limit int64) (*corev1
 		listOptions.Limit = limit
 	}
 
-	return s.client.CoreV1().PersistentVolumeClaims(namespace).List(context.TODO(), listOptions)
+	return clientSet.CoreV1().PersistentVolumeClaims(namespace).List(context.TODO(), listOptions)
 }
 
 // Create creates a new PersistentVolumeClaim.
-func (s *PVCService) Create(namespace string, pvc *corev1.PersistentVolumeClaim) (*corev1.PersistentVolumeClaim, error) {
+func (s *PVCService) Create(clientSet kubernetes.Interface, namespace string, pvc *corev1.PersistentVolumeClaim) (*corev1.PersistentVolumeClaim, error) {
 	// Validate namespace consistency
 	if pvc.Namespace != "" && pvc.Namespace != namespace {
 		return nil, NewValidationError("PVC namespace conflicts with path parameter")
@@ -133,7 +135,7 @@ func (s *PVCService) Create(namespace string, pvc *corev1.PersistentVolumeClaim)
 	}
 	// Add more validation for spec if needed (e.g., required fields)
 
-	return s.client.CoreV1().PersistentVolumeClaims(namespace).Create(context.TODO(), pvc, metav1.CreateOptions{})
+	return clientSet.CoreV1().PersistentVolumeClaims(namespace).Create(context.TODO(), pvc, metav1.CreateOptions{})
 }
 
 // Update updates an existing PersistentVolumeClaim.
@@ -142,7 +144,7 @@ func (s *PVCService) Create(namespace string, pvc *corev1.PersistentVolumeClaim)
 // The Kubernetes API server will reject spec changes for immutable fields.
 // This service function allows the update call, but relies on the API server for enforcement.
 // Consider adding validation here to prevent attempts to change immutable fields if desired.
-func (s *PVCService) Update(namespace string, pvc *corev1.PersistentVolumeClaim) (*corev1.PersistentVolumeClaim, error) {
+func (s *PVCService) Update(clientSet kubernetes.Interface, namespace string, pvc *corev1.PersistentVolumeClaim) (*corev1.PersistentVolumeClaim, error) {
 	if pvc.Namespace != "" && pvc.Namespace != namespace {
 		return nil, NewValidationError("PVC namespace conflicts with path parameter")
 	}
@@ -153,12 +155,12 @@ func (s *PVCService) Update(namespace string, pvc *corev1.PersistentVolumeClaim)
 		return nil, NewValidationError("PVC name cannot be empty for update")
 	}
 
-	return s.client.CoreV1().PersistentVolumeClaims(namespace).Update(context.TODO(), pvc, metav1.UpdateOptions{})
+	return clientSet.CoreV1().PersistentVolumeClaims(namespace).Update(context.TODO(), pvc, metav1.UpdateOptions{})
 }
 
 // Delete deletes a PersistentVolumeClaim by namespace and name.
-func (s *PVCService) Delete(namespace, name string) error {
-	return s.client.CoreV1().PersistentVolumeClaims(namespace).Delete(context.TODO(), name, metav1.DeleteOptions{})
+func (s *PVCService) Delete(clientSet kubernetes.Interface, namespace, name string) error {
+	return clientSet.CoreV1().PersistentVolumeClaims(namespace).Delete(context.TODO(), name, metav1.DeleteOptions{})
 }
 
 // --- Error Handling (reuse or define locally) ---

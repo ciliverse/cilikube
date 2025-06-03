@@ -105,7 +105,7 @@ func InitializeServices(
 		// services.NetworkPolicyService = service.NewNetworkPolicyService()
 		// services.ConfigMapService = service.NewConfigMapService()
 		// services.SecretService = service.NewSecretService()
-		// services.PVCService = service.NewPVCService()
+		services.PVCService = service.NewPVCService()
 		services.PVService = service.NewPVService()
 		// services.StatefulSetService = service.NewStatefulSetService()
 		services.NodeService = service.NewNodeService()
@@ -178,9 +178,9 @@ func InitializeHandlers(
 	// if services.SecretService != nil {
 	// 	appHandlers.SecretHandler = handlers.NewSecretHandler(services.SecretService, k8sClusterManager)
 	// }
-	// if services.PVCService != nil {
-	// 	appHandlers.PVCHandler = handlers.NewPVCHandler(services.PVCService, k8sClusterManager)
-	// }
+	if services.PVCService != nil {
+		appHandlers.PVCHandler = handlers.NewPVCHandler(services.PVCService, k8sClusterManager)
+	}
 	if services.PVService != nil {
 		appHandlers.PVHandler = handlers.NewPVHandler(services.PVService, k8sClusterManager)
 	}

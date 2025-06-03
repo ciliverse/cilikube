@@ -212,6 +212,7 @@
 package handlers
 
 import (
+	"github.com/ciliverse/cilikube/pkg/k8s"
 	"net/http"
 	"strings"
 
@@ -224,11 +225,12 @@ import (
 )
 
 type PVCHandler struct {
-	service *service.PVCService
+	service        *service.PVCService
+	clusterManager *k8s.ClusterManager
 }
 
-func NewPVCHandler(svc *service.PVCService) *PVCHandler {
-	return &PVCHandler{service: svc}
+func NewPVCHandler(svc *service.PVCService, cm *k8s.ClusterManager) *PVCHandler {
+	return &PVCHandler{service: svc, clusterManager: cm}
 }
 
 // ListPVCs godoc
@@ -245,6 +247,11 @@ func NewPVCHandler(svc *service.PVCService) *PVCHandler {
 // @Failure 500 {object} handlers.ErrorResponse "Internal Server Error"
 // @Router /api/v1/namespaces/{namespace}/persistentvolumeclaims [get]
 func (h *PVCHandler) ListPVCs(c *gin.Context) {
+	k8sClient, ok := k8s.GetK8sClientFromContext(c, h.clusterManager)
+	if !ok {
+		return
+	}
+
 	namespace := strings.TrimSpace(c.Param("namespace"))
 	if !utils.ValidateNamespace(namespace) {
 		respondError(c, http.StatusBadRequest, "无效的命名空间格式")
@@ -254,7 +261,7 @@ func (h *PVCHandler) ListPVCs(c *gin.Context) {
 	labelSelector := c.Query("labelSelector")
 	limit := utils.ParseInt(c.DefaultQuery("limit", "100"), 100)
 
-	pvcList, err := h.service.List(namespace, labelSelector, int64(limit))
+	pvcList, err := h.service.List(k8sClient.Clientset, namespace, labelSelector, int64(limit))
 	if err != nil {
 		respondError(c, http.StatusInternalServerError, "获取PVC列表失败: "+err.Error())
 		return
@@ -285,6 +292,11 @@ func (h *PVCHandler) ListPVCs(c *gin.Context) {
 // @Failure 500 {object} handlers.ErrorResponse "Internal Server Error"
 // @Router /api/v1/namespaces/{namespace}/persistentvolumeclaims/{name} [get]
 func (h *PVCHandler) GetPVC(c *gin.Context) {
+	k8sClient, ok := k8s.GetK8sClientFromContext(c, h.clusterManager)
+	if !ok {
+		return
+	}
+
 	namespace := strings.TrimSpace(c.Param("namespace"))
 	name := strings.TrimSpace(c.Param("name"))
 
@@ -293,7 +305,7 @@ func (h *PVCHandler) GetPVC(c *gin.Context) {
 		return
 	}
 
-	pvc, err := h.service.Get(namespace, name)
+	pvc, err := h.service.Get(k8sClient.Clientset, namespace, name)
 	if err != nil {
 		if errors.IsNotFound(err) {
 			respondError(c, http.StatusNotFound, "PVC不存在")
@@ -319,6 +331,11 @@ func (h *PVCHandler) GetPVC(c *gin.Context) {
 // @Failure 500 {object} handlers.ErrorResponse "Internal Server Error"
 // @Router /api/v1/namespaces/{namespace}/persistentvolumeclaims [post]
 func (h *PVCHandler) CreatePVC(c *gin.Context) {
+	k8sClient, ok := k8s.GetK8sClientFromContext(c, h.clusterManager)
+	if !ok {
+		return
+	}
+
 	namespace := strings.TrimSpace(c.Param("namespace"))
 	if !utils.ValidateNamespace(namespace) {
 		respondError(c, http.StatusBadRequest, "无效的命名空间格式")
@@ -341,7 +358,7 @@ func (h *PVCHandler) CreatePVC(c *gin.Context) {
 	}
 
 	// Let service handle namespace assignment/validation based on path param
-	createdPVC, err := h.service.Create(namespace, &pvc)
+	createdPVC, err := h.service.Create(k8sClient.Clientset, namespace, &pvc)
 	if err != nil {
 		if errors.IsAlreadyExists(err) {
 			respondError(c, http.StatusConflict, "PVC已存在")
@@ -373,6 +390,11 @@ func (h *PVCHandler) CreatePVC(c *gin.Context) {
 // @Failure 500 {object} handlers.ErrorResponse "Internal Server Error"
 // @Router /api/v1/namespaces/{namespace}/persistentvolumeclaims/{name} [put]
 func (h *PVCHandler) UpdatePVC(c *gin.Context) {
+	k8sClient, ok := k8s.GetK8sClientFromContext(c, h.clusterManager)
+	if !ok {
+		return
+	}
+
 	namespace := strings.TrimSpace(c.Param("namespace"))
 	name := strings.TrimSpace(c.Param("name"))
 
@@ -402,7 +424,7 @@ func (h *PVCHandler) UpdatePVC(c *gin.Context) {
 	}
 
 	// Service Update handles the actual call, API server enforces immutability
-	updatedPVC, err := h.service.Update(namespace, &pvc)
+	updatedPVC, err := h.service.Update(k8sClient.Clientset, namespace, &pvc)
 	if err != nil {
 		if errors.IsNotFound(err) {
 			respondError(c, http.StatusNotFound, "PVC不存在")
@@ -436,6 +458,11 @@ func (h *PVCHandler) UpdatePVC(c *gin.Context) {
 // @Failure 500 {object} handlers.ErrorResponse "Internal Server Error"
 // @Router /api/v1/namespaces/{namespace}/persistentvolumeclaims/{name} [delete]
 func (h *PVCHandler) DeletePVC(c *gin.Context) {
+	k8sClient, ok := k8s.GetK8sClientFromContext(c, h.clusterManager)
+	if !ok {
+		return
+	}
+
 	namespace := strings.TrimSpace(c.Param("namespace"))
 	name := strings.TrimSpace(c.Param("name"))
 
@@ -444,7 +471,7 @@ func (h *PVCHandler) DeletePVC(c *gin.Context) {
 		return
 	}
 
-	err := h.service.Delete(namespace, name)
+	err := h.service.Delete(k8sClient.Clientset, namespace, name)
 	if err != nil {
 		if errors.IsNotFound(err) {
 			// respondError(c, http.StatusNotFound, "PVC不存在")
