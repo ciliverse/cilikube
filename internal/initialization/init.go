@@ -103,7 +103,7 @@ func InitializeServices(
 		// services.ServiceService = service.NewServiceService()
 		// services.IngressService = service.NewIngressService()
 		// services.NetworkPolicyService = service.NewNetworkPolicyService()
-		// services.ConfigMapService = service.NewConfigMapService()
+		services.ConfigMapService = service.NewConfigMapService()
 		// services.SecretService = service.NewSecretService()
 		services.PVCService = service.NewPVCService()
 		services.PVService = service.NewPVService()
@@ -172,9 +172,9 @@ func InitializeHandlers(
 	// if services.NetworkPolicyService != nil {
 	// 	appHandlers.NetworkPolicyHandler = handlers.NewNetworkPolicyHandler(services.NetworkPolicyService, k8sClusterManager)
 	// }
-	// if services.ConfigMapService != nil {
-	// 	appHandlers.ConfigMapHandler = handlers.NewConfigMapHandler(services.ConfigMapService, k8sClusterManager)
-	// }
+	if services.ConfigMapService != nil {
+		appHandlers.ConfigMapHandler = handlers.NewConfigMapHandler(services.ConfigMapService, k8sClusterManager)
+	}
 	// if services.SecretService != nil {
 	// 	appHandlers.SecretHandler = handlers.NewSecretHandler(services.SecretService, k8sClusterManager)
 	// }
