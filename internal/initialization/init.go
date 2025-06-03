@@ -97,7 +97,7 @@ func InitializeServices(
 		log.Printf("检测到 %d 个可用的 Kubernetes 集群。Kubernetes 相关服务将被实例化。", len(availableClusters))
 
 		// 示例：PodService。假设 NewPodService() 现在不需要参数或只需要非 K8s 配置。
-		// services.PodService = service.NewPodService() // 构造函数将在第4步修改
+		services.PodService = service.NewPodService() // 构造函数将在第4步修改
 		services.DeploymentService = service.NewDeploymentService()
 		services.DaemonSetService = service.NewDaemonSetService()
 		// services.ServiceService = service.NewServiceService()
@@ -154,9 +154,9 @@ func InitializeHandlers(
 	// 初始化 Kubernetes 相关的处理器。
 
 	// (NewXxxHandler 构造函数签名将在后续步骤中修改 Handler 代码时调整)
-	// if services.PodService != nil { // 检查服务是否已实例化
-	// 	appHandlers.PodHandler = handlers.NewPodHandler(services.PodService, k8sClusterManager)
-	// }
+	if services.PodService != nil { // 检查服务是否已实例化
+		appHandlers.PodHandler = handlers.NewPodHandler(services.PodService, k8sClusterManager)
+	}
 	if services.DeploymentService != nil {
 		appHandlers.DeploymentHandler = handlers.NewDeploymentHandler(services.DeploymentService, k8sClusterManager)
 	}

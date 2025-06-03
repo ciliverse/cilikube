@@ -3,31 +3,32 @@ package service
 import (
 	"context"
 	"io"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
 
 	// Import net/url - Not directly used here, but might be needed elsewhere or was from previous iteration
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1" // Used for Options
 	"k8s.io/apimachinery/pkg/watch"
-	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/scheme" // Required for Exec parameter encoding
-	"k8s.io/client-go/rest"              // Required for Exec config
 	"k8s.io/client-go/tools/remotecommand"
 	"sigs.k8s.io/yaml" // Preferred YAML library for K8s types
 )
 
+// PodService 结构体不再持有 client 和 config 字段
 type PodService struct {
-	client kubernetes.Interface
-	config *rest.Config // Add rest.Config to handle Exec requests
+	// 不需要 client kubernetes.Interface 字段了
+	// 不需要 config *rest.Config 字段了
 }
 
-// NewPodService - Updated to accept rest.Config
-func NewPodService(client kubernetes.Interface, config *rest.Config) *PodService {
-	return &PodService{client: client, config: config}
+// NewPodService 构造函数不再接收 kubernetes.Interface 和 *rest.Config 参数
+func NewPodService() *PodService {
+	return &PodService{}
 }
 
 // ListNamespaces 列出所有命名空间
-func (s *PodService) ListNamespaces() ([]string, error) {
-	namespaceList, err := s.client.CoreV1().Namespaces().List(context.TODO(), metav1.ListOptions{})
+func (s *PodService) ListNamespaces(clientSet kubernetes.Interface) ([]string, error) {
+	namespaceList, err := clientSet.CoreV1().Namespaces().List(context.TODO(), metav1.ListOptions{})
 	if err != nil {
 		return nil, err
 	}
@@ -39,8 +40,8 @@ func (s *PodService) ListNamespaces() ([]string, error) {
 }
 
 // Get 获取单个Pod
-func (s *PodService) Get(namespace, name string) (*corev1.Pod, error) {
-	return s.client.CoreV1().Pods(namespace).Get(
+func (s *PodService) Get(clientSet kubernetes.Interface, namespace, name string) (*corev1.Pod, error) {
+	return clientSet.CoreV1().Pods(namespace).Get(
 		context.TODO(),
 		name,
 		metav1.GetOptions{},
@@ -49,7 +50,7 @@ func (s *PodService) Get(namespace, name string) (*corev1.Pod, error) {
 
 // --- 添加缺失的 Create 方法 ---
 // Create 创建 Pod（接收 Pod 对象, 用于 JSON 路径）
-func (s *PodService) Create(namespace string, pod *corev1.Pod) (*corev1.Pod, error) {
+func (s *PodService) Create(clientSet kubernetes.Interface, namespace string, pod *corev1.Pod) (*corev1.Pod, error) {
 	// 校验 Namespace (如果 Pod 对象中提供了 namespace)
 	if pod.Namespace != "" && pod.Namespace != namespace {
 		// 如果 Pod 对象中的 namespace 与 URL 路径参数不匹配，返回错误
@@ -59,7 +60,7 @@ func (s *PodService) Create(namespace string, pod *corev1.Pod) (*corev1.Pod, err
 	pod.Namespace = namespace // Overwrite or set namespace from path parameter
 
 	// 调用 Kubernetes API 创建 Pod
-	return s.client.CoreV1().Pods(namespace).Create(
+	return clientSet.CoreV1().Pods(namespace).Create(
 		context.TODO(),
 		pod, // 传递构造好的 Pod 对象
 		metav1.CreateOptions{},
@@ -67,7 +68,7 @@ func (s *PodService) Create(namespace string, pod *corev1.Pod) (*corev1.Pod, err
 }
 
 // CreateFromYAML 创建 Pod (从 YAML)
-func (s *PodService) CreateFromYAML(namespace string, yamlContent []byte) (*corev1.Pod, error) {
+func (s *PodService) CreateFromYAML(clientSet kubernetes.Interface, namespace string, yamlContent []byte) (*corev1.Pod, error) {
 	var pod corev1.Pod
 	err := yaml.Unmarshal(yamlContent, &pod)
 	if err != nil {
@@ -88,7 +89,7 @@ func (s *PodService) CreateFromYAML(namespace string, yamlContent []byte) (*core
 
 	// 调用 Kubernetes API 创建 Pod (注意：这里仍然调用 K8s Client 的 Create)
 	// 理论上也可以直接调用上面我们添加的 s.Create 方法，但直接调用 client 也一样
-	return s.client.CoreV1().Pods(pod.Namespace).Create(
+	return clientSet.CoreV1().Pods(pod.Namespace).Create(
 		context.TODO(),
 		&pod,
 		metav1.CreateOptions{},
@@ -97,14 +98,14 @@ func (s *PodService) CreateFromYAML(namespace string, yamlContent []byte) (*core
 
 // --- 添加缺失的 Update 方法 ---
 // Update 更新 Pod（接收 Pod 对象, 用于 JSON 路径）
-func (s *PodService) Update(namespace string, pod *corev1.Pod) (*corev1.Pod, error) {
+func (s *PodService) Update(clientSet kubernetes.Interface, namespace string, pod *corev1.Pod) (*corev1.Pod, error) {
 	// 确保要更新的 Pod 对象的 Namespace 与 URL 路径参数一致
 	if pod.Namespace != namespace {
 		return nil, NewValidationError("pod namespace in body ('" + pod.Namespace + "') conflicts with path parameter ('" + namespace + "') during update")
 	}
 
 	// 调用 Kubernetes API 更新 Pod
-	return s.client.CoreV1().Pods(namespace).Update(
+	return clientSet.CoreV1().Pods(namespace).Update(
 		context.TODO(),
 		pod, // 传递构造好的、待更新的 Pod 对象
 		metav1.UpdateOptions{},
@@ -112,7 +113,7 @@ func (s *PodService) Update(namespace string, pod *corev1.Pod) (*corev1.Pod, err
 }
 
 // UpdateFromYAML 更新Pod (从 YAML)
-func (s *PodService) UpdateFromYAML(namespace, name string, yamlContent []byte) (*corev1.Pod, error) {
+func (s *PodService) UpdateFromYAML(clientSet kubernetes.Interface, namespace, name string, yamlContent []byte) (*corev1.Pod, error) {
 	var updatedPod corev1.Pod
 	err := yaml.Unmarshal(yamlContent, &updatedPod)
 	if err != nil {
@@ -135,7 +136,7 @@ func (s *PodService) UpdateFromYAML(namespace, name string, yamlContent []byte) 
 
 	// 调用 Kubernetes API 更新 Pod (注意：这里仍然调用 K8s Client 的 Update)
 	// 也可以调用上面我们添加的 s.Update 方法
-	return s.client.CoreV1().Pods(namespace).Update(
+	return clientSet.CoreV1().Pods(namespace).Update(
 		context.TODO(),
 		&updatedPod, // 传递反序列化后的 Pod 对象
 		metav1.UpdateOptions{},
@@ -143,8 +144,8 @@ func (s *PodService) UpdateFromYAML(namespace, name string, yamlContent []byte) 
 }
 
 // Delete 删除Pod
-func (s *PodService) Delete(namespace, name string) error {
-	return s.client.CoreV1().Pods(namespace).Delete(
+func (s *PodService) Delete(clientSet kubernetes.Interface, namespace, name string) error {
+	return clientSet.CoreV1().Pods(namespace).Delete(
 		context.TODO(),
 		name,
 		metav1.DeleteOptions{},
@@ -152,8 +153,8 @@ func (s *PodService) Delete(namespace, name string) error {
 }
 
 // List 列表查询（支持分页和标签过滤）
-func (s *PodService) List(namespace, selector string, limit int64) (*corev1.PodList, error) {
-	return s.client.CoreV1().Pods(namespace).List(
+func (s *PodService) List(clientSet kubernetes.Interface, namespace, selector string, limit int64) (*corev1.PodList, error) {
+	return clientSet.CoreV1().Pods(namespace).List(
 		context.TODO(),
 		metav1.ListOptions{
 			LabelSelector: selector,
@@ -163,8 +164,8 @@ func (s *PodService) List(namespace, selector string, limit int64) (*corev1.PodL
 }
 
 // Watch 机制实现
-func (s *PodService) Watch(namespace, selector string) (watch.Interface, error) {
-	return s.client.CoreV1().Pods(namespace).Watch(
+func (s *PodService) Watch(clientSet kubernetes.Interface, namespace, selector string) (watch.Interface, error) {
+	return clientSet.CoreV1().Pods(namespace).Watch(
 		context.TODO(),
 		metav1.ListOptions{
 			LabelSelector:  selector,
@@ -175,14 +176,14 @@ func (s *PodService) Watch(namespace, selector string) (watch.Interface, error) 
 }
 
 // GetPodLogs 获取 Pod 日志流
-func (s *PodService) GetPodLogs(namespace, podName string, opts *corev1.PodLogOptions) (io.ReadCloser, error) {
-	req := s.client.CoreV1().Pods(namespace).GetLogs(podName, opts)
+func (s *PodService) GetPodLogs(clientSet kubernetes.Interface, namespace, podName string, opts *corev1.PodLogOptions) (io.ReadCloser, error) {
+	req := clientSet.CoreV1().Pods(namespace).GetLogs(podName, opts)
 	return req.Stream(context.TODO())
 }
 
 // GetPodYAML 获取 Pod 的 YAML 定义
-func (s *PodService) GetPodYAML(namespace, name string) ([]byte, error) {
-	pod, err := s.Get(namespace, name)
+func (s *PodService) GetPodYAML(clientSet kubernetes.Interface, namespace, name string) ([]byte, error) {
+	pod, err := s.Get(clientSet, namespace, name)
 	if err != nil {
 		return nil, err
 	}
@@ -215,8 +216,8 @@ type ExecOptions struct {
 }
 
 // ExecIntoPod 在 Pod 容器内执行命令
-func (s *PodService) ExecIntoPod(ctx context.Context, opts ExecOptions) error {
-	req := s.client.CoreV1().RESTClient().Post().
+func (s *PodService) ExecIntoPod(clientSet kubernetes.Interface, config *rest.Config, ctx context.Context, opts ExecOptions) error {
+	req := clientSet.CoreV1().RESTClient().Post().
 		Resource("pods").
 		Name(opts.PodName).
 		Namespace(opts.Namespace).
@@ -231,7 +232,7 @@ func (s *PodService) ExecIntoPod(ctx context.Context, opts ExecOptions) error {
 		TTY:       opts.Tty,
 	}, scheme.ParameterCodec)
 
-	exec, err := remotecommand.NewSPDYExecutor(s.config, "POST", req.URL())
+	exec, err := remotecommand.NewSPDYExecutor(config, "POST", req.URL())
 	if err != nil {
 		return err
 	}
