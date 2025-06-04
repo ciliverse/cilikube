@@ -40,9 +40,9 @@ type DatabaseConfig struct {
 	Enabled  bool   `yaml:"enabled" json:"enabled"`
 	Host     string `yaml:"host" json:"host"`
 	Port     int    `yaml:"port" json:"port"`
-	Username string `yaml:"username" json:"username"`
+	Username string `yaml:"username" json:"username"` // 确保这里是 username
 	Password string `yaml:"password" json:"password"`
-	Database string `yaml:"database" json:"database"`
+	Database string `yaml:"database" json:"database"` // 确保这里是 database
 	Charset  string `yaml:"charset" json:"charset"`
 }
 
@@ -53,24 +53,21 @@ type JWTConfig struct {
 }
 
 type ClusterInfo struct {
-	Name string `yaml:"name" json:"name"` // 集群的唯一标识名称，将用于API路径或参数
-	// ConfigPath 可以是 kubeconfig 文件的绝对路径，或者是 "in-cluster"（如果管理平台本身部署在目标集群内并希望使用服务账户）
+	Name string `yaml:"name" json:"name"` // 集群的唯一标识名称
+	// ConfigPath 可以是 kubeconfig 文件的绝对路径，或者是 "in-cluster"
 	ConfigPath string `yaml:"config_path" json:"config_path"`
 	IsActive   bool   `yaml:"is_active" json:"is_active"` // 标记此集群配置是否启用
-	// 可以考虑添加的字段：
-	// DisplayName string            `yaml:"display_name" json:"display_name"` // 用于UI显示的名称
-	// Description string            `yaml:"description" json:"description"`   // 集群描述
-	// Context     string            `yaml:"context,omitempty" json:"context"` // 如果 kubeconfig 文件包含多个 context，指定使用哪一个
-	// ReadOnly    bool              `yaml:"read_only,omitempty" json:"read_only"` // 是否只读集群
 }
 
 var GlobalConfig *Config
+var configFilePath string // Store the path of the loaded config file
 
 // Load 加载配置文件
 func Load(path string) (*Config, error) {
 	if path == "" {
 		return nil, fmt.Errorf("配置文件路径不能为空")
 	}
+	configFilePath = path // Store for saving later
 
 	ext := filepath.Ext(path)
 	var cfg *Config
@@ -88,7 +85,7 @@ func Load(path string) (*Config, error) {
 	}
 
 	GlobalConfig = cfg
-	setDefaults() // 保持原有的默认值设定逻辑
+	setDefaults()
 
 	return cfg, nil
 }
@@ -111,6 +108,43 @@ func loadYAMLConfig(path string) (*Config, error) {
 	return cfg, nil
 }
 
+// SaveGlobalConfig 将当前的 GlobalConfig 保存到其原始加载路径
+func SaveGlobalConfig() error {
+	if GlobalConfig == nil {
+		return fmt.Errorf("全局配置尚未加载, 无法保存")
+	}
+	if configFilePath == "" {
+		return fmt.Errorf("配置文件路径未知, 无法保存")
+	}
+
+	data, err := yaml.Marshal(GlobalConfig)
+	if err != nil {
+		return fmt.Errorf("序列化配置到 YAML 失败: %w", err)
+	}
+
+	// Create a temporary file
+	tempFile, err := os.CreateTemp(filepath.Dir(configFilePath), filepath.Base(configFilePath)+".tmp")
+	if err != nil {
+		return fmt.Errorf("创建临时配置文件失败: %w", err)
+	}
+	defer os.Remove(tempFile.Name()) // Clean up temp file
+
+	if _, err := tempFile.Write(data); err != nil {
+		tempFile.Close()
+		return fmt.Errorf("写入临时配置文件失败: %w", err)
+	}
+	if err := tempFile.Close(); err != nil {
+		return fmt.Errorf("关闭临时配置文件失败: %w", err)
+	}
+
+	// Replace the original file with the temporary file
+	if err := os.Rename(tempFile.Name(), configFilePath); err != nil {
+		return fmt.Errorf("替换原配置文件失败: %w", err)
+	}
+
+	return nil
+}
+
 func setDefaults() {
 	if GlobalConfig.Server.Port == "" {
 		GlobalConfig.Server.Port = "8080"
@@ -119,23 +153,34 @@ func setDefaults() {
 		GlobalConfig.Server.Mode = "debug"
 	}
 	if GlobalConfig.Server.ReadTimeout == 0 {
-		GlobalConfig.Server.ReadTimeout = 30 // 默认 30 秒
+		GlobalConfig.Server.ReadTimeout = 30
 	}
 	if GlobalConfig.Server.WriteTimeout == 0 {
-		GlobalConfig.Server.WriteTimeout = 30 // 默认 30 秒
+		GlobalConfig.Server.WriteTimeout = 30
 	}
-	if GlobalConfig.Database.Host == "" {
-		GlobalConfig.Database.Host = "localhost"
+	// ... (其他 database, jwt, installer, kubernetes 的默认值设置保持不变) ...
+	if GlobalConfig.Database.Enabled { // 修正：只在 enabled 时设置数据库默认值
+		if GlobalConfig.Database.Host == "" {
+			GlobalConfig.Database.Host = "localhost"
+		}
+		if GlobalConfig.Database.Port == 0 {
+			// 对于 MySQL 通常是 3306，PostgreSQL 是 5432。这里以 MySQL 为例。
+			GlobalConfig.Database.Port = 3306
+		}
+		if GlobalConfig.Database.Username == "" { // 对应 DatabaseConfig 中的 Username
+			GlobalConfig.Database.Username = "root"
+		}
+		if GlobalConfig.Database.Password == "" {
+			GlobalConfig.Database.Password = "cilikube-password-change-in-production"
+		}
+		if GlobalConfig.Database.Database == "" { // 对应 DatabaseConfig 中的 Database
+			GlobalConfig.Database.Database = "cilikube"
+		}
+		if GlobalConfig.Database.Charset == "" {
+			GlobalConfig.Database.Charset = "utf8mb4"
+		}
 	}
-	if GlobalConfig.Database.Port == 0 {
-		GlobalConfig.Database.Port = 3306
-	}
-	if GlobalConfig.Database.Username == "" {
-		GlobalConfig.Database.Username = "root"
-	}
-	if GlobalConfig.Database.Charset == "" {
-		GlobalConfig.Database.Charset = "utf8mb4"
-	}
+
 	if GlobalConfig.JWT.SecretKey == "" {
 		GlobalConfig.JWT.SecretKey = os.Getenv("JWT_SECRET")
 		if GlobalConfig.JWT.SecretKey == "" {
@@ -154,62 +199,29 @@ func setDefaults() {
 	if GlobalConfig.Installer.DownloadDir == "" {
 		GlobalConfig.Installer.DownloadDir = "."
 	}
-
 	if GlobalConfig.Kubernetes.Kubeconfig == "" || GlobalConfig.Kubernetes.Kubeconfig == "default" {
 		if kubeconfigEnv := os.Getenv("KUBECONFIG"); kubeconfigEnv != "" {
 			GlobalConfig.Kubernetes.Kubeconfig = kubeconfigEnv
 		} else {
 			home, err := os.UserHomeDir()
-			if err == nil { // 只有成功获取到主目录才设置
+			if err == nil {
 				GlobalConfig.Kubernetes.Kubeconfig = filepath.Join(home, ".kube", "config")
 			} else {
-				// 如果无法获取用户主目录，且环境变量也未设置，则此路径可能无效或为空。
-				// 此时应用应能优雅处理，例如日志警告，并依赖 `Clusters` 配置。
-				GlobalConfig.Kubernetes.Kubeconfig = "" // 或者一个明确的标记，表示未配置
+				GlobalConfig.Kubernetes.Kubeconfig = ""
 			}
 		}
 	}
-
-	if GlobalConfig.Database.Enabled {
-		if GlobalConfig.Database.Host == "" {
-			GlobalConfig.Database.Host = "localhost"
-		}
-		if GlobalConfig.Database.Port == 0 {
-			GlobalConfig.Database.Port = 3306
-		}
-		if GlobalConfig.Database.Username == "" {
-			GlobalConfig.Database.Username = "root"
-		}
-		if GlobalConfig.Database.Database == "" {
-			GlobalConfig.Database.Database = "cilikube"
-		}
-		if GlobalConfig.Database.Password == "" {
-			// 确保为数据库密码提供一个安全的默认值或强制用户配置
-			GlobalConfig.Database.Password = "cilikube-password-change-in-production"
-		}
-		if GlobalConfig.Database.Charset == "" {
-			GlobalConfig.Database.Charset = "utf8mb4"
-		}
-	}
-
-	// for i := range GlobalConfig.Clusters {
-	//    if GlobalConfig.Clusters[i].Name == "" {
-	//        log.Printf("警告: 第 %d 个集群配置缺少名称，这可能导致问题。", i+1)
-	//    }
-	//    // 默认 IsActive 为 true，除非显式设置为 false？
-	//    // if !isSet(GlobalConfig.Clusters[i].IsActive) { //伪代码: isSet 需要具体实现
-	//    //    GlobalConfig.Clusters[i].IsActive = true
-	//    // }
-	// }
 }
 
 func (c *Config) GetDSN() string {
-	// 保持原有的 DSN 生成逻辑
+	if !c.Database.Enabled {
+		return "" // 如果数据库未启用，返回空 DSN
+	}
 	return fmt.Sprintf("%s:%s@tcp(%s:%d)/%s?charset=%s&parseTime=true",
-		c.Database.Username,
+		c.Database.Username, // 确保这里是 Username
 		c.Database.Password,
 		c.Database.Host,
 		c.Database.Port,
-		c.Database.Database,
+		c.Database.Database, // 确保这里是 Database
 		c.Database.Charset)
 }

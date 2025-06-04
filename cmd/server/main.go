@@ -42,7 +42,7 @@ func main() {
 	// 旧的 initializeK8sClient 函数已被移除
 	// 我们现在使用 NewClusterManager 来初始化所有在 cfg.Clusters 中定义的集群
 	log.Println("初始化 Kubernetes 集群管理器...")
-	k8sClusterManager, k8sClusterAvailabilityStatus := k8s.NewClusterManager(cfg)
+	k8sClusterManager, k8sClusterAvailabilityStatus := k8s.NewClusterManager()
 	// k8sClusterAvailabilityStatus 是一个 map[string]bool，告诉每个配置的集群是否成功初始化
 
 	// 判断是否至少有一个 Kubernetes 集群可用。
