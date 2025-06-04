@@ -100,7 +100,7 @@ func InitializeServices(
 		services.PodService = service.NewPodService() // 构造函数将在第4步修改
 		services.DeploymentService = service.NewDeploymentService()
 		services.DaemonSetService = service.NewDaemonSetService()
-		// services.ServiceService = service.NewServiceService()
+		services.ServiceService = service.NewServiceService()
 		// services.IngressService = service.NewIngressService()
 		// services.NetworkPolicyService = service.NewNetworkPolicyService()
 		services.ConfigMapService = service.NewConfigMapService()
@@ -163,9 +163,9 @@ func InitializeHandlers(
 	if services.DaemonSetService != nil {
 		appHandlers.DaemonSetHandler = handlers.NewDaemonSetHandler(services.DaemonSetService, k8sClusterManager)
 	}
-	// if services.ServiceService != nil {
-	// 	appHandlers.ServiceHandler = handlers.NewServiceHandler(services.ServiceService, k8sClusterManager)
-	// }
+	if services.ServiceService != nil {
+		appHandlers.ServiceHandler = handlers.NewServiceHandler(services.ServiceService, k8sClusterManager)
+	}
 	// if services.IngressService != nil {
 	// 	appHandlers.IngressHandler = handlers.NewIngressHandler(services.IngressService, k8sClusterManager)
 	// }
