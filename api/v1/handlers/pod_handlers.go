@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"fmt"
+	"github.com/ciliverse/cilikube/pkg/k8s"
 	"io"
 	"net/http"
 	"strconv"
@@ -19,16 +20,22 @@ import (
 )
 
 type PodHandler struct {
-	service *service.PodService
+	service        *service.PodService
+	clusterManager *k8s.ClusterManager
 }
 
-func NewPodHandler(svc *service.PodService) *PodHandler {
-	return &PodHandler{service: svc}
+func NewPodHandler(svc *service.PodService, cm *k8s.ClusterManager) *PodHandler {
+	return &PodHandler{service: svc, clusterManager: cm}
 }
 
 // ListNamespaces ... (保持不变)
 func (h *PodHandler) ListNamespaces(c *gin.Context) {
-	namespaces, err := h.service.ListNamespaces()
+	k8sClient, ok := k8s.GetK8sClientFromContext(c, h.clusterManager)
+	if !ok {
+		return
+	}
+
+	namespaces, err := h.service.ListNamespaces(k8sClient.Clientset)
 	if err != nil {
 		respondError(c, http.StatusInternalServerError, "获取命名空间失败: "+err.Error())
 		return
@@ -39,6 +46,11 @@ func (h *PodHandler) ListNamespaces(c *gin.Context) {
 
 // GetPod ... (保持不变)
 func (h *PodHandler) GetPod(c *gin.Context) {
+	k8sClient, ok := k8s.GetK8sClientFromContext(c, h.clusterManager)
+	if !ok {
+		return
+	}
+
 	namespace := strings.TrimSpace(c.Param("namespace"))
 	name := strings.TrimSpace(c.Param("name"))
 
@@ -51,7 +63,7 @@ func (h *PodHandler) GetPod(c *gin.Context) {
 		return
 	}
 
-	pod, err := h.service.Get(namespace, name)
+	pod, err := h.service.Get(k8sClient.Clientset, namespace, name)
 	if err != nil {
 		if errors.IsNotFound(err) {
 			respondError(c, http.StatusNotFound, "Pod不存在")
@@ -66,6 +78,11 @@ func (h *PodHandler) GetPod(c *gin.Context) {
 
 // CreatePod 创建Pod (支持 JSON 或 YAML)
 func (h *PodHandler) CreatePod(c *gin.Context) {
+	k8sClient, ok := k8s.GetK8sClientFromContext(c, h.clusterManager)
+	if !ok {
+		return
+	}
+
 	namespace := strings.TrimSpace(c.Param("namespace"))
 	if !utils.ValidateNamespace(namespace) {
 		respondError(c, http.StatusBadRequest, "无效的命名空间格式")
@@ -86,7 +103,7 @@ func (h *PodHandler) CreatePod(c *gin.Context) {
 			respondError(c, http.StatusBadRequest, "请求体不能为空 (YAML)")
 			return
 		}
-		createdPod, err = h.service.CreateFromYAML(namespace, yamlBody)
+		createdPod, err = h.service.CreateFromYAML(k8sClient.Clientset, namespace, yamlBody)
 
 	} else if strings.Contains(contentType, "json") { // Explicitly check for JSON
 		var req models.CreatePodRequest
@@ -110,7 +127,7 @@ func (h *PodHandler) CreatePod(c *gin.Context) {
 			Spec: req.Spec,
 		}
 		// Use the original service.Create method for JSON objects
-		createdPod, err = h.service.Create(namespace, pod)
+		createdPod, err = h.service.Create(k8sClient.Clientset, namespace, pod)
 	} else {
 		respondError(c, http.StatusUnsupportedMediaType, "不支持的 Content-Type，请使用 application/json 或 application/yaml")
 		return
@@ -135,6 +152,11 @@ func (h *PodHandler) CreatePod(c *gin.Context) {
 
 // UpdatePod 更新Pod (支持 JSON 或 YAML)
 func (h *PodHandler) UpdatePod(c *gin.Context) {
+	k8sClient, ok := k8s.GetK8sClientFromContext(c, h.clusterManager)
+	if !ok {
+		return
+	}
+
 	namespace := strings.TrimSpace(c.Param("namespace"))
 	name := strings.TrimSpace(c.Param("name"))
 
@@ -157,12 +179,12 @@ func (h *PodHandler) UpdatePod(c *gin.Context) {
 			respondError(c, http.StatusBadRequest, "请求体不能为空 (YAML)")
 			return
 		}
-		result, err = h.service.UpdateFromYAML(namespace, name, yamlBody)
+		result, err = h.service.UpdateFromYAML(k8sClient.Clientset, namespace, name, yamlBody)
 
 	} else if strings.Contains(contentType, "json") { // Explicitly check for JSON
 		// --- Handle JSON Input ---
 		// Get the existing Pod first to apply changes correctly
-		existingPod, errGet := h.service.Get(namespace, name)
+		existingPod, errGet := h.service.Get(k8sClient.Clientset, namespace, name)
 		if errGet != nil {
 			if errors.IsNotFound(errGet) {
 				respondError(c, http.StatusNotFound, "Pod不存在，无法更新")
@@ -186,7 +208,7 @@ func (h *PodHandler) UpdatePod(c *gin.Context) {
 		updatedPod.Spec = req.Spec               // Replace the entire spec
 
 		// *** Call the correct Update method in the service ***
-		result, err = h.service.Update(namespace, updatedPod) // Use the method taking a Pod object
+		result, err = h.service.Update(k8sClient.Clientset, namespace, updatedPod) // Use the method taking a Pod object
 
 	} else {
 		respondError(c, http.StatusUnsupportedMediaType, "不支持的 Content-Type，请使用 application/json 或 application/yaml")
@@ -216,6 +238,11 @@ func (h *PodHandler) UpdatePod(c *gin.Context) {
 
 // DeletePod ... (保持不变, 使用 204)
 func (h *PodHandler) DeletePod(c *gin.Context) {
+	k8sClient, ok := k8s.GetK8sClientFromContext(c, h.clusterManager)
+	if !ok {
+		return
+	}
+
 	namespace := strings.TrimSpace(c.Param("namespace"))
 	name := strings.TrimSpace(c.Param("name"))
 
@@ -224,7 +251,7 @@ func (h *PodHandler) DeletePod(c *gin.Context) {
 		return
 	}
 
-	err := h.service.Delete(namespace, name)
+	err := h.service.Delete(k8sClient.Clientset, namespace, name)
 	if err != nil {
 		if errors.IsNotFound(err) {
 			// Idempotent: Return success even if not found
@@ -240,6 +267,11 @@ func (h *PodHandler) DeletePod(c *gin.Context) {
 
 // ListPods ... (保持不变)
 func (h *PodHandler) ListPods(c *gin.Context) {
+	k8sClient, ok := k8s.GetK8sClientFromContext(c, h.clusterManager)
+	if !ok {
+		return
+	}
+
 	namespace := strings.TrimSpace(c.Param("namespace"))
 	if !utils.ValidateNamespace(namespace) {
 		respondError(c, http.StatusBadRequest, "无效的命名空间格式")
@@ -253,7 +285,7 @@ func (h *PodHandler) ListPods(c *gin.Context) {
 		limit = 500 // Fallback
 	}
 
-	pods, err := h.service.List(namespace, labelSelector, limit)
+	pods, err := h.service.List(k8sClient.Clientset, namespace, labelSelector, limit)
 	if err != nil {
 		respondError(c, http.StatusInternalServerError, "获取Pod列表失败: "+err.Error())
 		return
@@ -279,6 +311,11 @@ func (h *PodHandler) ListPods(c *gin.Context) {
 // @Success 200 {object} models.WatchEvent "Server-Sent Event stream"
 // @Router /api/v1/namespaces/{namespace}/watch/pods [get] // Adjusted route based on routes.go
 func (h *PodHandler) WatchPods(c *gin.Context) {
+	k8sClient, ok := k8s.GetK8sClientFromContext(c, h.clusterManager)
+	if !ok {
+		return
+	}
+
 	namespace := strings.TrimSpace(c.Param("namespace"))
 	if !utils.ValidateNamespace(namespace) {
 		respondError(c, http.StatusBadRequest, "无效的命名空间格式")
@@ -286,7 +323,7 @@ func (h *PodHandler) WatchPods(c *gin.Context) {
 	}
 	labelSelector := c.Query("labelSelector")
 
-	watcher, err := h.service.Watch(namespace, labelSelector)
+	watcher, err := h.service.Watch(k8sClient.Clientset, namespace, labelSelector)
 	if err != nil {
 		respondError(c, http.StatusInternalServerError, "开始监听Pod失败: "+err.Error())
 		return
@@ -328,6 +365,11 @@ func (h *PodHandler) WatchPods(c *gin.Context) {
 
 // GetPodYAML ... (保持不变)
 func (h *PodHandler) GetPodYAML(c *gin.Context) {
+	k8sClient, ok := k8s.GetK8sClientFromContext(c, h.clusterManager)
+	if !ok {
+		return
+	}
+
 	namespace := strings.TrimSpace(c.Param("namespace"))
 	name := strings.TrimSpace(c.Param("name"))
 
@@ -336,7 +378,7 @@ func (h *PodHandler) GetPodYAML(c *gin.Context) {
 		return
 	}
 
-	yamlBytes, err := h.service.GetPodYAML(namespace, name)
+	yamlBytes, err := h.service.GetPodYAML(k8sClient.Clientset, namespace, name)
 	if err != nil {
 		if errors.IsNotFound(err) {
 			respondError(c, http.StatusNotFound, "Pod 不存在")
@@ -352,6 +394,11 @@ func (h *PodHandler) GetPodYAML(c *gin.Context) {
 
 // UpdatePodYAML ... (保持不变)
 func (h *PodHandler) UpdatePodYAML(c *gin.Context) {
+	k8sClient, ok := k8s.GetK8sClientFromContext(c, h.clusterManager)
+	if !ok {
+		return
+	}
+
 	namespace := strings.TrimSpace(c.Param("namespace"))
 	name := strings.TrimSpace(c.Param("name"))
 
@@ -376,7 +423,7 @@ func (h *PodHandler) UpdatePodYAML(c *gin.Context) {
 		return
 	}
 
-	updatedPod, err := h.service.UpdateFromYAML(namespace, name, yamlBody)
+	updatedPod, err := h.service.UpdateFromYAML(k8sClient.Clientset, namespace, name, yamlBody)
 	if err != nil {
 		if e, ok := err.(*service.ValidationError); ok {
 			respondError(c, http.StatusBadRequest, e.Error())

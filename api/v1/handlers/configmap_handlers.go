@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"github.com/ciliverse/cilikube/pkg/k8s"
 	"net/http"
 	"strings"
 
@@ -13,11 +14,12 @@ import (
 )
 
 type ConfigMapHandler struct {
-	service *service.ConfigMapService
+	service        *service.ConfigMapService
+	clusterManager *k8s.ClusterManager
 }
 
-func NewConfigMapHandler(svc *service.ConfigMapService) *ConfigMapHandler {
-	return &ConfigMapHandler{service: svc}
+func NewConfigMapHandler(svc *service.ConfigMapService, cm *k8s.ClusterManager) *ConfigMapHandler {
+	return &ConfigMapHandler{service: svc, clusterManager: cm}
 }
 
 // ListConfigMaps godoc
@@ -34,6 +36,11 @@ func NewConfigMapHandler(svc *service.ConfigMapService) *ConfigMapHandler {
 // @Failure 500 {object} handlers.ErrorResponse "Internal Server Error"
 // @Router /api/v1/namespaces/{namespace}/configmaps [get]
 func (h *ConfigMapHandler) ListConfigMaps(c *gin.Context) {
+	k8sClient, ok := k8s.GetK8sClientFromContext(c, h.clusterManager)
+	if !ok {
+		return
+	}
+
 	namespace := strings.TrimSpace(c.Param("namespace"))
 	if !utils.ValidateNamespace(namespace) {
 		respondError(c, http.StatusBadRequest, "无效的命名空间格式")
@@ -43,7 +50,7 @@ func (h *ConfigMapHandler) ListConfigMaps(c *gin.Context) {
 	labelSelector := c.Query("labelSelector")
 	limit := utils.ParseInt(c.DefaultQuery("limit", "100"), 100)
 
-	cmList, err := h.service.List(namespace, labelSelector, int64(limit))
+	cmList, err := h.service.List(k8sClient.Clientset, namespace, labelSelector, int64(limit))
 	if err != nil {
 		respondError(c, http.StatusInternalServerError, "获取ConfigMap列表失败: "+err.Error())
 		return
@@ -74,6 +81,11 @@ func (h *ConfigMapHandler) ListConfigMaps(c *gin.Context) {
 // @Failure 500 {object} handlers.ErrorResponse "Internal Server Error"
 // @Router /api/v1/namespaces/{namespace}/configmaps/{name} [get]
 func (h *ConfigMapHandler) GetConfigMap(c *gin.Context) {
+	k8sClient, ok := k8s.GetK8sClientFromContext(c, h.clusterManager)
+	if !ok {
+		return
+	}
+
 	namespace := strings.TrimSpace(c.Param("namespace"))
 	name := strings.TrimSpace(c.Param("name"))
 	if !utils.ValidateNamespace(namespace) || !utils.ValidateResourceName(name) {
@@ -81,7 +93,7 @@ func (h *ConfigMapHandler) GetConfigMap(c *gin.Context) {
 		return
 	}
 
-	cm, err := h.service.Get(namespace, name)
+	cm, err := h.service.Get(k8sClient.Clientset, namespace, name)
 	if err != nil {
 		if errors.IsNotFound(err) {
 			respondError(c, http.StatusNotFound, "ConfigMap不存在")
@@ -108,6 +120,11 @@ func (h *ConfigMapHandler) GetConfigMap(c *gin.Context) {
 // @Failure 500 {object} handlers.ErrorResponse "Internal Server Error"
 // @Router /api/v1/namespaces/{namespace}/configmaps [post]
 func (h *ConfigMapHandler) CreateConfigMap(c *gin.Context) {
+	k8sClient, ok := k8s.GetK8sClientFromContext(c, h.clusterManager)
+	if !ok {
+		return
+	}
+
 	namespace := strings.TrimSpace(c.Param("namespace"))
 	if !utils.ValidateNamespace(namespace) {
 		respondError(c, http.StatusBadRequest, "无效的命名空间格式")
@@ -128,7 +145,7 @@ func (h *ConfigMapHandler) CreateConfigMap(c *gin.Context) {
 		cm.APIVersion = "v1"
 	}
 
-	createdCM, err := h.service.Create(namespace, &cm)
+	createdCM, err := h.service.Create(k8sClient.Clientset, namespace, &cm)
 	if err != nil {
 		if errors.IsAlreadyExists(err) {
 			respondError(c, http.StatusConflict, "ConfigMap已存在")
@@ -160,6 +177,11 @@ func (h *ConfigMapHandler) CreateConfigMap(c *gin.Context) {
 // @Failure 500 {object} handlers.ErrorResponse "Internal Server Error"
 // @Router /api/v1/namespaces/{namespace}/configmaps/{name} [put]
 func (h *ConfigMapHandler) UpdateConfigMap(c *gin.Context) {
+	k8sClient, ok := k8s.GetK8sClientFromContext(c, h.clusterManager)
+	if !ok {
+		return
+	}
+
 	namespace := strings.TrimSpace(c.Param("namespace"))
 	name := strings.TrimSpace(c.Param("name"))
 	if !utils.ValidateNamespace(namespace) || !utils.ValidateResourceName(name) {
@@ -184,7 +206,7 @@ func (h *ConfigMapHandler) UpdateConfigMap(c *gin.Context) {
 		cm.APIVersion = "v1"
 	}
 
-	updatedCM, err := h.service.Update(namespace, &cm)
+	updatedCM, err := h.service.Update(k8sClient.Clientset, namespace, &cm)
 	if err != nil {
 		if errors.IsNotFound(err) {
 			respondError(c, http.StatusNotFound, "ConfigMap不存在")
@@ -218,6 +240,11 @@ func (h *ConfigMapHandler) UpdateConfigMap(c *gin.Context) {
 // @Failure 500 {object} handlers.ErrorResponse "Internal Server Error"
 // @Router /api/v1/namespaces/{namespace}/configmaps/{name} [delete]
 func (h *ConfigMapHandler) DeleteConfigMap(c *gin.Context) {
+	k8sClient, ok := k8s.GetK8sClientFromContext(c, h.clusterManager)
+	if !ok {
+		return
+	}
+
 	namespace := strings.TrimSpace(c.Param("namespace"))
 	name := strings.TrimSpace(c.Param("name"))
 	if !utils.ValidateNamespace(namespace) || !utils.ValidateResourceName(name) {
@@ -225,7 +252,7 @@ func (h *ConfigMapHandler) DeleteConfigMap(c *gin.Context) {
 		return
 	}
 
-	err := h.service.Delete(namespace, name)
+	err := h.service.Delete(k8sClient.Clientset, namespace, name)
 	if err != nil {
 		if errors.IsNotFound(err) {
 			c.Status(http.StatusNoContent)

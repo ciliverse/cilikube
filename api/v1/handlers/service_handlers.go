@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"github.com/ciliverse/cilikube/pkg/k8s"
 	"io"
 	"net/http"
 
@@ -16,16 +17,22 @@ import (
 
 // ServiceHandler ...
 type ServiceHandler struct {
-	service *service.ServiceService
+	service        *service.ServiceService
+	clusterManager *k8s.ClusterManager
 }
 
 // NewServiceHandler ...
-func NewServiceHandler(svc *service.ServiceService) *ServiceHandler {
-	return &ServiceHandler{service: svc}
+func NewServiceHandler(svc *service.ServiceService, cm *k8s.ClusterManager) *ServiceHandler {
+	return &ServiceHandler{service: svc, clusterManager: cm}
 }
 
 // ListServices ...
 func (h *ServiceHandler) ListServices(c *gin.Context) {
+	k8sClient, ok := k8s.GetK8sClientFromContext(c, h.clusterManager)
+	if !ok {
+		return
+	}
+
 	namespace := c.Param("namespace")
 	// 1. 参数校验
 	if !utils.ValidateNamespace(namespace) {
@@ -34,7 +41,7 @@ func (h *ServiceHandler) ListServices(c *gin.Context) {
 	}
 
 	// 2. 调用服务层获取Service列表
-	services, err := h.service.List(namespace)
+	services, err := h.service.List(k8sClient.Clientset, namespace)
 	if err != nil {
 		respondError(c, http.StatusInternalServerError, "获取Service列表失败: "+err.Error())
 		return
@@ -51,6 +58,11 @@ func (h *ServiceHandler) ListServices(c *gin.Context) {
 
 // CreateService ...
 func (h *ServiceHandler) CreateService(c *gin.Context) {
+	k8sClient, ok := k8s.GetK8sClientFromContext(c, h.clusterManager)
+	if !ok {
+		return
+	}
+
 	namespace := c.Param("namespace")
 	var req models.CreateServiceRequest
 
@@ -76,7 +88,7 @@ func (h *ServiceHandler) CreateService(c *gin.Context) {
 		Spec: req.Spec,
 	}
 
-	createdService, err := h.service.Create(namespace, service)
+	createdService, err := h.service.Create(k8sClient.Clientset, namespace, service)
 	if err != nil {
 		respondError(c, http.StatusInternalServerError, "创建Service失败: "+err.Error())
 		return
@@ -88,6 +100,11 @@ func (h *ServiceHandler) CreateService(c *gin.Context) {
 
 // GetService ...
 func (h *ServiceHandler) GetService(c *gin.Context) {
+	k8sClient, ok := k8s.GetK8sClientFromContext(c, h.clusterManager)
+	if !ok {
+		return
+	}
+
 	namespace := c.Param("namespace")
 	name := c.Param("name")
 	// 1. 参数校验
@@ -102,7 +119,7 @@ func (h *ServiceHandler) GetService(c *gin.Context) {
 	}
 
 	// 2. 调用服务层获取Service详情
-	service, err := h.service.Get(namespace, name)
+	service, err := h.service.Get(k8sClient.Clientset, namespace, name)
 	if err != nil {
 		if errors.IsNotFound(err) {
 			respondError(c, http.StatusNotFound, "Service不存在")
@@ -118,6 +135,11 @@ func (h *ServiceHandler) GetService(c *gin.Context) {
 
 // UpdateService ...
 func (h *ServiceHandler) UpdateService(c *gin.Context) {
+	k8sClient, ok := k8s.GetK8sClientFromContext(c, h.clusterManager)
+	if !ok {
+		return
+	}
+
 	namespace := c.Param("namespace")
 	name := c.Param("name")
 	var req models.UpdateServiceRequest
@@ -149,7 +171,7 @@ func (h *ServiceHandler) UpdateService(c *gin.Context) {
 		Spec: req.Spec,
 	}
 
-	updatedService, err := h.service.Update(namespace, service)
+	updatedService, err := h.service.Update(k8sClient.Clientset, namespace, service)
 	if err != nil {
 		respondError(c, http.StatusInternalServerError, "更新Service失败: "+err.Error())
 		return
@@ -161,6 +183,11 @@ func (h *ServiceHandler) UpdateService(c *gin.Context) {
 
 // DeleteService ...
 func (h *ServiceHandler) DeleteService(c *gin.Context) {
+	k8sClient, ok := k8s.GetK8sClientFromContext(c, h.clusterManager)
+	if !ok {
+		return
+	}
+
 	namespace := c.Param("namespace")
 	name := c.Param("name")
 
@@ -176,7 +203,7 @@ func (h *ServiceHandler) DeleteService(c *gin.Context) {
 	}
 
 	// 2. 调用服务层删除Service
-	if err := h.service.Delete(namespace, name); err != nil {
+	if err := h.service.Delete(k8sClient.Clientset, namespace, name); err != nil {
 		if errors.IsNotFound(err) {
 			respondError(c, http.StatusNotFound, "Service不存在")
 			return
@@ -191,6 +218,11 @@ func (h *ServiceHandler) DeleteService(c *gin.Context) {
 
 // WatchServices ...
 func (h *ServiceHandler) WatchServices(c *gin.Context) {
+	k8sClient, ok := k8s.GetK8sClientFromContext(c, h.clusterManager)
+	if !ok {
+		return
+	}
+
 	namespace := c.Param("namespace")
 	// 1. 参数校验
 	if !utils.ValidateNamespace(namespace) {
@@ -199,7 +231,7 @@ func (h *ServiceHandler) WatchServices(c *gin.Context) {
 	}
 
 	// 2. 调用服务层Watch Services
-	watcher, err := h.service.Watch(namespace, c.Query("selector"))
+	watcher, err := h.service.Watch(k8sClient.Clientset, namespace, c.Query("selector"))
 	if err != nil {
 		respondError(c, http.StatusInternalServerError, "Watch Services失败: "+err.Error())
 		return

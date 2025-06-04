@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"context"
 	"fmt"
+	"github.com/ciliverse/cilikube/pkg/k8s"
 	"github.com/ciliverse/cilikube/pkg/utils"
 	"github.com/gin-gonic/gin"
 	"io"
@@ -16,6 +17,11 @@ import (
 
 // GetPodLogs ... (保持不变)
 func (h *PodHandler) GetPodLogs(c *gin.Context) {
+	k8sClient, ok := k8s.GetK8sClientFromContext(c, h.clusterManager)
+	if !ok {
+		return
+	}
+
 	namespace := strings.TrimSpace(c.Param("namespace"))
 	name := strings.TrimSpace(c.Param("name"))
 	container := c.Query("container")
@@ -33,7 +39,7 @@ func (h *PodHandler) GetPodLogs(c *gin.Context) {
 	}
 
 	// Optional: Check container exists
-	pod, err := h.service.Get(namespace, name)
+	pod, err := h.service.Get(k8sClient.Clientset, namespace, name)
 	if err != nil {
 		if errors.IsNotFound(err) {
 			respondError(c, http.StatusNotFound, "Pod 不存在")
@@ -67,7 +73,7 @@ func (h *PodHandler) GetPodLogs(c *gin.Context) {
 	}
 
 	// 获取日志流
-	logStream, err := h.service.GetPodLogs(namespace, name, logOptions)
+	logStream, err := h.service.GetPodLogs(k8sClient.Clientset, namespace, name, logOptions)
 	if err != nil {
 		respondError(c, http.StatusInternalServerError, "获取日志失败: "+err.Error())
 		return

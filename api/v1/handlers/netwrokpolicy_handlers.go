@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"github.com/ciliverse/cilikube/pkg/k8s"
 	"io"
 	"net/http"
 
@@ -16,16 +17,22 @@ import (
 
 // NetworkPolicyHandler ...
 type NetworkPolicyHandler struct {
-	service *service.NetworkPolicyService
+	service        *service.NetworkPolicyService
+	clusterManager *k8s.ClusterManager
 }
 
 // NewNetworkPolicyHandler ...
-func NewNetworkPolicyHandler(svc *service.NetworkPolicyService) *NetworkPolicyHandler {
-	return &NetworkPolicyHandler{service: svc}
+func NewNetworkPolicyHandler(svc *service.NetworkPolicyService, cm *k8s.ClusterManager) *NetworkPolicyHandler {
+	return &NetworkPolicyHandler{service: svc, clusterManager: cm}
 }
 
 // ListNetworkPolicies ...
 func (h *NetworkPolicyHandler) ListNetworkPolicies(c *gin.Context) {
+	k8sClient, ok := k8s.GetK8sClientFromContext(c, h.clusterManager)
+	if !ok {
+		return
+	}
+
 	namespace := c.Param("namespace")
 	// 1. 参数校验
 	if !utils.ValidateNamespace(namespace) {
@@ -34,7 +41,7 @@ func (h *NetworkPolicyHandler) ListNetworkPolicies(c *gin.Context) {
 	}
 
 	// 2. 调用服务层获取NetworkPolicy列表
-	networkPolicies, err := h.service.List(namespace, c.Query("selector"), 0)
+	networkPolicies, err := h.service.List(k8sClient.Clientset, namespace, c.Query("selector"), 0)
 	if err != nil {
 		respondError(c, http.StatusInternalServerError, "获取NetworkPolicy列表失败: "+err.Error())
 		return
@@ -46,6 +53,11 @@ func (h *NetworkPolicyHandler) ListNetworkPolicies(c *gin.Context) {
 
 // CreateNetworkPolicy ...
 func (h *NetworkPolicyHandler) CreateNetworkPolicy(c *gin.Context) {
+	k8sClient, ok := k8s.GetK8sClientFromContext(c, h.clusterManager)
+	if !ok {
+		return
+	}
+
 	namespace := c.Param("namespace")
 	var req models.CreateNetworkPolicyRequest
 
@@ -71,7 +83,7 @@ func (h *NetworkPolicyHandler) CreateNetworkPolicy(c *gin.Context) {
 		Spec: req.Spec,
 	}
 
-	createdNetworkPolicy, err := h.service.Create(namespace, networkPolicy)
+	createdNetworkPolicy, err := h.service.Create(k8sClient.Clientset, namespace, networkPolicy)
 	if err != nil {
 		respondError(c, http.StatusInternalServerError, "创建NetworkPolicy失败: "+err.Error())
 		return
@@ -83,6 +95,11 @@ func (h *NetworkPolicyHandler) CreateNetworkPolicy(c *gin.Context) {
 
 // GetNetworkPolicy ...
 func (h *NetworkPolicyHandler) GetNetworkPolicy(c *gin.Context) {
+	k8sClient, ok := k8s.GetK8sClientFromContext(c, h.clusterManager)
+	if !ok {
+		return
+	}
+
 	namespace := c.Param("namespace")
 	name := c.Param("name")
 	// 1. 参数校验
@@ -97,7 +114,7 @@ func (h *NetworkPolicyHandler) GetNetworkPolicy(c *gin.Context) {
 	}
 
 	// 2. 调用服务层获取NetworkPolicy详情
-	networkPolicy, err := h.service.Get(namespace, name)
+	networkPolicy, err := h.service.Get(k8sClient.Clientset, namespace, name)
 	if err != nil {
 		if errors.IsNotFound(err) {
 			respondError(c, http.StatusNotFound, "NetworkPolicy不存在")
@@ -113,6 +130,11 @@ func (h *NetworkPolicyHandler) GetNetworkPolicy(c *gin.Context) {
 
 // UpdateNetworkPolicy ...
 func (h *NetworkPolicyHandler) UpdateNetworkPolicy(c *gin.Context) {
+	k8sClient, ok := k8s.GetK8sClientFromContext(c, h.clusterManager)
+	if !ok {
+		return
+	}
+
 	namespace := c.Param("namespace")
 	name := c.Param("name")
 	var req models.UpdateNetworkPolicyRequest
@@ -144,7 +166,7 @@ func (h *NetworkPolicyHandler) UpdateNetworkPolicy(c *gin.Context) {
 		Spec: req.Spec,
 	}
 
-	updatedNetworkPolicy, err := h.service.Update(namespace, networkPolicy)
+	updatedNetworkPolicy, err := h.service.Update(k8sClient.Clientset, namespace, networkPolicy)
 	if err != nil {
 		respondError(c, http.StatusInternalServerError, "更新NetworkPolicy失败: "+err.Error())
 		return
@@ -156,6 +178,11 @@ func (h *NetworkPolicyHandler) UpdateNetworkPolicy(c *gin.Context) {
 
 // DeleteNetworkPolicy ...
 func (h *NetworkPolicyHandler) DeleteNetworkPolicy(c *gin.Context) {
+	k8sClient, ok := k8s.GetK8sClientFromContext(c, h.clusterManager)
+	if !ok {
+		return
+	}
+
 	namespace := c.Param("namespace")
 	name := c.Param("name")
 
@@ -171,7 +198,7 @@ func (h *NetworkPolicyHandler) DeleteNetworkPolicy(c *gin.Context) {
 	}
 
 	// 2. 调用服务层删除NetworkPolicy
-	if err := h.service.Delete(namespace, name); err != nil {
+	if err := h.service.Delete(k8sClient.Clientset, namespace, name); err != nil {
 		if errors.IsNotFound(err) {
 			respondError(c, http.StatusNotFound, "NetworkPolicy不存在")
 			return
@@ -186,6 +213,11 @@ func (h *NetworkPolicyHandler) DeleteNetworkPolicy(c *gin.Context) {
 
 // WatchNetworkPolicies ...
 func (h *NetworkPolicyHandler) WatchNetworkPolicies(c *gin.Context) {
+	k8sClient, ok := k8s.GetK8sClientFromContext(c, h.clusterManager)
+	if !ok {
+		return
+	}
+
 	namespace := c.Param("namespace")
 	// 1. 参数校验
 	if !utils.ValidateNamespace(namespace) {
@@ -194,7 +226,7 @@ func (h *NetworkPolicyHandler) WatchNetworkPolicies(c *gin.Context) {
 	}
 
 	// 2. 调用服务层Watch NetworkPolicies
-	watcher, err := h.service.Watch(namespace, c.Query("selector"))
+	watcher, err := h.service.Watch(k8sClient.Clientset, namespace, c.Query("selector"))
 	if err != nil {
 		respondError(c, http.StatusInternalServerError, "Watch NetworkPolicies失败: "+err.Error())
 		return

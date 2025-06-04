@@ -3,6 +3,7 @@ package handlers
 import (
 	"context"
 	"fmt"
+	"github.com/ciliverse/cilikube/pkg/k8s"
 	"log"
 	"net/http"
 	"strings"
@@ -56,6 +57,11 @@ func NewWebSocketStreamHandler(conn *websocket.Conn, enableStdin, enableStdout b
 
 // ExecIntoPod 处理 WebSocket 连接，执行容器命令
 func (h *PodHandler) ExecIntoPod(c *gin.Context) {
+	k8sClient, ok := k8s.GetK8sClientFromContext(c, h.clusterManager)
+	if !ok {
+		return
+	}
+
 	namespace := strings.TrimSpace(c.Param("namespace"))
 	name := strings.TrimSpace(c.Param("name"))
 	container := c.Query("container")
@@ -114,7 +120,7 @@ func (h *PodHandler) ExecIntoPod(c *gin.Context) {
 	go func() {
 		defer close(execDone)
 		log.Printf("Executing command: %v in %s/%s/%s", command, namespace, name, container)
-		execErr = h.service.ExecIntoPod(ctx, execOptions)
+		execErr = h.service.ExecIntoPod(k8sClient.Clientset, k8sClient.Config, ctx, execOptions)
 		if execErr != nil {
 			errMsg := []byte(fmt.Sprintf("\r\n--- Command Execution Failed ---\r\nError: %v\r\n", execErr))
 			if err := wsStreamHandler.WriteMessage(websocket.TextMessage, errMsg); err != nil {
