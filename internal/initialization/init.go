@@ -99,15 +99,15 @@ func InitializeServices(
 		// 示例：PodService。假设 NewPodService() 现在不需要参数或只需要非 K8s 配置。
 		// services.PodService = service.NewPodService() // 构造函数将在第4步修改
 		services.DeploymentService = service.NewDeploymentService()
-		services.DaemonSetService = service.NewDaemonSetService()
+		// services.DaemonSetService = service.NewDaemonSetService()
 		// services.ServiceService = service.NewServiceService()
 		// services.IngressService = service.NewIngressService()
 		// services.NetworkPolicyService = service.NewNetworkPolicyService()
 		// services.ConfigMapService = service.NewConfigMapService()
 		// services.SecretService = service.NewSecretService()
-		services.PVCService = service.NewPVCService()
-		services.PVService = service.NewPVService()
-		services.StatefulSetService = service.NewStatefulSetService()
+		// services.PVCService = service.NewPVCService()
+		// services.PVService = service.NewPVService()
+		// services.StatefulSetService = service.NewStatefulSetService()
 		services.NodeService = service.NewNodeService()
 		services.NamespaceService = service.NewNamespaceService()
 		// services.SummaryService = service.NewSummaryService()
@@ -160,9 +160,9 @@ func InitializeHandlers(
 	if services.DeploymentService != nil {
 		appHandlers.DeploymentHandler = handlers.NewDeploymentHandler(services.DeploymentService, k8sClusterManager)
 	}
-	if services.DaemonSetService != nil {
-		appHandlers.DaemonSetHandler = handlers.NewDaemonSetHandler(services.DaemonSetService, k8sClusterManager)
-	}
+	// if services.DaemonSetService != nil {
+	// 	appHandlers.DaemonSetHandler = handlers.NewDaemonSetHandler(services.DaemonSetService, k8sClusterManager)
+	// }
 	// if services.ServiceService != nil {
 	// 	appHandlers.ServiceHandler = handlers.NewServiceHandler(services.ServiceService, k8sClusterManager)
 	// }
@@ -178,15 +178,15 @@ func InitializeHandlers(
 	// if services.SecretService != nil {
 	// 	appHandlers.SecretHandler = handlers.NewSecretHandler(services.SecretService, k8sClusterManager)
 	// }
-	if services.PVCService != nil {
-		appHandlers.PVCHandler = handlers.NewPVCHandler(services.PVCService, k8sClusterManager)
-	}
-	if services.PVService != nil {
-		appHandlers.PVHandler = handlers.NewPVHandler(services.PVService, k8sClusterManager)
-	}
-	if services.StatefulSetService != nil {
-		appHandlers.StatefulSetHandler = handlers.NewStatefulSetHandler(services.StatefulSetService, k8sClusterManager)
-	}
+	// if services.PVCService != nil {
+	// 	appHandlers.PVCHandler = handlers.NewPVCHandler(services.PVCService, k8sClusterManager)
+	// }
+	// if services.PVService != nil {
+	// 	appHandlers.PVHandler = handlers.NewPVHandler(services.PVService, k8sClusterManager)
+	// }
+	// if services.StatefulSetService != nil {
+	// 	appHandlers.StatefulSetHandler = handlers.NewStatefulSetHandler(services.StatefulSetService, k8sClusterManager)
+	// }
 	if services.NodeService != nil {
 		appHandlers.NodeHandler = handlers.NewNodeHandler(services.NodeService, k8sClusterManager)
 	}
