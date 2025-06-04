@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"github.com/ciliverse/cilikube/pkg/k8s"
 	"io"
 	"net/http"
 
@@ -15,16 +16,22 @@ import (
 
 // IngressHandler ...
 type IngressHandler struct {
-	service *service.IngressService
+	service        *service.IngressService
+	clusterManager *k8s.ClusterManager
 }
 
 // NewIngressHandler ...
-func NewIngressHandler(svc *service.IngressService) *IngressHandler {
-	return &IngressHandler{service: svc}
+func NewIngressHandler(svc *service.IngressService, cm *k8s.ClusterManager) *IngressHandler {
+	return &IngressHandler{service: svc, clusterManager: cm}
 }
 
 // ListIngresses ...
 func (h *IngressHandler) ListIngresses(c *gin.Context) {
+	k8sClient, ok := k8s.GetK8sClientFromContext(c, h.clusterManager)
+	if !ok {
+		return
+	}
+
 	namespace := c.Param("namespace")
 	// 1. 参数校验
 	if !utils.ValidateNamespace(namespace) {
@@ -33,7 +40,7 @@ func (h *IngressHandler) ListIngresses(c *gin.Context) {
 	}
 
 	// 2. 调用服务层获取Ingress列表
-	ingresses, err := h.service.List(namespace, c.Query("selector"), 0)
+	ingresses, err := h.service.List(k8sClient.Clientset, namespace, c.Query("selector"), 0)
 	if err != nil {
 		respondError(c, http.StatusInternalServerError, "获取Ingress列表失败: "+err.Error())
 		return
@@ -50,6 +57,11 @@ func (h *IngressHandler) ListIngresses(c *gin.Context) {
 
 // CreateIngress ...
 func (h *IngressHandler) CreateIngress(c *gin.Context) {
+	k8sClient, ok := k8s.GetK8sClientFromContext(c, h.clusterManager)
+	if !ok {
+		return
+	}
+
 	namespace := c.Param("namespace")
 	var req models.CreateIngressRequest
 
@@ -75,7 +87,7 @@ func (h *IngressHandler) CreateIngress(c *gin.Context) {
 		Spec: req.Spec,
 	}
 
-	createdIngress, err := h.service.Create(namespace, ingress)
+	createdIngress, err := h.service.Create(k8sClient.Clientset, namespace, ingress)
 	if err != nil {
 		respondError(c, http.StatusInternalServerError, "创建Ingress失败: "+err.Error())
 		return
@@ -87,6 +99,11 @@ func (h *IngressHandler) CreateIngress(c *gin.Context) {
 
 // GetIngress ...
 func (h *IngressHandler) GetIngress(c *gin.Context) {
+	k8sClient, ok := k8s.GetK8sClientFromContext(c, h.clusterManager)
+	if !ok {
+		return
+	}
+
 	namespace := c.Param("namespace")
 	name := c.Param("name")
 	// 1. 参数校验
@@ -101,7 +118,7 @@ func (h *IngressHandler) GetIngress(c *gin.Context) {
 	}
 
 	// 2. 调用服务层获取Ingress详情
-	ingress, err := h.service.Get(namespace, name)
+	ingress, err := h.service.Get(k8sClient.Clientset, namespace, name)
 	if err != nil {
 		if errors.IsNotFound(err) {
 			respondError(c, http.StatusNotFound, "Ingress不存在")
@@ -117,6 +134,11 @@ func (h *IngressHandler) GetIngress(c *gin.Context) {
 
 // UpdateIngress ...
 func (h *IngressHandler) UpdateIngress(c *gin.Context) {
+	k8sClient, ok := k8s.GetK8sClientFromContext(c, h.clusterManager)
+	if !ok {
+		return
+	}
+
 	namespace := c.Param("namespace")
 	name := c.Param("name")
 	var req models.UpdateIngressRequest
@@ -148,7 +170,7 @@ func (h *IngressHandler) UpdateIngress(c *gin.Context) {
 		Spec: req.Spec,
 	}
 
-	updatedIngress, err := h.service.Update(namespace, ingress)
+	updatedIngress, err := h.service.Update(k8sClient.Clientset, namespace, ingress)
 	if err != nil {
 		respondError(c, http.StatusInternalServerError, "更新Ingress失败: "+err.Error())
 		return
@@ -160,6 +182,11 @@ func (h *IngressHandler) UpdateIngress(c *gin.Context) {
 
 // DeleteIngress ...
 func (h *IngressHandler) DeleteIngress(c *gin.Context) {
+	k8sClient, ok := k8s.GetK8sClientFromContext(c, h.clusterManager)
+	if !ok {
+		return
+	}
+
 	namespace := c.Param("namespace")
 	name := c.Param("name")
 
@@ -175,7 +202,7 @@ func (h *IngressHandler) DeleteIngress(c *gin.Context) {
 	}
 
 	// 2. 调用服务层删除Ingress
-	if err := h.service.Delete(namespace, name); err != nil {
+	if err := h.service.Delete(k8sClient.Clientset, namespace, name); err != nil {
 		if errors.IsNotFound(err) {
 			respondError(c, http.StatusNotFound, "Ingress不存在")
 			return
@@ -190,6 +217,11 @@ func (h *IngressHandler) DeleteIngress(c *gin.Context) {
 
 // WatchIngresses ...
 func (h *IngressHandler) WatchIngresses(c *gin.Context) {
+	k8sClient, ok := k8s.GetK8sClientFromContext(c, h.clusterManager)
+	if !ok {
+		return
+	}
+
 	namespace := c.Param("namespace")
 	// 1. 参数校验
 	if !utils.ValidateNamespace(namespace) {
@@ -198,7 +230,7 @@ func (h *IngressHandler) WatchIngresses(c *gin.Context) {
 	}
 
 	// 2. 调用服务层Watch Ingresses
-	watcher, err := h.service.Watch(namespace, c.Query("selector"))
+	watcher, err := h.service.Watch(k8sClient.Clientset, namespace, c.Query("selector"))
 	if err != nil {
 		respondError(c, http.StatusInternalServerError, "Watch Ingresses失败: "+err.Error())
 		return
