@@ -7,6 +7,7 @@ import (
 
 	"github.com/ciliverse/cilikube/api/v1/models"
 	"github.com/ciliverse/cilikube/configs"
+	"github.com/ciliverse/cilikube/internal/store"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
@@ -72,6 +73,7 @@ func AutoMigrate() error {
 	log.Println("开始数据库自动迁移...") // 添加日志
 	err := DB.AutoMigrate(
 		&models.User{},
+		&store.Cluster{},
 	)
 	if err != nil {
 		return fmt.Errorf("failed to migrate database: %v", err)
