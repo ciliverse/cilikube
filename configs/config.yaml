@@ -4,6 +4,8 @@ server:
   read_timeout: 15
   write_timeout: 30
   activeCluster: "default" # 这个值现在将对应下面 clusters 列表中的一个条目
+  # !!! 确保这是一个32个字符的随机字符串 !!!
+  encryptionKey: "mobSIziSWMBZLMSDIIbuB9kMqc9QebV3" 
 
 kubernetes: # 这个顶层配置在多集群模式下作为备用或特定用途
   kubeconfig: "default"
