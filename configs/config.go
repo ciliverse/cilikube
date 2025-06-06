@@ -24,6 +24,8 @@ type ServerConfig struct {
 	WriteTimeout  int    `yaml:"write_timeout" json:"write_timeout"`
 	Mode          string `yaml:"mode" json:"mode"` // debug, release
 	ActiveCluster string `yaml:"activeCluster" json:"activeCluster"`
+	// [NEW] 添加用于加密 kubeconfig 的密钥
+	EncryptionKey string `yaml:"encryptionKey" json:"encryptionKey"`
 }
 
 type KubernetesConfig struct {
