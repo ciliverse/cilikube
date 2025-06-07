@@ -2,9 +2,7 @@ package initialization
 
 import (
 	"log"
-	"net"
 	"net/http"
-	"os"
 	"time"
 
 	"github.com/casbin/casbin/v2"
@@ -14,7 +12,6 @@ import (
 	"github.com/ciliverse/cilikube/internal/service"
 	"github.com/ciliverse/cilikube/pkg/auth"
 	"github.com/ciliverse/cilikube/pkg/k8s"
-	"github.com/fatih/color"
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 )
@@ -192,52 +189,4 @@ func SetupRouter(cfg *configs.Config, appHandlers *AppHandlers, e *casbin.Enforc
 
 	log.Println("API 路由注册完成。")
 	return router
-}
-
-// StartServer 启动 HTTP 服务器（这是您提供的代码，保持不变）。
-func StartServer(cfg *configs.Config, router http.Handler) {
-	serverAddr := ":" + cfg.Server.Port
-	version := getVersion()
-	mode := os.Getenv("CILIKUBE_MODE")
-	if mode == "" {
-		mode = "development"
-	}
-	displayServerInfo(serverAddr, mode, version)
-	server := &http.Server{
-		Addr:    serverAddr,
-		Handler: router,
-	}
-	if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-		log.Fatalf("启动服务器失败: %v", err)
-	}
-}
-
-// displayServerInfo, getVersion, getLocalIP 等辅助函数也保持不变
-func displayServerInfo(serverAddr, mode, version string) {
-	color.Cyan("🚀 CiliKube Server is running!")
-	color.Green("   ➜  Local:       http://127.0.0.1%s", serverAddr)
-	color.Green("   ➜  Network:     http://%s%s", getLocalIP(), serverAddr)
-	color.Yellow("  ➜  Mode:        %s", mode)
-	color.Magenta("  ➜  Version:     %s", version)
-}
-
-func getVersion() string {
-	data, err := os.ReadFile("VERSION")
-	if err != nil {
-		return "v0.2.2" // default version
-	}
-	return string(data)
-}
-
-func getLocalIP() string {
-	addrs, err := net.InterfaceAddrs()
-	if err != nil {
-		return "unknown"
-	}
-	for _, addr := range addrs {
-		if ipNet, ok := addr.(*net.IPNet); ok && !ipNet.IP.IsLoopback() && ipNet.IP.To4() != nil {
-			return ipNet.IP.String()
-		}
-	}
-	return "unknown"
 }
