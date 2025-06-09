@@ -8,7 +8,11 @@
 <!-- [![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Fciliverse%2Fcilikube.svg?type=shield)](https://app.fossa.com/projects/git%2Bgithub.com%2Fciliverse%2Fcilikube?ref=badge_shield) -->
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](./LICENSE)
 
+## 最新公告（2025年6月）
 
+- 目前单集群维护在release-0.1.X最新分支
+- 多集群版本在0.2.x最新分支，正在开发中
+- 全新Antd组件web界面即将上线，敬请期待！
 
 ## 🤔 What is CiliKube? | CiliKube 是什么？
 
