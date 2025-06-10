@@ -15,7 +15,6 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"github.com/ciliverse/cilikube/configs"
-	// 确保引用了 initialization 包，以便调用 displayServerInfo
 	"github.com/ciliverse/cilikube/internal/initialization"
 	"github.com/ciliverse/cilikube/internal/store"
 	"github.com/ciliverse/cilikube/pkg/auth"
@@ -31,9 +30,7 @@ type Application struct {
 	Server *http.Server
 }
 
-// New 函数保持不变 (为了完整性，这里省略了代码，它和上次一样)
 func New(configPath string) (*Application, error) {
-	// ... 此处代码与上次重构完全相同 ...
 	// --- 1. 初始化日志 ---
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo}))
 
@@ -114,14 +111,11 @@ func New(configPath string) (*Application, error) {
 	}, nil
 }
 
-// Run 方法被修改以包含启动信息展示
 func (app *Application) Run() {
 	// --- 1. 构造服务器地址 ---
 	serverAddr := ":" + app.Config.Server.Port
 
 	// --- 2. 展示漂亮的启动信息 ---
-	// 我们将调用 initialization 包中的公共函数来显示信息。
-	// 这要求 displayServerInfo 必须是可导出的（首字母大写）。
 	initialization.DisplayServerInfo(serverAddr, app.Config.Server.Mode)
 
 	// --- 3. 配置并启动服务器 ---
@@ -134,7 +128,6 @@ func (app *Application) Run() {
 
 	// 启动服务器（goroutine 中）
 	go func() {
-		// 使用 slog 日志记录启动信息，这对于文件日志和后续处理很有用
 		app.Logger.Info("服务器正在监听...", "address", app.Server.Addr)
 		if err := app.Server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			app.Logger.Error("服务器意外关闭", "error", err)
@@ -143,7 +136,6 @@ func (app *Application) Run() {
 	}()
 
 	// --- 4. 设置优雅关闭逻辑 ---
-	// (这部分代码保持不变)
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 	<-quit
