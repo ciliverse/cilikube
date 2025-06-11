@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"github.com/ciliverse/cilikube/pkg/k8s"
 	"net/http"
 
 	"github.com/ciliverse/cilikube/internal/service"
@@ -9,16 +10,22 @@ import (
 
 // Existing SummaryHandler struct...
 type SummaryHandler struct {
-	service *service.SummaryService
+	service        *service.SummaryService
+	clusterManager *k8s.ClusterManager
 }
 
-func NewSummaryHandler(svc *service.SummaryService) *SummaryHandler {
-	return &SummaryHandler{service: svc}
+func NewSummaryHandler(svc *service.SummaryService, cm *k8s.ClusterManager) *SummaryHandler {
+	return &SummaryHandler{service: svc, clusterManager: cm}
 }
 
 // Existing GetResourceSummary handlers...
 func (h *SummaryHandler) GetResourceSummary(c *gin.Context) { /* ... as before ... */
-	summary, _ := h.service.GetResourceSummary()
+	k8sClient, ok := k8s.GetK8sClientFromContext(c, h.clusterManager)
+	if !ok {
+		return
+	}
+
+	summary, _ := h.service.GetResourceSummary(k8sClient.Clientset)
 	respondSuccess(c, http.StatusOK, summary)
 }
 
