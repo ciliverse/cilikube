@@ -16,6 +16,7 @@ import (
 
 	"github.com/ciliverse/cilikube/configs"
 	"github.com/ciliverse/cilikube/internal/initialization"
+	"github.com/ciliverse/cilikube/internal/logger"
 	"github.com/ciliverse/cilikube/internal/store"
 	"github.com/ciliverse/cilikube/pkg/auth"
 	"github.com/ciliverse/cilikube/pkg/database"
@@ -31,30 +32,31 @@ type Application struct {
 }
 
 func New(configPath string) (*Application, error) {
-	// --- 1. 初始化日志 ---
-	logger := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo}))
-
-	// --- 2. 加载配置 ---
+	// --- 1. 加载配置 ---
 	cfg, err := configs.Load(configPath)
 	if err != nil {
 		return nil, fmt.Errorf("加载配置失败: %w", err)
 	}
-	logger.Info("配置加载成功", "path", configPath)
 
-	// 根据配置设置日志级别
+	// --- 2. 初始化日志 ---
 	var logLevel slog.Level
 	if cfg.Server.Mode == "debug" {
 		logLevel = slog.LevelDebug
 	} else {
 		logLevel = slog.LevelInfo
 	}
-	logger = slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: logLevel}))
-	slog.SetDefault(logger) // 设置为全局默认 logger
 
-	// --- 3. 数据库和 Store 初始化 ---
+	appLogger := logger.New(logLevel)
+
+	slog.SetDefault(appLogger)
+
+	// --- 3. 加载配置 ---
+	slog.Info("配置加载成功", "path", configPath)
+
+	// --- 4. 数据库和 Store 初始化 ---
 	var clusterStore store.ClusterStore
 	if cfg.Database.Enabled {
-		logger.Info("数据库已启用，正在初始化...")
+		slog.Info("数据库已启用，正在初始化...")
 		if err := database.InitDatabase(); err != nil {
 			return nil, fmt.Errorf("数据库连接失败: %w", err)
 		}
@@ -73,23 +75,23 @@ func New(configPath string) (*Application, error) {
 		if err != nil {
 			return nil, fmt.Errorf("初始化 Cluster Store 失败: %w", err)
 		}
-		logger.Info("数据库和 Cluster Store 初始化成功")
+		slog.Info("数据库和 Cluster Store 初始化成功")
 	} else {
-		logger.Warn("数据库未启用，跳过相关初始化。ClusterStore 将为 nil")
+		slog.Warn("数据库未启用，跳过相关初始化。ClusterStore 将为 nil")
 	}
 
-	// --- 4. 初始化 ClusterManager ---
+	// --- 5. 初始化 ClusterManager ---
 	k8sManager, err := k8s.NewClusterManager(clusterStore, cfg)
 	if err != nil {
 		return nil, fmt.Errorf("初始化 Kubernetes 集群管理器失败: %w", err)
 	}
-	logger.Info("Kubernetes 集群管理器初始化成功")
+	slog.Info("Kubernetes 集群管理器初始化成功")
 
-	// --- 5. 初始化应用服务和处理器 ---
+	// --- 6. 初始化应用服务和处理器 ---
 	services := initialization.InitializeServices(k8sManager, cfg)
 	appHandlers := initialization.InitializeHandlers(services, k8sManager)
 
-	// --- 6. Casbin 初始化 ---
+	// --- 7. Casbin 初始化 ---
 	var e *casbin.Enforcer
 	if cfg.Database.Enabled {
 		var casbinErr error
@@ -97,36 +99,29 @@ func New(configPath string) (*Application, error) {
 		if casbinErr != nil {
 			return nil, fmt.Errorf("初始化 Casbin 失败: %w", casbinErr)
 		}
-		logger.Info("Casbin 初始化成功")
+		slog.Info("Casbin 初始化成功")
 	}
 
-	// --- 7. Gin 路由器设置 ---
+	// --- 8. Gin 路由器设置 ---
 	router := initialization.SetupRouter(cfg, appHandlers, e)
-	logger.Info("Gin 路由器设置完成")
+	slog.Info("Gin 路由器设置完成")
 
 	return &Application{
 		Config: cfg,
-		Logger: logger,
+		Logger: appLogger,
 		Router: router,
 	}, nil
 }
 
 func (app *Application) Run() {
-	// --- 1. 构造服务器地址 ---
 	serverAddr := ":" + app.Config.Server.Port
-
-	// --- 2. 展示漂亮的启动信息 ---
 	initialization.DisplayServerInfo(serverAddr, app.Config.Server.Mode)
-
-	// --- 3. 配置并启动服务器 ---
 	app.Server = &http.Server{
 		Addr:         serverAddr,
 		Handler:      app.Router,
 		ReadTimeout:  time.Duration(app.Config.Server.ReadTimeout) * time.Second,
 		WriteTimeout: time.Duration(app.Config.Server.WriteTimeout) * time.Second,
 	}
-
-	// 启动服务器（goroutine 中）
 	go func() {
 		app.Logger.Info("服务器正在监听...", "address", app.Server.Addr)
 		if err := app.Server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
@@ -134,25 +129,19 @@ func (app *Application) Run() {
 			os.Exit(1)
 		}
 	}()
-
-	// --- 4. 设置优雅关闭逻辑 ---
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 	<-quit
 	app.Logger.Info("收到关闭信号，正在关闭服务器...")
-
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
-
 	if app.Config.Database.Enabled {
 		database.CloseDatabase()
 		app.Logger.Info("数据库连接已关闭")
 	}
-
 	if err := app.Server.Shutdown(ctx); err != nil {
 		app.Logger.Error("服务器关闭失败", "error", err)
 		os.Exit(1)
 	}
-
 	app.Logger.Info("服务器已优雅关闭")
 }

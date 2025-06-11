@@ -1,7 +1,7 @@
 <div align="center">
   <img alt="CiliKube Logo" width="500" height="100" src="docs/logo.png">
   <h1>CiliKube</h1>
-  <span><a href="./README.zh-CN.md">中文纯净版</a> | English</span>
+  <span><a href="./README.zh-CN.md">中文</a> | English</span>
 </div>
 
 ![Alt](https://repobeats.axiom.co/api/embed/97bc0de802d8faf0f90512177cb349c4e494d76d.svg "Repobeats analytics image")
