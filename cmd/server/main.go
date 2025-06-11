@@ -24,11 +24,10 @@ func main() {
 	// --- 2. 创建并运行应用 ---
 	application, err := app.New(configPath)
 	if err != nil {
-		// 使用 slog 来记录致命错误
 		slog.Error("应用初始化失败", "error", err)
 		os.Exit(1)
 	}
-
+	slog.Info("应用初始化成功", "configPath", configPath)
 	// 启动应用
 	application.Run()
 }
