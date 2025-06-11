@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"github.com/ciliverse/cilikube/pkg/k8s"
 	"net/http"
 	"net/url"
 
@@ -12,21 +13,28 @@ import (
 )
 
 type ProxyHandler struct {
-	service *service.ProxyService
+	service        *service.ProxyService
+	clusterManager *k8s.ClusterManager
 }
 
-func NewProxyHandler(service *service.ProxyService) *ProxyHandler {
-	return &ProxyHandler{service: service}
+func NewProxyHandler(service *service.ProxyService, cm *k8s.ClusterManager) *ProxyHandler {
+	return &ProxyHandler{service: service, clusterManager: cm}
 }
 
-func (p *ProxyHandler) Proxy(c *gin.Context) {
-	config := p.service.GetConfig()
+func (h *ProxyHandler) Proxy(c *gin.Context) {
+	k8sClient, ok := k8s.GetK8sClientFromContext(c, h.clusterManager)
+	if !ok {
+		return
+	}
+
+	//config := h.service.GetConfig() 原逻辑，后续可删除
+	config := k8sClient.Config
 	transport, err := rest.TransportFor(config)
 	if err != nil {
 		respondError(c, http.StatusInternalServerError, "服务器内部错误: "+err.Error())
 		return
 	}
-	target, err := p.validateTarget(*c.Request.URL, config.Host)
+	target, err := h.validateTarget(*c.Request.URL, config.Host)
 	if err != nil {
 		respondError(c, http.StatusInternalServerError, "服务器内部错误: "+err.Error())
 		return
@@ -36,7 +44,7 @@ func (p *ProxyHandler) Proxy(c *gin.Context) {
 	httpProxy.ServeHTTP(c.Writer, c.Request)
 }
 
-func (p *ProxyHandler) validateTarget(target url.URL, host string) (*url.URL, error) {
+func (h *ProxyHandler) validateTarget(target url.URL, host string) (*url.URL, error) {
 	kubeURL, err := url.Parse(host)
 	if err != nil {
 		return nil, err

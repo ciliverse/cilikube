@@ -89,7 +89,8 @@ func InitializeServices(k8sManager *k8s.ClusterManager, cfg *configs.Config) *Ap
 		SummaryService:       service.NewSummaryService(),
 		EventsService:        service.NewEventsService(),
 		RbacService:          service.NewRbacService(),
-		// ProxyService:         service.NewProxyService(k8sManager), // ProxyService也需要manager来动态获取配置
+		ProxyService:         service.NewProxyService(), // 在Handler中已经有manager来动态获取配置，这里无需传入manager，后续可删除下一行注释
+		//ProxyService:         service.NewProxyService(k8sManager), // ProxyService也需要manager来动态获取配置
 
 		// 非 K8s 服务
 		InstallerService: service.NewInstallerService(cfg),
@@ -122,7 +123,7 @@ func InitializeHandlers(services *AppServices, k8sManager *k8s.ClusterManager) *
 		SummaryHandler:       handlers.NewSummaryHandler(services.SummaryService, k8sManager),
 		EventsHandler:        handlers.NewEventsHandler(services.EventsService, k8sManager),
 		RbacHandler:          handlers.NewRbacHandler(services.RbacService, k8sManager),
-		// ProxyHandler:         handlers.NewProxyHandler(services.ProxyService, k8sManager),
+		ProxyHandler:         handlers.NewProxyHandler(services.ProxyService, k8sManager),
 
 		// 非 K8s 处理器
 		// InstallerHandler: handlers.NewInstallerHandler(&services.InstallerService),

@@ -1,19 +1,14 @@
 package service
 
-import (
-	"k8s.io/client-go/rest"
-)
-
+// ProxyService 结构体不再持有 restConfig 字段
 type ProxyService struct {
-	restConfig *rest.Config
+	// 不需要 restConfig *rest.Config 字段了
 }
 
-func NewProxyService(restConfig *rest.Config) *ProxyService {
-	return &ProxyService{
-		restConfig: restConfig,
-	}
+func NewProxyService() *ProxyService {
+	return &ProxyService{}
 }
 
-func (s *ProxyService) GetConfig() *rest.Config {
-	return s.restConfig
-}
+//func (s *ProxyService) GetConfig() *rest.Config {
+//	return s.restConfig
+//}
