@@ -87,7 +87,7 @@ func InitializeServices(k8sManager *k8s.ClusterManager, cfg *configs.Config) *Ap
 		NodeService:          service.NewNodeService(),
 		NamespaceService:     service.NewNamespaceService(),
 		SummaryService:       service.NewSummaryService(),
-		// EventsService:        service.NewEventsService(),
+		EventsService:        service.NewEventsService(),
 		// RbacService:          service.NewRbacService(),
 		// ProxyService:         service.NewProxyService(k8sManager), // ProxyService也需要manager来动态获取配置
 
@@ -120,7 +120,7 @@ func InitializeHandlers(services *AppServices, k8sManager *k8s.ClusterManager) *
 		NodeHandler:          handlers.NewNodeHandler(services.NodeService, k8sManager),
 		NamespaceHandler:     handlers.NewNamespaceHandler(services.NamespaceService, k8sManager),
 		SummaryHandler:       handlers.NewSummaryHandler(services.SummaryService, k8sManager),
-		// EventsHandler:        handlers.NewEventsHandler(services.EventsService, k8sManager),
+		EventsHandler:        handlers.NewEventsHandler(services.EventsService, k8sManager),
 		// RbacHandler:          handlers.NewRbacHandler(services.RbacService, k8sManager),
 		// ProxyHandler:         handlers.NewProxyHandler(services.ProxyService, k8sManager),
 
