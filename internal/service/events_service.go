@@ -8,22 +8,21 @@ import (
 	"log"
 )
 
+// EventsService 结构体不再持有 client 字段
 type EventsService struct {
-	client kubernetes.Interface
+	// 不需要 client kubernetes.Interface 字段了
 }
 
-func NewEventsService(client kubernetes.Interface) *EventsService {
-	return &EventsService{
-		client: client,
-	}
+func NewEventsService() *EventsService {
+	return &EventsService{}
 }
 
-func (s *EventsService) List(namespace string) *models.EventList {
+func (s *EventsService) List(clientSet kubernetes.Interface, namespace string) *models.EventList {
 	results := &models.EventList{
 		Items: []models.Event{},
 		Total: 0,
 	}
-	events, err := s.client.CoreV1().Events(namespace).List(context.Background(), metav1.ListOptions{})
+	events, err := clientSet.CoreV1().Events(namespace).List(context.Background(), metav1.ListOptions{})
 	if err != nil {
 		log.Printf("获取事件列表失败：%s", err)
 		return results
@@ -35,8 +34,8 @@ func (s *EventsService) List(namespace string) *models.EventList {
 	return results
 }
 
-func (s *EventsService) Get(namespace, name string) models.Event {
-	event, err := s.client.CoreV1().Events(namespace).Get(context.Background(), name, metav1.GetOptions{})
+func (s *EventsService) Get(clientSet kubernetes.Interface, namespace, name string) models.Event {
+	event, err := clientSet.CoreV1().Events(namespace).Get(context.Background(), name, metav1.GetOptions{})
 	if err != nil {
 		log.Printf("获取事件失败：%s", err)
 		return models.Event{}

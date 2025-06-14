@@ -3,33 +3,32 @@ package service
 import (
 	"bufio"
 	"context"
+	"k8s.io/client-go/kubernetes"
 	"log"
 	"os"
 	"path/filepath"
 	"strings"
 	"sync"
 
+	"github.com/ciliverse/cilikube/api/v1/models" // Adjust import path
 	// k8s imports ... (keep existing ones)
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes"
-
-	"github.com/ciliverse/cilikube/api/v1/models" // Adjust import path
 
 	// Import for robust mod file parsing (optional but recommended)
 	"golang.org/x/mod/modfile"
 )
 
-// Existing SummaryService struct...
+// SummaryService 结构体不再持有 client 字段
 type SummaryService struct {
-	client kubernetes.Interface
+	// 不需要 client kubernetes.Interface 字段了
 }
 
-func NewSummaryService(client kubernetes.Interface) *SummaryService {
-	return &SummaryService{client: client}
+func NewSummaryService() *SummaryService {
+	return &SummaryService{}
 }
 
-// Existing GetResourceSummary function ...
-func (s *SummaryService) GetResourceSummary() (*models.ResourceSummary, map[string]error) {
+// GetResourceSummary Existing GetResourceSummary function ...
+func (s *SummaryService) GetResourceSummary(clientSet kubernetes.Interface) (*models.ResourceSummary, map[string]error) {
 	// ... (keep existing implementation) ...
 	summary := &models.ResourceSummary{}
 	errors := make(map[string]error)
@@ -40,7 +39,7 @@ func (s *SummaryService) GetResourceSummary() (*models.ResourceSummary, map[stri
 	// ... (fetch funcs map and execution) ...
 	fetchFuncs := map[string]func(){
 		"nodes": func() {
-			list, err := s.client.CoreV1().Nodes().List(ctx, metav1.ListOptions{})
+			list, err := clientSet.CoreV1().Nodes().List(ctx, metav1.ListOptions{})
 			mu.Lock()
 			defer mu.Unlock()
 			if err != nil {
@@ -52,7 +51,7 @@ func (s *SummaryService) GetResourceSummary() (*models.ResourceSummary, map[stri
 			}
 		},
 		"namespaces": func() {
-			list, err := s.client.CoreV1().Namespaces().List(ctx, metav1.ListOptions{})
+			list, err := clientSet.CoreV1().Namespaces().List(ctx, metav1.ListOptions{})
 			mu.Lock()
 			defer mu.Unlock()
 			if err != nil {
@@ -65,7 +64,7 @@ func (s *SummaryService) GetResourceSummary() (*models.ResourceSummary, map[stri
 		},
 		// ... other resource counts ...
 		"pods": func() {
-			list, err := s.client.CoreV1().Pods("").List(ctx, listOptions)
+			list, err := clientSet.CoreV1().Pods("").List(ctx, listOptions)
 			mu.Lock()
 			defer mu.Unlock()
 			if err != nil {
@@ -76,7 +75,7 @@ func (s *SummaryService) GetResourceSummary() (*models.ResourceSummary, map[stri
 				if list.RemainingItemCount != nil {
 					count += int(*list.RemainingItemCount)
 				} else {
-					fullList, err := s.client.CoreV1().Pods("").List(ctx, metav1.ListOptions{})
+					fullList, err := clientSet.CoreV1().Pods("").List(ctx, metav1.ListOptions{})
 					if err == nil {
 						count = len(fullList.Items)
 					}
@@ -85,7 +84,7 @@ func (s *SummaryService) GetResourceSummary() (*models.ResourceSummary, map[stri
 			}
 		},
 		"deployments": func() {
-			list, err := s.client.AppsV1().Deployments("").List(ctx, listOptions)
+			list, err := clientSet.AppsV1().Deployments("").List(ctx, listOptions)
 			mu.Lock()
 			defer mu.Unlock()
 			if err != nil {
@@ -96,7 +95,7 @@ func (s *SummaryService) GetResourceSummary() (*models.ResourceSummary, map[stri
 				if list.RemainingItemCount != nil {
 					count += int(*list.RemainingItemCount)
 				} else {
-					fullList, err := s.client.AppsV1().Deployments("").List(ctx, metav1.ListOptions{})
+					fullList, err := clientSet.AppsV1().Deployments("").List(ctx, metav1.ListOptions{})
 					if err == nil {
 						count = len(fullList.Items)
 					}
@@ -105,7 +104,7 @@ func (s *SummaryService) GetResourceSummary() (*models.ResourceSummary, map[stri
 			}
 		},
 		"services": func() {
-			list, err := s.client.CoreV1().Services("").List(ctx, listOptions)
+			list, err := clientSet.CoreV1().Services("").List(ctx, listOptions)
 			mu.Lock()
 			defer mu.Unlock()
 			if err != nil {
@@ -116,7 +115,7 @@ func (s *SummaryService) GetResourceSummary() (*models.ResourceSummary, map[stri
 				if list.RemainingItemCount != nil {
 					count += int(*list.RemainingItemCount)
 				} else {
-					fullList, err := s.client.CoreV1().Services("").List(ctx, metav1.ListOptions{})
+					fullList, err := clientSet.CoreV1().Services("").List(ctx, metav1.ListOptions{})
 					if err == nil {
 						count = len(fullList.Items)
 					}
@@ -125,7 +124,7 @@ func (s *SummaryService) GetResourceSummary() (*models.ResourceSummary, map[stri
 			}
 		},
 		"persistentVolumes": func() {
-			list, err := s.client.CoreV1().PersistentVolumes().List(ctx, listOptions)
+			list, err := clientSet.CoreV1().PersistentVolumes().List(ctx, listOptions)
 			mu.Lock()
 			defer mu.Unlock()
 			if err != nil {
@@ -136,7 +135,7 @@ func (s *SummaryService) GetResourceSummary() (*models.ResourceSummary, map[stri
 				if list.RemainingItemCount != nil {
 					count += int(*list.RemainingItemCount)
 				} else {
-					fullList, err := s.client.CoreV1().PersistentVolumes().List(ctx, metav1.ListOptions{})
+					fullList, err := clientSet.CoreV1().PersistentVolumes().List(ctx, metav1.ListOptions{})
 					if err == nil {
 						count = len(fullList.Items)
 					}
@@ -145,7 +144,7 @@ func (s *SummaryService) GetResourceSummary() (*models.ResourceSummary, map[stri
 			}
 		},
 		"pvcs": func() {
-			list, err := s.client.CoreV1().PersistentVolumeClaims("").List(ctx, listOptions)
+			list, err := clientSet.CoreV1().PersistentVolumeClaims("").List(ctx, listOptions)
 			mu.Lock()
 			defer mu.Unlock()
 			if err != nil {
@@ -156,7 +155,7 @@ func (s *SummaryService) GetResourceSummary() (*models.ResourceSummary, map[stri
 				if list.RemainingItemCount != nil {
 					count += int(*list.RemainingItemCount)
 				} else {
-					fullList, err := s.client.CoreV1().PersistentVolumeClaims("").List(ctx, metav1.ListOptions{})
+					fullList, err := clientSet.CoreV1().PersistentVolumeClaims("").List(ctx, metav1.ListOptions{})
 					if err == nil {
 						count = len(fullList.Items)
 					}
@@ -165,7 +164,7 @@ func (s *SummaryService) GetResourceSummary() (*models.ResourceSummary, map[stri
 			}
 		},
 		"statefulSets": func() {
-			list, err := s.client.AppsV1().StatefulSets("").List(ctx, listOptions)
+			list, err := clientSet.AppsV1().StatefulSets("").List(ctx, listOptions)
 			mu.Lock()
 			defer mu.Unlock()
 			if err != nil {
@@ -176,7 +175,7 @@ func (s *SummaryService) GetResourceSummary() (*models.ResourceSummary, map[stri
 				if list.RemainingItemCount != nil {
 					count += int(*list.RemainingItemCount)
 				} else {
-					fullList, err := s.client.AppsV1().StatefulSets("").List(ctx, metav1.ListOptions{})
+					fullList, err := clientSet.AppsV1().StatefulSets("").List(ctx, metav1.ListOptions{})
 					if err == nil {
 						count = len(fullList.Items)
 					}
@@ -185,7 +184,7 @@ func (s *SummaryService) GetResourceSummary() (*models.ResourceSummary, map[stri
 			}
 		},
 		"daemonSets": func() {
-			list, err := s.client.AppsV1().DaemonSets("").List(ctx, listOptions)
+			list, err := clientSet.AppsV1().DaemonSets("").List(ctx, listOptions)
 			mu.Lock()
 			defer mu.Unlock()
 			if err != nil {
@@ -196,7 +195,7 @@ func (s *SummaryService) GetResourceSummary() (*models.ResourceSummary, map[stri
 				if list.RemainingItemCount != nil {
 					count += int(*list.RemainingItemCount)
 				} else {
-					fullList, err := s.client.AppsV1().DaemonSets("").List(ctx, metav1.ListOptions{})
+					fullList, err := clientSet.AppsV1().DaemonSets("").List(ctx, metav1.ListOptions{})
 					if err == nil {
 						count = len(fullList.Items)
 					}
@@ -205,7 +204,7 @@ func (s *SummaryService) GetResourceSummary() (*models.ResourceSummary, map[stri
 			}
 		},
 		"configMaps": func() {
-			list, err := s.client.CoreV1().ConfigMaps("").List(ctx, listOptions)
+			list, err := clientSet.CoreV1().ConfigMaps("").List(ctx, listOptions)
 			mu.Lock()
 			defer mu.Unlock()
 			if err != nil {
@@ -216,7 +215,7 @@ func (s *SummaryService) GetResourceSummary() (*models.ResourceSummary, map[stri
 				if list.RemainingItemCount != nil {
 					count += int(*list.RemainingItemCount)
 				} else {
-					fullList, err := s.client.CoreV1().ConfigMaps("").List(ctx, metav1.ListOptions{})
+					fullList, err := clientSet.CoreV1().ConfigMaps("").List(ctx, metav1.ListOptions{})
 					if err == nil {
 						count = len(fullList.Items)
 					}
@@ -225,7 +224,7 @@ func (s *SummaryService) GetResourceSummary() (*models.ResourceSummary, map[stri
 			}
 		},
 		"secrets": func() {
-			list, err := s.client.CoreV1().Secrets("").List(ctx, listOptions)
+			list, err := clientSet.CoreV1().Secrets("").List(ctx, listOptions)
 			mu.Lock()
 			defer mu.Unlock()
 			if err != nil {
@@ -236,7 +235,7 @@ func (s *SummaryService) GetResourceSummary() (*models.ResourceSummary, map[stri
 				if list.RemainingItemCount != nil {
 					count += int(*list.RemainingItemCount)
 				} else {
-					fullList, err := s.client.CoreV1().Secrets("").List(ctx, metav1.ListOptions{})
+					fullList, err := clientSet.CoreV1().Secrets("").List(ctx, metav1.ListOptions{})
 					if err == nil {
 						count = len(fullList.Items)
 					}
@@ -247,7 +246,7 @@ func (s *SummaryService) GetResourceSummary() (*models.ResourceSummary, map[stri
 		"ingresses": func() {
 			// Check if networking.k8s.io/v1 is available
 			// For simplicity, assuming v1 is used. Add checks/fallback if needed.
-			list, err := s.client.NetworkingV1().Ingresses("").List(ctx, listOptions)
+			list, err := clientSet.NetworkingV1().Ingresses("").List(ctx, listOptions)
 			mu.Lock()
 			defer mu.Unlock()
 			if err != nil {
@@ -258,7 +257,7 @@ func (s *SummaryService) GetResourceSummary() (*models.ResourceSummary, map[stri
 				if list.RemainingItemCount != nil {
 					count += int(*list.RemainingItemCount)
 				} else {
-					fullList, err := s.client.NetworkingV1().Ingresses("").List(ctx, metav1.ListOptions{})
+					fullList, err := clientSet.NetworkingV1().Ingresses("").List(ctx, metav1.ListOptions{})
 					if err == nil {
 						count = len(fullList.Items)
 					}
