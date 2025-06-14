@@ -7,15 +7,18 @@ import (
 	"k8s.io/client-go/kubernetes"
 )
 
+// RbacService 结构体不再持有 client 字段
 type RbacService struct {
-	client kubernetes.Interface
+	// 不需要 client kubernetes.Interface 字段了
 }
 
-func NewRbacService(client kubernetes.Interface) *RbacService { return &RbacService{client: client} }
+func NewRbacService() *RbacService {
+	return &RbacService{}
+}
 
 // Roles
-func (s *RbacService) ListRoles(namespace string) ([]*models.RoleResponse, error) {
-	roleList, err := s.client.RbacV1().Roles(namespace).List(context.TODO(), metav1.ListOptions{})
+func (s *RbacService) ListRoles(clientSet kubernetes.Interface, namespace string) ([]*models.RoleResponse, error) {
+	roleList, err := clientSet.RbacV1().Roles(namespace).List(context.TODO(), metav1.ListOptions{})
 	if err != nil {
 		return nil, err
 	}
@@ -27,8 +30,8 @@ func (s *RbacService) ListRoles(namespace string) ([]*models.RoleResponse, error
 }
 
 // GetRole retrieves a single Role by namespace and name.
-func (s *RbacService) GetRole(namespace string, name string) (*models.RoleResponse, error) {
-	role, err := s.client.RbacV1().Roles(namespace).Get(context.TODO(), name, metav1.GetOptions{})
+func (s *RbacService) GetRole(clientSet kubernetes.Interface, namespace string, name string) (*models.RoleResponse, error) {
+	role, err := clientSet.RbacV1().Roles(namespace).Get(context.TODO(), name, metav1.GetOptions{})
 	if err != nil {
 		return nil, err
 	}
@@ -36,8 +39,8 @@ func (s *RbacService) GetRole(namespace string, name string) (*models.RoleRespon
 }
 
 // RoleBindings
-func (s *RbacService) ListRoleBindings(namespace string) ([]*models.RoleBindingResponse, error) {
-	roleBindingList, err := s.client.RbacV1().RoleBindings(namespace).List(context.TODO(), metav1.ListOptions{})
+func (s *RbacService) ListRoleBindings(clientSet kubernetes.Interface, namespace string) ([]*models.RoleBindingResponse, error) {
+	roleBindingList, err := clientSet.RbacV1().RoleBindings(namespace).List(context.TODO(), metav1.ListOptions{})
 	if err != nil {
 		return nil, err
 	}
@@ -48,8 +51,8 @@ func (s *RbacService) ListRoleBindings(namespace string) ([]*models.RoleBindingR
 	return roleBindings, nil
 }
 
-func (s *RbacService) GetRoleBinding(namespace string, name string) (*models.RoleBindingResponse, error) {
-	roleBinding, err := s.client.RbacV1().RoleBindings(namespace).Get(context.TODO(), name, metav1.GetOptions{})
+func (s *RbacService) GetRoleBinding(clientSet kubernetes.Interface, namespace string, name string) (*models.RoleBindingResponse, error) {
+	roleBinding, err := clientSet.RbacV1().RoleBindings(namespace).Get(context.TODO(), name, metav1.GetOptions{})
 	if err != nil {
 		return nil, err
 	}
@@ -57,8 +60,8 @@ func (s *RbacService) GetRoleBinding(namespace string, name string) (*models.Rol
 }
 
 // ClusterRoles
-func (s *RbacService) ListClusterRoles() ([]*models.ClusterRoleResponse, error) {
-	clusterRoleList, err := s.client.RbacV1().ClusterRoles().List(context.TODO(), metav1.ListOptions{})
+func (s *RbacService) ListClusterRoles(clientSet kubernetes.Interface) ([]*models.ClusterRoleResponse, error) {
+	clusterRoleList, err := clientSet.RbacV1().ClusterRoles().List(context.TODO(), metav1.ListOptions{})
 	if err != nil {
 		return nil, err
 	}
@@ -69,8 +72,8 @@ func (s *RbacService) ListClusterRoles() ([]*models.ClusterRoleResponse, error) 
 	return clusterRoles, nil
 }
 
-func (s *RbacService) GetClusterRole(name string) (*models.ClusterRoleResponse, error) {
-	clusterRole, err := s.client.RbacV1().ClusterRoles().Get(context.TODO(), name, metav1.GetOptions{})
+func (s *RbacService) GetClusterRole(clientSet kubernetes.Interface, name string) (*models.ClusterRoleResponse, error) {
+	clusterRole, err := clientSet.RbacV1().ClusterRoles().Get(context.TODO(), name, metav1.GetOptions{})
 	if err != nil {
 		return nil, err
 	}
@@ -78,8 +81,8 @@ func (s *RbacService) GetClusterRole(name string) (*models.ClusterRoleResponse, 
 }
 
 // ClusterRoleBindings
-func (s *RbacService) ListClusterRoleBindings() ([]*models.ClusterRoleBindingsResponse, error) {
-	clusterRoleBindingsList, err := s.client.RbacV1().ClusterRoleBindings().List(context.TODO(), metav1.ListOptions{})
+func (s *RbacService) ListClusterRoleBindings(clientSet kubernetes.Interface) ([]*models.ClusterRoleBindingsResponse, error) {
+	clusterRoleBindingsList, err := clientSet.RbacV1().ClusterRoleBindings().List(context.TODO(), metav1.ListOptions{})
 	if err != nil {
 		return nil, err
 	}
@@ -90,8 +93,8 @@ func (s *RbacService) ListClusterRoleBindings() ([]*models.ClusterRoleBindingsRe
 	return clusterRoleBindings, nil
 }
 
-func (s *RbacService) GetClusterRoleBinding(name string) (*models.ClusterRoleBindingsResponse, error) {
-	clusterRoleBinding, err := s.client.RbacV1().ClusterRoleBindings().Get(context.TODO(), name, metav1.GetOptions{})
+func (s *RbacService) GetClusterRoleBinding(clientSet kubernetes.Interface, name string) (*models.ClusterRoleBindingsResponse, error) {
+	clusterRoleBinding, err := clientSet.RbacV1().ClusterRoleBindings().Get(context.TODO(), name, metav1.GetOptions{})
 	if err != nil {
 		return nil, err
 	}
@@ -99,8 +102,8 @@ func (s *RbacService) GetClusterRoleBinding(name string) (*models.ClusterRoleBin
 }
 
 // ServiceAccount
-func (s *RbacService) ListServiceAccounts(namespace string) ([]*models.ServiceAccountsResponse, error) {
-	serviceAccountList, err := s.client.CoreV1().ServiceAccounts(namespace).List(context.TODO(), metav1.ListOptions{})
+func (s *RbacService) ListServiceAccounts(clientSet kubernetes.Interface, namespace string) ([]*models.ServiceAccountsResponse, error) {
+	serviceAccountList, err := clientSet.CoreV1().ServiceAccounts(namespace).List(context.TODO(), metav1.ListOptions{})
 	if err != nil {
 		return nil, err
 	}
@@ -111,8 +114,8 @@ func (s *RbacService) ListServiceAccounts(namespace string) ([]*models.ServiceAc
 	return serviceAccounts, nil
 }
 
-func (s *RbacService) GetServiceAccounts(namespace string, name string) (*models.ServiceAccountsResponse, error) {
-	serviceAccount, err := s.client.CoreV1().ServiceAccounts(namespace).Get(context.TODO(), name, metav1.GetOptions{})
+func (s *RbacService) GetServiceAccounts(clientSet kubernetes.Interface, namespace string, name string) (*models.ServiceAccountsResponse, error) {
+	serviceAccount, err := clientSet.CoreV1().ServiceAccounts(namespace).Get(context.TODO(), name, metav1.GetOptions{})
 	if err != nil {
 		return nil, err
 	}
