@@ -34,9 +34,9 @@ Unlike complex systems pursuing "large and comprehensive" features, CiliKube foc
 
 与追求“大而全”的复杂系统不同，CiliKube 专注于“小而美”。它的核心目标是：
 
-1.  **核心功能**: 提供清晰、直观的界面来管理常用的 K8s 资源。
-2.  **学习友好**: 代码结构清晰，技术栈现代，非常适合作为学习 **Vue3/Go Web 开发** 和 **Kubernetes 二次开发** 的入门项目。
-3.  **易于拓展**: 预留了自定义功能的空间，方便用户根据自身需求进行扩展。
+1.  **核心功能**: 提供清晰、直观的界面来管理常用的 K8s 资源
+2.  **学习友好**: 代码结构清晰，技术栈现代，非常适合作为学习 **Vue3/Go Web 开发** 和 **Kubernetes 二次开发** 的入门项目
+3.  **易于拓展**: 预留了自定义功能的空间，方便用户根据自身需求进行扩展
 
 
 
@@ -46,10 +46,10 @@ Unlike complex systems pursuing "large and comprehensive" features, CiliKube foc
 *   Developers looking to learn **Go + Gin** backend development.
 *   Cloud-native enthusiasts interested in using the **Kubernetes API** and **client-go**.
 *   Teams or individuals needing a concise K8s management dashboard with the potential for customization.
-*   希望学习 **Vue3 + TypeScript + ElementPlus** 前端开发的开发者。
-*   希望学习 **Go + Gin** 后端开发的开发者。
-*   对 **Kubernetes API** 和 **client-go** 使用感兴趣的云原生爱好者。
-*   需要一个简洁 K8s 管理面板，并可能进行二次开发的团队或个人。
+*   希望学习 **Vue3 + TypeScript + ElementPlus** 前端开发的开发者
+*   希望学习 **Go + Gin** 后端开发的开发者
+*   对 **Kubernetes API** 和 **client-go** 使用感兴趣的云原生爱好者
+*   需要一个简洁 K8s 管理面板，并可能进行二次开发的团队或个人
 
 ## 💡 Project Background | 项目背景
 
@@ -121,14 +121,14 @@ This project utilizes popular frontend and backend technology stacks, ensuring d
 本项目采用了当前流行的前后端技术栈，确保开发者能够接触和使用最新的工具和库。
 
 *   **环境要求 (推荐)**:
-    *   Node.js >= 18.0.0 (项目当前使用 v22.15.0 开发)
+    *   Node.js >= 18.0.0 (项目当前使用 v22.16.0 开发)
     *   Go >= 1.20 (项目当前使用 v1.24.2 开发)
     *   PNPM >= 8.x
 
 *   **前端**: `Vue3` `TypeScript` `Vite` `Element Plus` `Pinia` `Vue Router` `Axios` `UnoCSS` `Scss` `ESlint` `Prettier`
     *   基于优秀的 [v3-admin-vite](https://github.com/un-pany/v3-admin-vite) 模板进行开发，感谢原作者 un-pany。
 
-*   **后端**: `Go` `Gin` `Kubernetes client-go` `JWT (dgrijalva/jwt-go)` `Gorilla Websocket` `Logger (wonderivan/logger)`
+*   **后端**: `Go` `Gin` `Kubernetes client-go` `JWT (dgrijalva/jwt-go)` `Gorilla Websocket` `Logger (log/slog)`
 
 ## ✨ Main Features ([See Detailed Roadmap](#️-roadmap)) | 主要功能 ([查看详细开发计划](#️-开发计划-roadmap))
 
@@ -155,7 +155,7 @@ This project utilizes popular frontend and backend technology stacks, ensuring d
     *   配置 (ConfigMap/Secret) 管理
     *   网络 (Service/Ingress) 管理
     *   工作负载 (Deployment/StatefulSet/DaemonSet) 管理 (部分实现)
-*   **系统设置**: 主题切换、国际化支持 (计划中)。
+*   **系统设置**: 主题切换、国际化支持 (计划中)
 
 
 ## 🛠️ Roadmap | 开发计划
@@ -173,8 +173,8 @@ This project utilizes popular frontend and backend technology stacks, ensuring d
 *   [ ] Events Viewer
 *   [ ] Basic CRD Resource Management
 *   [ ] Monitoring Integration (Display data from Prometheus/Grafana)
-*   [ ] Log Viewer Enhancements
-*   [ ] Web Shell Terminal Integration
+*   [x] Log Viewer Enhancements
+*   [x] Web Shell Terminal Integration
 
 **Backend**
 
@@ -190,7 +190,7 @@ This project utilizes popular frontend and backend technology stacks, ensuring d
 *   [x] Deployment / StatefulSet / DaemonSet Resource API
 *   [x] Service / Ingress Resource API
 *   [x] ConfigMap / Secret Resource API
-*   [ ] RBAC Related Resource API
+*   [x] RBAC Related Resource API
 *   [x] Event Resource API
 
 **前端**
@@ -206,8 +206,8 @@ This project utilizes popular frontend and backend technology stacks, ensuring d
 *   [ ] 事件 (Events) 查看
 *   [ ] CRD 资源管理 (基础)
 *   [ ] 监控集成 (集成 Prometheus/Grafana 数据展示)
-*   [ ] 日志查看页面优化
-*   [ ] Web Shell 终端集成
+*   [x] 日志查看页面优化
+*   [x] Web Shell 终端集成
 
 **后端**
 
@@ -221,10 +221,10 @@ This project utilizes popular frontend and backend technology stacks, ensuring d
 *   [x] Deployment / StatefulSet / DaemonSet 资源接口
 *   [x] Service / Ingress 资源接口
 *   [x] ConfigMap / Secret 资源接口
-*   [ ] RBAC 相关资源接口
+*   [x] RBAC 相关资源接口
 *   [ ] Event 资源接口
-*   [ ] JWT 认证中间件
-*   [ ] WebSocket 接口 (用于日志和 Web Shell)
+*   [x] JWT 认证中间件
+*   [x] WebSocket 接口 (用于日志和 Web Shell)
 ## 💻 Local Development | 本地开发
 
 CiliKube offers multiple deployment methods, making it convenient for users who want to quickly experience its interface or perform secondary development.
@@ -261,7 +261,7 @@ go mod tidy
 go run cmd/server/main.go
 ```
 
-## 2\. Docker Deployment
+## 2. Docker Deployment
 
 **Tip**: For a quick experience of CiliKube's front-end and back-end features, Docker deployment is recommended. Both front-end and back-end can run via Docker images, perfect for quick setup and testing. Below are the steps for Docker deployment:
 
@@ -649,7 +649,7 @@ Please follow the Conventional Commits specification:
 - style: 代码样式调整（不影响逻辑）
 
 - refactor: 代码重构
-- 
+
 - revert: 撤销更改
 
 - test: 添加或修改测试
@@ -691,16 +691,20 @@ Email: cilliantech@gmail.com
 
 Website: https://www.cillian.website
 
-WeChat
+WeChat: 希里安
 
-![alt text](docs/wechat400x400.png)
+<img src="docs/wechat400x400.png" width="100" height="100" />
+<!-- <img src="docs/wechat400x400.png" width="100" height="100" />
+<img src="docs/qrcode.png" width="100" height="100" /> -->
+
 
 ## 📜 License | 许可证
 
-This project is open-sourced under the Apache 2.0 License.
+This project is open-sourced under the Apache 2.0 License
 
+本项目基于 Apache 2.0 License 开源
 
-本项目基于 Apache 2.0 License 开源。[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](./LICENSE)
+[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](./LICENSE)
 
 ## 🌟 Star History
 <a href="https://star-history.com/#ciliverse/cilikube&Date">
