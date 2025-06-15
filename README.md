@@ -116,7 +116,7 @@ This project utilizes popular frontend and backend technology stacks, ensuring d
 *   **Frontend**: `Vue3` `TypeScript` `Vite` `Element Plus` `Pinia` `Vue Router` `Axios` `UnoCSS` `Scss` `ESlint` `Prettier`
     *   Developed based on the excellent [v3-admin-vite](https://github.com/un-pany/v3-admin-vite) template, thanks to the original author un-pany.
 
-*   **Backend**: `Go` `Gin` `Kubernetes client-go` `JWT (dgrijalva/jwt-go)` `Gorilla Websocket` `Logger (wonderivan/logger)`
+*   **Backend**: `Go` `Gin` `Kubernetes client-go` `JWT (dgrijalva/jwt-go)` `Gorilla Websocket` `Logger (slog/logger)`
 
 本项目采用了当前流行的前后端技术栈，确保开发者能够接触和使用最新的工具和库。
 
