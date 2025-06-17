@@ -14,6 +14,7 @@ import (
 	"github.com/ciliverse/cilikube/pkg/k8s"
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
+	v1 "k8s.io/api/core/v1"
 )
 
 // AppServices 结构体需要包含新增的 ClusterService。
@@ -30,7 +31,6 @@ type AppServices struct {
 	PVCService           *service.PVCService
 	PVService            *service.PVService
 	StatefulSetService   *service.StatefulSetService
-	NodeService          *service.NodeService
 	NamespaceService     *service.NamespaceService
 	SummaryService       *service.SummaryService
 	EventsService        *service.EventsService
@@ -54,7 +54,6 @@ type AppHandlers struct {
 	PVCHandler           *handlers.PVCHandler
 	PVHandler            *handlers.PVHandler
 	StatefulSetHandler   *handlers.StatefulSetHandler
-	NodeHandler          *handlers.NodeHandler
 	NamespaceHandler     *handlers.NamespaceHandler
 	SummaryHandler       *handlers.SummaryHandler
 	EventsHandler        *handlers.EventsHandler
@@ -62,6 +61,7 @@ type AppHandlers struct {
 	InstallerHandler     *handlers.InstallerHandler
 	AuthHandler          *handlers.AuthHandler
 	ProxyHandler         *handlers.ProxyHandler
+	NodeHandler          *handlers.ResourceHandler[*v1.Node] // 确保 NodeHandler 字段存在
 }
 
 // InitializeServices 的职责是创建所有 Service 层的实例。
@@ -84,7 +84,6 @@ func InitializeServices(k8sManager *k8s.ClusterManager, cfg *configs.Config) *Ap
 		PVCService:           service.NewPVCService(),
 		PVService:            service.NewPVService(),
 		StatefulSetService:   service.NewStatefulSetService(),
-		NodeService:          service.NewNodeService(),
 		NamespaceService:     service.NewNamespaceService(),
 		SummaryService:       service.NewSummaryService(),
 		EventsService:        service.NewEventsService(),
@@ -118,12 +117,12 @@ func InitializeHandlers(services *AppServices, k8sManager *k8s.ClusterManager) *
 		PVCHandler:           handlers.NewPVCHandler(services.PVCService, k8sManager),
 		PVHandler:            handlers.NewPVHandler(services.PVService, k8sManager),
 		StatefulSetHandler:   handlers.NewStatefulSetHandler(services.StatefulSetService, k8sManager),
-		NodeHandler:          handlers.NewNodeHandler(services.NodeService, k8sManager),
 		NamespaceHandler:     handlers.NewNamespaceHandler(services.NamespaceService, k8sManager),
 		SummaryHandler:       handlers.NewSummaryHandler(services.SummaryService, k8sManager),
 		EventsHandler:        handlers.NewEventsHandler(services.EventsService, k8sManager),
 		RbacHandler:          handlers.NewRbacHandler(services.RbacService, k8sManager),
 		ProxyHandler:         handlers.NewProxyHandler(services.ProxyService, k8sManager),
+		NodeHandler:          handlers.NewResourceHandler[*v1.Node](&service.NodeResourceService{}, k8sManager),
 
 		// 非 K8s 处理器
 		// InstallerHandler: handlers.NewInstallerHandler(&services.InstallerService),
@@ -179,7 +178,7 @@ func SetupRouter(cfg *configs.Config, appHandlers *AppHandlers, e *casbin.Enforc
 			routes.RegisterPVCRoutes(clusterSpecificRoutes, appHandlers.PVCHandler)
 			routes.RegisterPVRoutes(clusterSpecificRoutes, appHandlers.PVHandler)
 			routes.RegisterStatefulSetRoutes(clusterSpecificRoutes, appHandlers.StatefulSetHandler)
-			routes.RegisterNodeRoutes(clusterSpecificRoutes, appHandlers.NodeHandler)
+			routes.RegisterResourceRoutes[*v1.Node](clusterSpecificRoutes, appHandlers.NodeHandler, "nodes")
 			routes.RegisterNamespaceRoutes(clusterSpecificRoutes, appHandlers.NamespaceHandler)
 			routes.RegisterSummaryRoutes(clusterSpecificRoutes, appHandlers.SummaryHandler)
 			routes.RegisterEventsRoutes(clusterSpecificRoutes, appHandlers.EventsHandler)
