@@ -20,18 +20,16 @@ func DisplayServerInfo(serverAddr, mode string) {
 	color.White("-------------------------------------------------")
 }
 
-// getVersion 从项目根目录的 VERSION 文件获取版本号。
-// (此函数保持不变)
+// getVersion 从项目根目录的 VERSION 文件获取版本号
 func getVersion() string {
 	data, err := os.ReadFile("VERSION")
 	if err != nil {
-		return "v0.2.3" // 如果读取失败，返回默认版本号
+		return "v0.2.4" // 如果读取失败，返回默认版本号
 	}
 	return string(data)
 }
 
-// getLocalIP 获取本机的局域网 IP 地址。
-// (此函数保持不变)
+// getLocalIP 获取本机的局域网 IP 地址
 func getLocalIP() string {
 	addrs, err := net.InterfaceAddrs()
 	if err != nil {

@@ -47,7 +47,6 @@ func New(configPath string) (*Application, error) {
 	}
 
 	appLogger := logger.New(logLevel)
-
 	slog.SetDefault(appLogger)
 
 	// --- 3. 加载配置 ---
@@ -87,9 +86,8 @@ func New(configPath string) (*Application, error) {
 	}
 	slog.Info("Kubernetes 集群管理器初始化成功")
 
-	// --- 6. 初始化应用服务和处理器 ---
+	// --- 6. 初始化应用服务 ---
 	services := initialization.InitializeServices(k8sManager, cfg)
-	appHandlers := initialization.InitializeHandlers(services, k8sManager)
 
 	// --- 7. Casbin 初始化 ---
 	var e *casbin.Enforcer
@@ -103,7 +101,7 @@ func New(configPath string) (*Application, error) {
 	}
 
 	// --- 8. Gin 路由器设置 ---
-	router := initialization.SetupRouter(cfg, appHandlers, e)
+	router := initialization.SetupRouter(cfg, services, k8sManager, e)
 	slog.Info("Gin 路由器设置完成")
 
 	return &Application{
