@@ -4,19 +4,35 @@ import (
 	"bufio"
 	"context"
 	"fmt"
-	"github.com/ciliverse/cilikube/pkg/k8s"
-	"github.com/ciliverse/cilikube/pkg/utils"
-	"github.com/gin-gonic/gin"
 	"io"
-	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
 	"net/http"
 	"strconv"
 	"strings"
+
+	"github.com/ciliverse/cilikube/internal/service"
+	"github.com/ciliverse/cilikube/pkg/k8s"
+	"github.com/ciliverse/cilikube/pkg/utils"
+	"github.com/gin-gonic/gin"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
 )
 
-// GetPodLogs ... (保持不变)
-func (h *PodHandler) GetPodLogs(c *gin.Context) {
+// PodLogsHandler 处理 Pod 日志相关请求
+type PodLogsHandler struct {
+	service        *service.PodLogsService
+	clusterManager *k8s.ClusterManager
+}
+
+// NewPodLogsHandler 创建 Pod 日志处理器
+func NewPodLogsHandler(service *service.PodLogsService, clusterManager *k8s.ClusterManager) *PodLogsHandler {
+	return &PodLogsHandler{
+		service:        service,
+		clusterManager: clusterManager,
+	}
+}
+
+// GetPodLogs 获取 Pod 日志
+func (h *PodLogsHandler) GetPodLogs(c *gin.Context) {
 	k8sClient, ok := k8s.GetK8sClientFromContext(c, h.clusterManager)
 	if !ok {
 		return
@@ -25,7 +41,6 @@ func (h *PodHandler) GetPodLogs(c *gin.Context) {
 	namespace := strings.TrimSpace(c.Param("namespace"))
 	name := strings.TrimSpace(c.Param("name"))
 	container := c.Query("container")
-	//follow := c.Query("follow") == "true"
 	timestamps := c.Query("timestamps") == "true"
 	tailLinesStr := c.Query("tailLines")
 
@@ -38,7 +53,7 @@ func (h *PodHandler) GetPodLogs(c *gin.Context) {
 		return
 	}
 
-	// Optional: Check container exists
+	// 检查 Pod 和容器是否存在
 	pod, err := h.service.Get(k8sClient.Clientset, namespace, name)
 	if err != nil {
 		if errors.IsNotFound(err) {
@@ -48,6 +63,7 @@ func (h *PodHandler) GetPodLogs(c *gin.Context) {
 		respondError(c, http.StatusInternalServerError, "获取 Pod 信息失败: "+err.Error())
 		return
 	}
+
 	containerFound := false
 	for _, cont := range append(pod.Spec.Containers, pod.Spec.InitContainers...) {
 		if cont.Name == container {
@@ -63,15 +79,6 @@ func (h *PodHandler) GetPodLogs(c *gin.Context) {
 	// 配置日志选项
 	logOptions := buildLogOptions(container, timestamps, tailLinesStr)
 
-	if tailLinesStr != "" {
-		tailLines, err := strconv.ParseInt(tailLinesStr, 10, 64)
-		if err != nil || tailLines <= 0 {
-			respondError(c, http.StatusBadRequest, "无效的 'tailLines' 参数")
-			return
-		}
-		logOptions.TailLines = &tailLines
-	}
-
 	// 获取日志流
 	logStream, err := h.service.GetPodLogs(k8sClient.Clientset, namespace, name, logOptions)
 	if err != nil {
@@ -86,6 +93,7 @@ func (h *PodHandler) GetPodLogs(c *gin.Context) {
 
 	// 设置 SSE 响应头
 	setSSEHeaders(c)
+
 	// 检查是否支持 Flush
 	flusher, ok := c.Writer.(http.Flusher)
 	if !ok {
@@ -148,8 +156,6 @@ func buildLogOptions(container string, timestamps bool, tailLinesStr string) *co
 		val, err := strconv.ParseInt(tailLinesStr, 10, 64)
 		if err == nil && val > 0 {
 			tailLines = &val
-		} else {
-			tailLines = &defaultTailLines
 		}
 	} else {
 		tailLines = &defaultTailLines
@@ -157,7 +163,6 @@ func buildLogOptions(container string, timestamps bool, tailLinesStr string) *co
 
 	return &corev1.PodLogOptions{
 		Container:  container,
-		Follow:     true,
 		Timestamps: timestamps,
 		TailLines:  tailLines,
 	}
@@ -168,14 +173,12 @@ func setSSEHeaders(c *gin.Context) {
 	c.Header("Content-Type", "text/event-stream")
 	c.Header("Cache-Control", "no-cache")
 	c.Header("Connection", "keep-alive")
-	c.Header("Transfer-Encoding", "chunked")
+	c.Header("X-Accel-Buffering", "no")
 }
 
-// initScanner 初始化 Scanner 并设置缓冲区
+// initScanner 初始化日志扫描器
 func initScanner(logStream io.ReadCloser) *bufio.Scanner {
 	scanner := bufio.NewScanner(logStream)
-	const maxCapacity = 1024 * 1024 // 1MB
-	buf := make([]byte, maxCapacity)
-	scanner.Buffer(buf, maxCapacity)
+	scanner.Buffer(make([]byte, 4096), 1024*1024) // 设置更大的缓冲区
 	return scanner
 }

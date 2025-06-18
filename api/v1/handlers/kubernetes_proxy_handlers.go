@@ -1,24 +1,22 @@
 package handlers
 
 import (
-	"github.com/ciliverse/cilikube/pkg/k8s"
 	"net/http"
 	"net/url"
+
+	"github.com/ciliverse/cilikube/pkg/k8s"
 
 	"github.com/gin-gonic/gin"
 	"k8s.io/apimachinery/pkg/util/proxy"
 	"k8s.io/client-go/rest"
-
-	"github.com/ciliverse/cilikube/internal/service"
 )
 
 type ProxyHandler struct {
-	service        *service.ProxyService
 	clusterManager *k8s.ClusterManager
 }
 
-func NewProxyHandler(service *service.ProxyService, cm *k8s.ClusterManager) *ProxyHandler {
-	return &ProxyHandler{service: service, clusterManager: cm}
+func NewProxyHandler(cm *k8s.ClusterManager) *ProxyHandler {
+	return &ProxyHandler{clusterManager: cm}
 }
 
 func (h *ProxyHandler) Proxy(c *gin.Context) {
@@ -27,7 +25,6 @@ func (h *ProxyHandler) Proxy(c *gin.Context) {
 		return
 	}
 
-	//config := h.service.GetConfig() 原逻辑，后续可删除
 	config := k8sClient.Config
 	transport, err := rest.TransportFor(config)
 	if err != nil {
