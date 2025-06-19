@@ -88,3 +88,7 @@ func (s *gormClusterStore) UpdateCluster(cluster *Cluster) error {
 func (s *gormClusterStore) DeleteClusterByName(name string) error {
 	return s.db.Delete(&Cluster{}, "name = ?", name).Error
 }
+
+func (s *gormClusterStore) DeleteClusterByID(id string) error {
+	return s.db.Delete(&Cluster{}, "id = ?", id).Error
+}

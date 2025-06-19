@@ -11,8 +11,8 @@ func RegisterClusterRoutes(router *gin.RouterGroup, handler *handlers.ClusterHan
 		clusterRoutes.GET("", handler.ListClusters)
 		clusterRoutes.POST("", handler.CreateCluster)
 
-		// [修复] 将 /:name 修改为 /:cluster_name 以解决路由冲突
-		clusterRoutes.DELETE("/:cluster_name", handler.DeleteCluster)
+		// 使用集群 ID 进行删除操作
+		clusterRoutes.DELETE("/:cluster_id", handler.DeleteCluster)
 
 		activeRoutes := clusterRoutes.Group("/active")
 		{
