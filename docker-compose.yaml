@@ -6,7 +6,8 @@ services:
       - "8080:8080" # 宿主机端口:容器内应用端口
     restart: unless-stopped
     # 如果后端应用依赖其他服务 (如数据库)，可以在这里添加 depends_on 和 network 配置
-
+    # networks:
+    #   - cilikube-net
   frontend:
     image: cilliantech/cilikube-web:v0.1.0
     container_name: cilikube-web
@@ -19,7 +20,8 @@ services:
     # 注意：前端 VITE_BASE_API 在构建镜像时仍需正确配置，
     # 例如指向 http://localhost:8080 (如果从浏览器访问)
     # 或 http://backend:8080 (如果Nginx配置了反向代理到服务名'backend'，这需要更复杂的Nginx配置)
-
+    # networks:
+    #   - cilikube-net
 # (可选) 定义网络，如果服务间需要通过服务名通信
 # networks:
 #   cilikube-net:

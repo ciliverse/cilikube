@@ -19,13 +19,13 @@ type Config struct {
 }
 
 type ServerConfig struct {
-	Port          string `yaml:"port" json:"port"`
-	ReadTimeout   int    `yaml:"read_timeout" json:"read_timeout"`
-	WriteTimeout  int    `yaml:"write_timeout" json:"write_timeout"`
-	Mode          string `yaml:"mode" json:"mode"` // debug, release
-	ActiveCluster string `yaml:"activeCluster" json:"activeCluster"`
+	Port            string `yaml:"port" json:"port"`
+	ReadTimeout     int    `yaml:"read_timeout" json:"read_timeout"`
+	WriteTimeout    int    `yaml:"write_timeout" json:"write_timeout"`
+	Mode            string `yaml:"mode" json:"mode"` // debug, release
+	ActiveClusterID string `yaml:"activeClusterID" json:"activeClusterID"` // 修改为 ActiveClusterID
 	// [NEW] 添加用于加密 kubeconfig 的密钥
-	EncryptionKey string `yaml:"encryptionKey" json:"encryptionKey"`
+	EncryptionKey   string `yaml:"encryptionKey" json:"encryptionKey"`
 }
 
 type KubernetesConfig struct {

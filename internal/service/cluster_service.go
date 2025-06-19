@@ -54,17 +54,35 @@ func (s *ClusterService) CreateCluster(req CreateClusterRequest) error {
 	return s.k8sManager.AddDBCluster(cluster)
 }
 
-// DeleteCluster 处理删除集群的逻辑。
+// DeleteCluster 处理删除集群的逻辑（按名称）。
+// Deprecated: 优先使用 DeleteClusterByID。
 func (s *ClusterService) DeleteCluster(name string) error {
-	return s.k8sManager.RemoveDBCluster(name)
+	return s.k8sManager.RemoveDBClusterByName(name) // 假设 k8sManager 有 RemoveDBClusterByName
 }
 
-// SetActiveCluster 处理切换活动集群的逻辑。
+// DeleteClusterByID 处理删除集群的逻辑（按ID）。
+func (s *ClusterService) DeleteClusterByID(id string) error {
+	return s.k8sManager.RemoveDBClusterByID(id) // 假设 k8sManager 有 RemoveDBClusterByID
+}
+
+// SetActiveCluster 处理切换活动集群的逻辑（按名称）。
+// Deprecated: 优先使用 SetActiveClusterByID。
 func (s *ClusterService) SetActiveCluster(name string) error {
-	return s.k8sManager.SetActiveCluster(name)
+	return s.k8sManager.SetActiveClusterByName(name) // 假设 k8sManager 有 SetActiveClusterByName
+}
+
+// SetActiveClusterByID 处理切换活动集群的逻辑（按ID）。
+func (s *ClusterService) SetActiveClusterByID(id string) error {
+	return s.k8sManager.SetActiveClusterByID(id) // 假设 k8sManager 有 SetActiveClusterByID
 }
 
 // GetActiveCluster 获取当前活动集群的名称。
 func (s *ClusterService) GetActiveCluster() string {
+	// TODO: 考虑是否也需要 GetActiveClusterID() 或让此方法返回更丰富的集群信息对象
 	return s.k8sManager.GetActiveClusterName()
+}
+
+// GetActiveClusterID 获取当前活动集群的ID。
+func (s *ClusterService) GetActiveClusterID() string {
+	return s.k8sManager.GetActiveClusterID() // 假设 k8sManager 有 GetActiveClusterID
 }

@@ -23,7 +23,7 @@ func GetK8sClientFromContext(c *gin.Context, cm *ClusterManager) (*Client, bool)
 	}
 
 	// 从 manager 获取指定名称的客户端
-	client, err := cm.GetClient(clusterName)
+	client, err := cm.GetClientByName(clusterName)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{
 			"error":   fmt.Sprintf("集群 '%s' 未找到或不可用", clusterName),

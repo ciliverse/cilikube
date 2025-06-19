@@ -8,4 +8,5 @@ type ClusterStore interface {
 	GetAllClusters() ([]Cluster, error)
 	UpdateCluster(cluster *Cluster) error
 	DeleteClusterByName(name string) error
+	DeleteClusterByID(id string) error
 }
