@@ -4,23 +4,16 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
-	"net/http" // 导入 net/http
+	"net/http"
 
-	"github.com/ciliverse/cilikube/internal/service" // 只导入 service 包
+	"github.com/ciliverse/cilikube/internal/service"
 	"github.com/gin-gonic/gin"
 )
 
-// // --- 移除 Handler 中重复的类型定义 ---
-// type Step string
-// const ( ... )
-// type ProgressUpdate struct { ... }
-
-// InstallerHandler handles requests related to the Minikube installer.
 type InstallerHandler struct {
 	installerService service.InstallerService
 }
 
-// NewInstallerHandler creates a new InstallerHandler.
 func NewInstallerHandler(is service.InstallerService) *InstallerHandler {
 	return &InstallerHandler{
 		installerService: is,
@@ -47,7 +40,7 @@ func (h *InstallerHandler) StreamMinikubeInstallation(c *gin.Context) {
 
 	log.Println("SSE: 连接已建立，启动安装服务 Goroutine。")
 	// 在新 Goroutine 中启动服务
-	go h.installerService.InstallMinikube(messageChan, clientGone) 
+	go h.installerService.InstallMinikube(messageChan, clientGone)
 	// 将 clientGone (<-chan struct{}) 传递给服务
 
 	log.Println("SSE: Handler 开始监听服务消息并推送到客户端...")
@@ -60,7 +53,6 @@ func (h *InstallerHandler) StreamMinikubeInstallation(c *gin.Context) {
 }
 
 // streamUpdatesToClient 辅助函数，处理从 service 发来的消息并推送到 client
-// **关键修正:** 参数 clientGone 的类型必须是 <-chan struct{} 以匹配 Context.Done()
 func (h *InstallerHandler) streamUpdatesToClient(c *gin.Context, messageChan <-chan service.ProgressUpdate, clientGone <-chan struct{}) error {
 	defer log.Println("SSE: streamUpdatesToClient 循环结束。")
 	for {
@@ -82,10 +74,10 @@ func (h *InstallerHandler) streamUpdatesToClient(c *gin.Context, messageChan <-c
 				log.Printf("SSE: 序列化服务更新失败: %v", err)
 				// 尝试通知客户端
 				_, writeErr := fmt.Fprintf(c.Writer, "event: error\ndata: {\"error\": \"Internal server error marshalling update: %v\"}\n\n", err)
-                if writeErr != nil {
-                    log.Printf("SSE: 向客户端写入序列化错误信息时失败: %v", writeErr)
-                    return writeErr // 返回写入错误
-                }
+				if writeErr != nil {
+					log.Printf("SSE: 向客户端写入序列化错误信息时失败: %v", writeErr)
+					return writeErr // 返回写入错误
+				}
 				c.Writer.Flush()
 				continue // 继续监听下一条消息
 			}
@@ -101,8 +93,8 @@ func (h *InstallerHandler) streamUpdatesToClient(c *gin.Context, messageChan <-c
 			if f, ok := c.Writer.(http.Flusher); ok {
 				f.Flush()
 			} else {
-                 log.Println("SSE: 警告 - ResponseWriter 不支持 Flushing。")
-            }
+				log.Println("SSE: 警告 - ResponseWriter 不支持 Flushing。")
+			}
 
 			// 如果是最后一条消息，则退出
 			if update.Done {

@@ -6,25 +6,30 @@ import (
 	networkingv1 "k8s.io/api/networking/v1"
 )
 
-// AppServices 应用程序服务集合
+// AppServices 作为所有应用服务的集合，在这里统一定义
 type AppServices struct {
-	// 集群服务
-	ClusterService *ClusterService
+	// 集群与安装服务
+	ClusterService   *ClusterService
+	InstallerService InstallerService
 
-	// 资源服务
-	ServiceService     *BaseResourceService[*corev1.Service]
-	PodService         *BaseResourceService[*corev1.Pod]
-	DeploymentService  *BaseResourceService[*appsv1.Deployment]
-	DaemonSetService   *BaseResourceService[*appsv1.DaemonSet]
-	IngressService     *BaseResourceService[*networkingv1.Ingress]
-	ConfigMapService   *BaseResourceService[*corev1.ConfigMap]
-	SecretService      *BaseResourceService[*corev1.Secret]
-	PVCService         *BaseResourceService[*corev1.PersistentVolumeClaim]
-	PVService          *BaseResourceService[*corev1.PersistentVolume]
-	StatefulSetService *BaseResourceService[*appsv1.StatefulSet]
-	NamespaceService   *BaseResourceService[*corev1.Namespace]
+	// [新增] 节点指标服务
+	NodeMetricsService *NodeMetricsService
 
-	// 非 K8s 服务
-	InstallerService *InstallerService
-	ProxyService     *ProxyService
+	// Kubernetes 资源服务
+	NodeService        ResourceService[*corev1.Node]
+	NamespaceService   ResourceService[*corev1.Namespace]
+	PVService          ResourceService[*corev1.PersistentVolume]
+	PodService         ResourceService[*corev1.Pod]
+	DeploymentService  ResourceService[*appsv1.Deployment]
+	ServiceService     ResourceService[*corev1.Service]
+	DaemonSetService   ResourceService[*appsv1.DaemonSet]
+	IngressService     ResourceService[*networkingv1.Ingress]
+	ConfigMapService   ResourceService[*corev1.ConfigMap]
+	SecretService      ResourceService[*corev1.Secret]
+	PVCService         ResourceService[*corev1.PersistentVolumeClaim]
+	StatefulSetService ResourceService[*appsv1.StatefulSet]
+
+	// Pod 日志与终端服务
+	PodLogsService *PodLogsService
+	PodExecService *PodExecService
 }

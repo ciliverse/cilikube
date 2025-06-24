@@ -1,8 +1,9 @@
 package handlers
 
 import (
-	"github.com/ciliverse/cilikube/pkg/k8s"
 	"net/http"
+
+	"github.com/ciliverse/cilikube/pkg/k8s"
 
 	"github.com/ciliverse/cilikube/internal/service"
 	"github.com/gin-gonic/gin"
@@ -20,7 +21,7 @@ func NewSummaryHandler(svc *service.SummaryService, cm *k8s.ClusterManager) *Sum
 
 // Existing GetResourceSummary handlers...
 func (h *SummaryHandler) GetResourceSummary(c *gin.Context) { /* ... as before ... */
-	k8sClient, ok := k8s.GetK8sClientFromContext(c, h.clusterManager)
+	k8sClient, ok := k8s.GetClientFromQuery(c, h.clusterManager)
 	if !ok {
 		return
 	}
@@ -53,6 +54,3 @@ func (h *SummaryHandler) GetBackendDependencies(c *gin.Context) {
 		"message": "success",
 	})
 }
-
-// --- Re-use or define respond helpers ---
-/* ... */
