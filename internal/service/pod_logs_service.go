@@ -25,7 +25,12 @@ func (s *PodLogsService) Get(clientset kubernetes.Interface, namespace, name str
 // GetPodLogs 获取 Pod 日志流
 func (s *PodLogsService) GetPodLogs(clientset kubernetes.Interface, namespace, name string, opts *v1.PodLogOptions) (io.ReadCloser, error) {
 	req := clientset.CoreV1().Pods(namespace).GetLogs(name, opts)
-	return req.Stream(context.Background())
+	stream, err := req.Stream(context.Background())
+	if err != nil {
+		return nil, err
+	}
+	// 自动检测并转码 GBK -> UTF-8
+	return ConvertIfGBK(stream), nil
 }
 
 // GetLogs 获取 Pod 日志

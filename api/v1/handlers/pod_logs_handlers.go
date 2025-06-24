@@ -33,7 +33,7 @@ func NewPodLogsHandler(service *service.PodLogsService, clusterManager *k8s.Clus
 
 // GetPodLogs 获取 Pod 日志
 func (h *PodLogsHandler) GetPodLogs(c *gin.Context) {
-	k8sClient, ok := k8s.GetK8sClientFromContext(c, h.clusterManager)
+	k8sClient, ok := k8s.GetClientFromQuery(c, h.clusterManager)
 	if !ok {
 		return
 	}
@@ -130,6 +130,9 @@ func (h *PodLogsHandler) GetPodLogs(c *gin.Context) {
 		select {
 		case line, ok := <-logChan:
 			if !ok {
+				// 日志流结束，主动推送 event: end
+				fmt.Fprintf(c.Writer, "event: end\ndata: [END]\n\n")
+				flusher.Flush()
 				return
 			}
 			if _, err := fmt.Fprintf(c.Writer, "data: %s\n\n", line); err != nil {
@@ -174,6 +177,8 @@ func setSSEHeaders(c *gin.Context) {
 	c.Header("Cache-Control", "no-cache")
 	c.Header("Connection", "keep-alive")
 	c.Header("X-Accel-Buffering", "no")
+	c.Header("Access-Control-Allow-Origin", "*") // 支持跨域
+	c.Header("Access-Control-Allow-Credentials", "true")
 }
 
 // initScanner 初始化日志扫描器

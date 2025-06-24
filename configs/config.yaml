@@ -51,10 +51,10 @@ clusters:
   - name: "default"          # 集群的唯一名称，与 server.activeCluster 匹配
     config_path: "default"   # 使用 "default" 来让应用查找标准 kubeconfig 路径
                         # (~/.kube/config 或 KUBECONFIG 环境变量)
-    is_active: true          # 激活此集群配置
+    # is_active: true          # 激活此集群配置
   - name: "dev-cluster"        # 另一个示例集群
     config_path: "/root/dev/config" # 替换为实际路径
-    is_active: true        # 激活这个集群
+    # is_active: true        # 激活这个集群
   # 如果你有其他集群，可以在这里继续添加，例如：
   # - name: "dev-cluster"
   #   config_path: "/path/to/your/dev-cluster-kubeconfig.yaml"
