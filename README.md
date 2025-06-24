@@ -10,9 +10,16 @@
 
 ## 最新公告（2025年6月）
 
-- 目前单集群维护在release-0.1.x最新分支
-- 多集群版本在0.2.x最新分支，正在开发中
+在此非常感谢各位小伙伴的贡献支持，每个release分支都可以参与贡献
+
+- 单集群版本维护在release-0.1.x最新分支
+- 多集群版本（集群名字为标识符）维护在0.2.x最新分支
+- 泛型多集群版本（集群ID为标识符）维护在0.3.x 最新分支，还在开发中
 - 全新Antd组件web界面即将上线，敬请期待！
+
+诚挚邀请大家参与贡献（小白也可以参与），也欢迎大家加入我们的交流群
+
+![alt text](docs/run.png)
 
 ## 🤔 What is CiliKube? | CiliKube 是什么？
 
@@ -77,6 +84,8 @@ CiliKube 起源于作者学习 Web 全栈开发的实践项目。在学习过程
 
 ![alt text](docs/newui.png)
 ![alt text](docs/antd-2.png)
+![alt text](docs/node-ant.png)
+![alt text](docs/cluster-ant.png)
 
 ### **原始UI**
 ![alt text](docs/login.png)
