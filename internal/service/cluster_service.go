@@ -4,12 +4,12 @@ import (
 	"encoding/base64"
 	"fmt"
 
+	"github.com/ciliverse/cilikube/api/v1/models"
 	"github.com/ciliverse/cilikube/internal/store"
 	"github.com/ciliverse/cilikube/pkg/k8s"
 )
 
 // ClusterService 提供了围绕集群管理的业务逻辑。
-// 它是 API handlers 和底层 k8s.ClusterManager 之间的桥梁。
 type ClusterService struct {
 	k8sManager *k8s.ClusterManager
 }
@@ -21,68 +21,86 @@ func NewClusterService(k8sManager *k8s.ClusterManager) *ClusterService {
 	}
 }
 
-// CreateClusterRequest 定义了创建集群API的请求体结构。
-// 这是一个数据传输对象 (DTO)，用于 API 层的输入。
-type CreateClusterRequest struct {
-	Name           string `json:"name" binding:"required"`
-	KubeconfigData string `json:"kubeconfigData" binding:"required"` // Base64 编码的 kubeconfig 字符串
-	Provider       string `json:"provider"`
-	Description    string `json:"description"`
+// ListClusters 返回所有受管集群的概要信息列表。
+func (s *ClusterService) ListClusters() []models.ClusterListResponse {
+	// k8sManager 返回的信息结构已经很适合列表页，我们直接转换一下
+	managerInfo := s.k8sManager.ListClusterInfo()
+	response := make([]models.ClusterListResponse, len(managerInfo))
+	for i, info := range managerInfo {
+		response[i] = models.ClusterListResponse{
+			ID:          info.ID, // 确保 k8s.ClusterInfoResponse 中有 ID 字段
+			Name:        info.Name,
+			Server:      info.Server,
+			Version:     info.Version,
+			Status:      info.Status,
+			Source:      info.Source,
+			Environment: info.Environment,
+		}
+	}
+	return response
 }
 
-// ListClusters 返回所有受管集群的信息列表。
-func (s *ClusterService) ListClusters() []k8s.ClusterInfoResponse {
-	return s.k8sManager.ListClusterInfo()
+// GetClusterByID 获取单个集群的详细信息。
+func (s *ClusterService) GetClusterByID(id string) (*models.ClusterResponse, error) {
+	cluster, err := s.k8sManager.GetClusterDetailFromDB(id)
+	if err != nil {
+		// 如果数据库中没有，可能是文件类型的集群，我们从缓存中组装一个简版
+		if info, ok := s.k8sManager.GetStatusFromCache(id); ok {
+			return &models.ClusterResponse{
+				ID:          info.ID,
+				Name:        info.Name,
+				Version:     info.Version,
+				Status:      info.Status,
+				Environment: info.Environment,
+				Source:      info.Source,
+			}, nil
+		}
+		return nil, fmt.Errorf("集群 ID '%s' 未找到: %w", id, err)
+	}
+
+	return &models.ClusterResponse{
+		ID:          cluster.ID,
+		Name:        cluster.Name,
+		Provider:    cluster.Provider,
+		Description: cluster.Description,
+		Environment: cluster.Environment,
+		Region:      cluster.Region,
+		Version:     cluster.Version,
+		Status:      cluster.Status,
+		Labels:      cluster.Labels,
+		CreatedAt:   cluster.CreatedAt,
+		UpdatedAt:   cluster.UpdatedAt,
+	}, nil
 }
 
 // CreateCluster 处理创建新集群的逻辑。
-func (s *ClusterService) CreateCluster(req CreateClusterRequest) error {
-	// 解码 Base64 格式的 kubeconfig 数据。
+func (s *ClusterService) CreateCluster(req models.CreateClusterRequest) error {
 	kubeconfigBytes, err := base64.StdEncoding.DecodeString(req.KubeconfigData)
 	if err != nil {
 		return fmt.Errorf("kubeconfig 数据不是有效的 Base64 编码: %w", err)
 	}
-
-	// 将请求数据映射到数据库模型。
 	cluster := &store.Cluster{
 		Name:           req.Name,
 		KubeconfigData: kubeconfigBytes,
 		Provider:       req.Provider,
 		Description:    req.Description,
+		Environment:    req.Environment,
+		Region:         req.Region,
 	}
-
 	return s.k8sManager.AddDBCluster(cluster)
 }
 
-// DeleteCluster 处理删除集群的逻辑（按名称）。
-// Deprecated: 优先使用 DeleteClusterByID。
-func (s *ClusterService) DeleteCluster(name string) error {
-	return s.k8sManager.RemoveDBClusterByName(name) // 假设 k8sManager 有 RemoveDBClusterByName
+// UpdateCluster 更新集群信息。
+func (s *ClusterService) UpdateCluster(id string, req models.UpdateClusterRequest) error {
+	return s.k8sManager.UpdateDBCluster(id, req)
 }
 
-// DeleteClusterByID 处理删除集群的逻辑（按ID）。
+// DeleteClusterByID 处理删除集群的逻辑。
 func (s *ClusterService) DeleteClusterByID(id string) error {
-	return s.k8sManager.RemoveDBClusterByID(id) // 假设 k8sManager 有 RemoveDBClusterByID
+	return s.k8sManager.RemoveDBClusterByID(id)
 }
 
-// SetActiveCluster 处理切换活动集群的逻辑（按名称）。
-// Deprecated: 优先使用 SetActiveClusterByID。
-func (s *ClusterService) SetActiveCluster(name string) error {
-	return s.k8sManager.SetActiveClusterByName(name) // 假设 k8sManager 有 SetActiveClusterByName
-}
-
-// SetActiveClusterByID 处理切换活动集群的逻辑（按ID）。
-func (s *ClusterService) SetActiveClusterByID(id string) error {
-	return s.k8sManager.SetActiveClusterByID(id) // 假设 k8sManager 有 SetActiveClusterByID
-}
-
-// GetActiveCluster 获取当前活动集群的名称。
-func (s *ClusterService) GetActiveCluster() string {
-	// TODO: 考虑是否也需要 GetActiveClusterID() 或让此方法返回更丰富的集群信息对象
-	return s.k8sManager.GetActiveClusterName()
-}
-
-// GetActiveClusterID 获取当前活动集群的ID。
-func (s *ClusterService) GetActiveClusterID() string {
-	return s.k8sManager.GetActiveClusterID() // 假设 k8sManager 有 GetActiveClusterID
+// SetActiveCluster 处理切换活动集群的逻辑。
+func (s *ClusterService) SetActiveCluster(id string) error {
+	return s.k8sManager.SetActiveClusterByID(id)
 }

@@ -4,7 +4,7 @@ import (
 	"sync"
 
 	appsv1 "k8s.io/api/apps/v1"
-	v1 "k8s.io/api/core/v1"
+	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
 )
 
@@ -35,18 +35,18 @@ func (f *ResourceServiceFactory) GetService(name string) interface{} {
 	return f.services[name]
 }
 
-// InitializeDefaultServices 初始化默认服务
+// InitializeDefaultServices 初始化所有默认服务
 func (f *ResourceServiceFactory) InitializeDefaultServices() {
-	// 注册所有资源服务
-	f.RegisterService("services", NewBaseResourceService[*v1.Service]())
-	f.RegisterService("pods", NewBaseResourceService[*v1.Pod]())
-	f.RegisterService("deployments", NewBaseResourceService[*appsv1.Deployment]())
-	f.RegisterService("daemonsets", NewBaseResourceService[*appsv1.DaemonSet]())
-	f.RegisterService("ingresses", NewBaseResourceService[*networkingv1.Ingress]())
-	f.RegisterService("configmaps", NewBaseResourceService[*v1.ConfigMap]())
-	f.RegisterService("secrets", NewBaseResourceService[*v1.Secret]())
-	f.RegisterService("persistentvolumeclaims", NewBaseResourceService[*v1.PersistentVolumeClaim]())
-	f.RegisterService("persistentvolumes", NewBaseResourceService[*v1.PersistentVolume]())
-	f.RegisterService("statefulsets", NewBaseResourceService[*appsv1.StatefulSet]())
-	f.RegisterService("namespaces", NewBaseResourceService[*v1.Namespace]())
+	f.RegisterService("nodes", NewBaseResourceService[*corev1.Node](new(NodeClient)))
+	f.RegisterService("pods", NewBaseResourceService[*corev1.Pod](new(PodClient)))
+	f.RegisterService("deployments", NewBaseResourceService[*appsv1.Deployment](new(DeploymentClient)))
+	f.RegisterService("services", NewBaseResourceService[*corev1.Service](new(ServiceClient)))
+	f.RegisterService("daemonsets", NewBaseResourceService[*appsv1.DaemonSet](new(DaemonSetClient)))
+	f.RegisterService("ingresses", NewBaseResourceService[*networkingv1.Ingress](new(IngressClient)))
+	f.RegisterService("configmaps", NewBaseResourceService[*corev1.ConfigMap](new(ConfigMapClient)))
+	f.RegisterService("secrets", NewBaseResourceService[*corev1.Secret](new(SecretClient)))
+	f.RegisterService("persistentvolumeclaims", NewBaseResourceService[*corev1.PersistentVolumeClaim](new(PVCClient)))
+	f.RegisterService("persistentvolumes", NewBaseResourceService[*corev1.PersistentVolume](new(PVClient)))
+	f.RegisterService("statefulsets", NewBaseResourceService[*appsv1.StatefulSet](new(StatefulSetClient)))
+	f.RegisterService("namespaces", NewBaseResourceService[*corev1.Namespace](new(NamespaceClient)))
 }

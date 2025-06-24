@@ -1,35 +1,63 @@
 package initialization
 
 import (
+	"log"
 	"net"
 	"os"
+	"runtime"
+	"strings"
+	"time"
 
 	"github.com/fatih/color"
 )
 
-// DisplayServerInfo 在控制台显示彩色的服务器运行信息。
-// 它现在是一个可导出的公共函数。
-func DisplayServerInfo(serverAddr, mode string) {
-	version := getVersion() // 版本信息在内部获取
+// Version 允许通过编译参数注入（go build -ldflags "-X 'github.com/ciliverse/cilikube/internal/initialization.Version=v0.3.1'")
+var Version = ""
 
+// DisplayServerInfo 打印服务启动信息，包括本地/局域网地址、模式、版本号、Go版本、启动时间等
+func DisplayServerInfo(serverAddr, mode string) {
+	version := getVersion()
+	goVersion := runtime.Version()
+	buildTime := getBuildTime()
+	hostname, _ := os.Hostname()
 	color.Cyan("🚀 CiliKube Server is running!")
 	color.Green("   ➜  Local:       http://127.0.0.1%s", serverAddr)
 	color.Green("   ➜  Network:     http://%s%s", getLocalIP(), serverAddr)
 	color.Yellow("  ➜  Mode:        %s", mode)
 	color.Magenta("  ➜  Version:     %s", version)
+	color.Cyan("   ➜  Go Version:   %s", goVersion)
+	color.Cyan("   ➜  Hostname:     %s", hostname)
+	color.Cyan("   ➜  Start Time:   %s", time.Now().Format("2006-01-02 15:04:05"))
+	if buildTime != "" {
+		color.Cyan("   ➜  Build Time:   %s", buildTime)
+	}
 	color.White("-------------------------------------------------")
 }
 
-// getVersion 从项目根目录的 VERSION 文件获取版本号
+// getVersion 获取版本号，优先级：环境变量 > 编译变量 > VERSION 文件 > 默认值
 func getVersion() string {
-	data, err := os.ReadFile("VERSION")
-	if err != nil {
-		return "v0.2.4" // 如果读取失败，返回默认版本号
+	if v := os.Getenv("CILIKUBE_VERSION"); v != "" {
+		return v
 	}
-	return string(data)
+	if Version != "" {
+		return Version
+	}
+	data, err := os.ReadFile("VERSION")
+	if err == nil {
+		return strings.TrimSpace(string(data))
+	}
+	log.Printf("[WARN] 获取版本号失败（环境变量、编译变量、VERSION 文件均无效），使用默认版本号: %v", err)
+	return "v0.3.1"
 }
 
-// getLocalIP 获取本机的局域网 IP 地址
+// getBuildTime 支持通过编译参数注入构建时间（go build -ldflags "-X 'github.com/ciliverse/cilikube/internal/initialization.BuildTime=2025-06-24T12:00:00Z'")
+var BuildTime = ""
+
+func getBuildTime() string {
+	return BuildTime
+}
+
+// getLocalIP 获取本机第一个非回环 IPv4 地址，常用于局域网访问
 func getLocalIP() string {
 	addrs, err := net.InterfaceAddrs()
 	if err != nil {

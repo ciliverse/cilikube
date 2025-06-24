@@ -20,7 +20,7 @@ func NewProxyHandler(cm *k8s.ClusterManager) *ProxyHandler {
 }
 
 func (h *ProxyHandler) Proxy(c *gin.Context) {
-	k8sClient, ok := k8s.GetK8sClientFromContext(c, h.clusterManager)
+	k8sClient, ok := k8s.GetClientFromQuery(c, h.clusterManager)
 	if !ok {
 		return
 	}

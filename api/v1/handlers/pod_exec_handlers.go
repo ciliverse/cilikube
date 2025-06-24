@@ -72,7 +72,7 @@ func NewPodExecHandler(svc *service.PodExecService, cm *k8s.ClusterManager) *Pod
 
 // ExecPod 处理 Pod 执行请求
 func (h *PodExecHandler) ExecPod(c *gin.Context) {
-	k8sClient, ok := k8s.GetK8sClientFromContext(c, h.clusterManager)
+	k8sClient, ok := k8s.GetClientFromQuery(c, h.clusterManager)
 	if !ok {
 		return
 	}
@@ -107,7 +107,7 @@ func (h *PodExecHandler) ExecPod(c *gin.Context) {
 
 // ExecIntoPod 处理 WebSocket 连接，执行容器命令
 func (h *PodExecHandler) ExecIntoPod(c *gin.Context) {
-	k8sClient, ok := k8s.GetK8sClientFromContext(c, h.clusterManager)
+	k8sClient, ok := k8s.GetClientFromQuery(c, h.clusterManager)
 	if !ok {
 		return
 	}

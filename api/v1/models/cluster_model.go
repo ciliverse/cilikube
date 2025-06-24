@@ -1,16 +1,48 @@
 package models
 
-// ClusterInfo represents metadata about a configured Kubernetes cluster.
-type ClusterInfo struct {
-	Name           string `json:"name"`
-	KubeconfigPath string `json:"kubeconfigPath"` // Path where the kubeconfig file is stored on the server
-	Description    string `json:"description,omitempty"`
-	IsActive       bool   `json:"isActive,omitempty"` // Transient field, set at runtime
+import "time"
+
+type CreateClusterRequest struct {
+	Name           string `json:"name" binding:"required"`
+	KubeconfigData string `json:"kubeconfigData" binding:"required"` // Base64 编码的 kubeconfig 字符串
+	Provider       string `json:"provider"`
+	Description    string `json:"description"`
+	Environment    string `json:"environment"`
+	Region         string `json:"region"`
 }
 
-// AddClusterRequest is the request body for adding a new cluster.
-type AddClusterRequest struct {
-	Name              string `json:"name" binding:"required"`
-	KubeconfigContent string `json:"kubeconfigContent" binding:"required"`
-	Description       string `json:"description"`
+type UpdateClusterRequest struct {
+	Name           string            `json:"name"`
+	Provider       string            `json:"provider"`
+	Description    string            `json:"description"`
+	Environment    string            `json:"environment"`
+	Region         string            `json:"region"`
+	Status         string            `json:"status"`
+	Labels         map[string]string `json:"labels"`
+	KubeconfigData string            `json:"kubeconfigData,omitempty"`
+}
+
+type ClusterResponse struct {
+	ID          string            `json:"id"`
+	Name        string            `json:"name"`
+	Provider    string            `json:"provider"`
+	Description string            `json:"description"`
+	Environment string            `json:"environment"`
+	Region      string            `json:"region"`
+	Version     string            `json:"version"`
+	Status      string            `json:"status"`
+	Source      string            `json:"source"`
+	Labels      map[string]string `json:"labels"`
+	CreatedAt   time.Time         `json:"created_at"`
+	UpdatedAt   time.Time         `json:"updated_at"`
+}
+
+type ClusterListResponse struct {
+	ID          string `json:"id"`
+	Name        string `json:"name"`
+	Server      string `json:"server"`
+	Version     string `json:"version"`
+	Status      string `json:"status"`
+	Source      string `json:"source"`
+	Environment string `json:"environment"`
 }
