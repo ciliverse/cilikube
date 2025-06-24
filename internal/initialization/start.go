@@ -20,6 +20,14 @@ func DisplayServerInfo(serverAddr, mode string) {
 	goVersion := runtime.Version()
 	buildTime := getBuildTime()
 	hostname, _ := os.Hostname()
+	// 设置为北京时间（东八区）
+	loc, err := time.LoadLocation("Asia/Shanghai")
+	var startTime string
+	if err == nil {
+		startTime = time.Now().In(loc).Format("2006-01-02 15:04:05 MST")
+	} else {
+		startTime = time.Now().Format("2006-01-02 15:04:05")
+	}
 	color.Cyan("🚀 CiliKube Server is running!")
 	color.Green("   ➜  Local:       http://127.0.0.1%s", serverAddr)
 	color.Green("   ➜  Network:     http://%s%s", getLocalIP(), serverAddr)
@@ -27,7 +35,7 @@ func DisplayServerInfo(serverAddr, mode string) {
 	color.Magenta("  ➜  Version:     %s", version)
 	color.Cyan("   ➜  Go Version:   %s", goVersion)
 	color.Cyan("   ➜  Hostname:     %s", hostname)
-	color.Cyan("   ➜  Start Time:   %s", time.Now().Format("2006-01-02 15:04:05"))
+	color.Cyan("   ➜  Start Time:   %s", startTime)
 	if buildTime != "" {
 		color.Cyan("   ➜  Build Time:   %s", buildTime)
 	}
