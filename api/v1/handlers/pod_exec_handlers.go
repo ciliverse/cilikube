@@ -2,78 +2,52 @@ package handlers
 
 import (
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"strings"
 	"sync"
 
-	"github.com/ciliverse/cilikube/pkg/k8s"
-
-	"io"
-
 	"github.com/ciliverse/cilikube/internal/service"
-	"github.com/ciliverse/cilikube/pkg/utils"
+	"github.com/ciliverse/cilikube/pkg/k8s"
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
 )
 
-var upgrader = websocket.Upgrader{
-	ReadBufferSize:  1024,
-	WriteBufferSize: 1024,
-	CheckOrigin: func(r *http.Request) bool {
-		return true
-	},
-}
-
-// WebSocketStreamHandler 实现 io.Reader 和 io.Writer 接口，处理 WebSocket 数据
-type WebSocketStreamHandler struct {
-	conn        *websocket.Conn
-	stdinChan   chan []byte
-	stdoutChan  chan []byte
-	closeChan   chan struct{}
-	mu          sync.Mutex
-	stdinClosed bool
-}
-
-// NewWebSocketStreamHandler 创建 WebSocketStreamHandler 实例
-func NewWebSocketStreamHandler(conn *websocket.Conn, enableStdin, enableStdout bool) *WebSocketStreamHandler {
-	handler := &WebSocketStreamHandler{
-		conn:        conn,
-		stdinChan:   make(chan []byte, 100),
-		stdoutChan:  make(chan []byte, 100),
-		closeChan:   make(chan struct{}),
-		stdinClosed: false,
-	}
-
-	if enableStdin {
-		go handler.readMessages()
-	}
-
-	if enableStdout {
-		go handler.writeMessages()
-	}
-
-	return handler
-}
-
-// PodExecHandler 处理 Pod 执行请求
+// PodExecHandler handles pod execution requests
 type PodExecHandler struct {
 	service        *service.PodExecService
 	clusterManager *k8s.ClusterManager
+	upgrader       websocket.Upgrader
 }
 
-// NewPodExecHandler 创建 Pod 执行处理器
+// NewPodExecHandler creates a new PodExecHandler
 func NewPodExecHandler(svc *service.PodExecService, cm *k8s.ClusterManager) *PodExecHandler {
 	return &PodExecHandler{
 		service:        svc,
 		clusterManager: cm,
+		upgrader: websocket.Upgrader{
+			ReadBufferSize:  1024,
+			WriteBufferSize: 1024,
+			CheckOrigin: func(r *http.Request) bool {
+				return true
+			},
+		},
 	}
 }
 
-// ExecPod 处理 Pod 执行请求
+// ExecPod handles WebSocket requests for pod execution
 func (h *PodExecHandler) ExecPod(c *gin.Context) {
+	ws, err := h.upgrader.Upgrade(c.Writer, c.Request, nil)
+	if err != nil {
+		log.Printf("Failed to upgrade to websocket: %v", err)
+		return
+	}
+	defer ws.Close()
+
 	k8sClient, ok := k8s.GetClientFromQuery(c, h.clusterManager)
 	if !ok {
+		ws.WriteMessage(websocket.TextMessage, []byte("Failed to get Kubernetes client"))
 		return
 	}
 
@@ -82,12 +56,27 @@ func (h *PodExecHandler) ExecPod(c *gin.Context) {
 	container := c.Query("container")
 	command := c.QueryArray("command")
 
+	shell := c.Query("shell")
 	if len(command) == 0 {
-		respondError(c, 400, "命令不能为空")
-		return
+		if shell != "" {
+			command = []string{shell}
+		} else {
+			command = []string{"/bin/sh"}
+		}
 	}
 
-	// 创建执行选项
+	wsStreamHandler := &WebSocketStreamHandler{
+		conn:        ws,
+		stdinChan:   make(chan []byte, 100),
+		stdoutChan:  make(chan []byte, 100),
+		closeChan:   make(chan struct{}),
+		stdinClosed: false,
+	}
+	defer wsStreamHandler.Close()
+
+	go wsStreamHandler.readMessages()
+	go wsStreamHandler.writeMessages()
+
 	options := &service.ExecOptions{
 		Command:   command,
 		Container: container,
@@ -97,86 +86,29 @@ func (h *PodExecHandler) ExecPod(c *gin.Context) {
 		TTY:       true,
 	}
 
-	// 执行命令
-	err := h.service.Exec(k8sClient.Clientset, namespace, podName, options, c.Writer, c.Request.Body)
+	err = h.service.Exec(k8sClient.Clientset, namespace, podName, options, wsStreamHandler, wsStreamHandler)
 	if err != nil {
-		respondError(c, 500, "执行命令失败: "+err.Error())
-		return
-	}
-}
-
-// ExecIntoPod 处理 WebSocket 连接，执行容器命令
-func (h *PodExecHandler) ExecIntoPod(c *gin.Context) {
-	k8sClient, ok := k8s.GetClientFromQuery(c, h.clusterManager)
-	if !ok {
-		return
-	}
-
-	namespace := strings.TrimSpace(c.Param("namespace"))
-	name := strings.TrimSpace(c.Param("name"))
-	container := c.Query("container")
-	commandStr := c.Query("command")
-	argsStr := c.Query("args")
-
-	enableStdin := c.DefaultQuery("stdin", "true") == "true"
-	enableStdout := c.DefaultQuery("stdout", "true") == "true"
-	enableStderr := c.DefaultQuery("stderr", "true") == "true"
-	enableTty := c.Query("tty") == "true"
-
-	if !utils.ValidateNamespace(namespace) || !utils.ValidateResourceName(name) || container == "" || commandStr == "" {
-		respondError(c, http.StatusBadRequest, "无效的命名空间/Pod名称/容器/命令参数")
-		return
-	}
-
-	// 构建命令
-	command := buildCommand(commandStr, argsStr)
-
-	ws, err := upgrader.Upgrade(c.Writer, c.Request, nil)
-	if err != nil {
-		log.Printf("WebSocket upgrade failed: %v", err)
-		return
-	}
-	defer func(ws *websocket.Conn) {
-		err := ws.Close()
-		if err != nil {
-
-		}
-	}(ws)
-
-	wsStreamHandler := NewWebSocketStreamHandler(ws, enableStdin, enableStdout || enableStderr)
-	defer func(wsStreamHandler *WebSocketStreamHandler) {
-		err := wsStreamHandler.Close()
-		if err != nil {
-
-		}
-	}(wsStreamHandler)
-
-	// 创建执行选项
-	options := &service.ExecOptions{
-		Command:   command,
-		Container: container,
-		Stdin:     enableStdin,
-		Stdout:    enableStdout,
-		Stderr:    enableStderr,
-		TTY:       enableTty,
-	}
-
-	// 执行命令
-	err = h.service.Exec(k8sClient.Clientset, namespace, name, options, wsStreamHandler, wsStreamHandler)
-	if err != nil {
-		errMsg := []byte(fmt.Sprintf("\r\n--- Command Execution Failed ---\r\nError: %v\r\n", err))
-		if err := wsStreamHandler.WriteMessage(websocket.TextMessage, errMsg); err != nil {
-			log.Printf("Failed to send error message: %v", err)
-		}
+		errmsg := []byte(fmt.Sprintf("\r\n--- Command Execution Failed ---\r\nError: %v\r\n", err))
+		wsStreamHandler.WriteMessage(websocket.TextMessage, errmsg)
 		log.Printf("Exec error: %v", err)
 		return
 	}
 
 	log.Println("Exec finished without error.")
-	wsStreamHandler.ClosePipes()
 }
 
-// readMessages 从 WebSocket 读取前端输入，发送到 stdinChan
+// WebSocketStreamHandler implements io.Reader and io.Writer for WebSocket data
+type WebSocketStreamHandler struct {
+	conn        *websocket.Conn
+	stdinChan   chan []byte
+	stdoutChan  chan []byte
+	closeChan   chan struct{}
+	mu          sync.Mutex
+	stdinClosed bool
+	buffer      []byte
+}
+
+// readMessages reads messages from WebSocket and sends to stdinChan
 func (h *WebSocketStreamHandler) readMessages() {
 	defer h.closeStdin()
 	for {
@@ -193,7 +125,7 @@ func (h *WebSocketStreamHandler) readMessages() {
 	}
 }
 
-// closeStdin 关闭 stdinChan
+// closeStdin closes stdinChan
 func (h *WebSocketStreamHandler) closeStdin() {
 	h.mu.Lock()
 	defer h.mu.Unlock()
@@ -203,12 +135,7 @@ func (h *WebSocketStreamHandler) closeStdin() {
 	}
 }
 
-// ClosePipes 关闭 stdinChan
-func (h *WebSocketStreamHandler) ClosePipes() {
-	h.closeStdin()
-}
-
-// writeMessages 从 stdoutChan 读取容器输出，发送到 WebSocket
+// writeMessages reads from stdoutChan and writes to WebSocket
 func (h *WebSocketStreamHandler) writeMessages() {
 	for {
 		select {
@@ -226,34 +153,40 @@ func (h *WebSocketStreamHandler) writeMessages() {
 	}
 }
 
-// Read 从 stdinChan 读取数据，供容器执行命令使用
+// Read reads data from stdinChan for container execution
 func (h *WebSocketStreamHandler) Read(p []byte) (n int, err error) {
+	if len(h.buffer) > 0 {
+		n = copy(p, h.buffer)
+		h.buffer = h.buffer[n:]
+		return n, nil
+	}
 	data, ok := <-h.stdinChan
 	if !ok {
 		return 0, io.EOF
 	}
 	n = copy(p, data)
+	h.buffer = append(h.buffer, data[n:]...)
 	return n, nil
 }
 
-// Write 将容器输出写入 stdoutChan
+// Write writes container output to stdoutChan
 func (h *WebSocketStreamHandler) Write(p []byte) (n int, err error) {
 	h.stdoutChan <- p
 	return len(p), nil
 }
 
-// WriteMessage 发送 WebSocket 消息
+// WriteMessage sends a WebSocket message
 func (h *WebSocketStreamHandler) WriteMessage(messageType int, data []byte) error {
 	return h.conn.WriteMessage(messageType, data)
 }
 
-// Close 关闭 WebSocket 连接
+// Close closes the WebSocket connection
 func (h *WebSocketStreamHandler) Close() error {
 	close(h.closeChan)
 	return h.conn.Close()
 }
 
-// buildCommand 构建命令
+// buildCommand builds the command array
 func buildCommand(commandStr, argsStr string) []string {
 	command := []string{commandStr}
 	if argsStr != "" {
