@@ -4,7 +4,6 @@ import (
 	"log"
 	"net/http"
 
-	// 移除 "strings" 因为不再需要检查路径
 	"github.com/gin-gonic/gin"
 )
 
