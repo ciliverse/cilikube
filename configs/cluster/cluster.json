@@ -1,0 +1,7 @@
+{
+    "my-dev-cluster": {
+      "name": "my-dev-cluster",
+      "kubeconfigPath": "./kubeconfigs/my-dev-cluster.yaml",
+      "description": "Development cluster"
+    }
+  }
