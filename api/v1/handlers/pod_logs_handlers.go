@@ -4,7 +4,7 @@ import (
 	"bufio"
 	"context"
 	"fmt"
-	"io"
+	"log"
 	"net/http"
 	"strconv"
 	"strings"
@@ -13,28 +13,45 @@ import (
 	"github.com/ciliverse/cilikube/pkg/k8s"
 	"github.com/ciliverse/cilikube/pkg/utils"
 	"github.com/gin-gonic/gin"
+	"github.com/gorilla/websocket"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 )
 
-// PodLogsHandler 处理 Pod 日志相关请求
+// PodLogsHandler struct
 type PodLogsHandler struct {
 	service        *service.PodLogsService
 	clusterManager *k8s.ClusterManager
+	upgrader       websocket.Upgrader
 }
 
-// NewPodLogsHandler 创建 Pod 日志处理器
+// NewPodLogsHandler creates a new PodLogsHandler
 func NewPodLogsHandler(service *service.PodLogsService, clusterManager *k8s.ClusterManager) *PodLogsHandler {
 	return &PodLogsHandler{
 		service:        service,
 		clusterManager: clusterManager,
+		upgrader: websocket.Upgrader{
+			ReadBufferSize:  1024,
+			WriteBufferSize: 1024,
+			CheckOrigin: func(r *http.Request) bool {
+				return true
+			},
+		},
 	}
 }
 
-// GetPodLogs 获取 Pod 日志
+// GetPodLogs handles WebSocket requests for pod logs
 func (h *PodLogsHandler) GetPodLogs(c *gin.Context) {
+	ws, err := h.upgrader.Upgrade(c.Writer, c.Request, nil)
+	if err != nil {
+		log.Printf("Failed to upgrade to websocket: %v", err)
+		return
+	}
+	defer ws.Close()
+
 	k8sClient, ok := k8s.GetClientFromQuery(c, h.clusterManager)
 	if !ok {
+		ws.WriteMessage(websocket.TextMessage, []byte("Failed to get Kubernetes client"))
 		return
 	}
 
@@ -45,22 +62,21 @@ func (h *PodLogsHandler) GetPodLogs(c *gin.Context) {
 	tailLinesStr := c.Query("tailLines")
 
 	if !utils.ValidateNamespace(namespace) || !utils.ValidateResourceName(name) {
-		respondError(c, http.StatusBadRequest, "无效的命名空间或 Pod 名称格式")
+		ws.WriteMessage(websocket.TextMessage, []byte("Invalid namespace or pod name"))
 		return
 	}
 	if container == "" {
-		respondError(c, http.StatusBadRequest, "必须提供 'container' 查询参数")
+		ws.WriteMessage(websocket.TextMessage, []byte("Container name is required"))
 		return
 	}
 
-	// 检查 Pod 和容器是否存在
 	pod, err := h.service.Get(k8sClient.Clientset, namespace, name)
 	if err != nil {
 		if errors.IsNotFound(err) {
-			respondError(c, http.StatusNotFound, "Pod 不存在")
+			ws.WriteMessage(websocket.TextMessage, []byte("Pod not found"))
 			return
 		}
-		respondError(c, http.StatusInternalServerError, "获取 Pod 信息失败: "+err.Error())
+		ws.WriteMessage(websocket.TextMessage, []byte("Failed to get pod info: "+err.Error()))
 		return
 	}
 
@@ -72,118 +88,57 @@ func (h *PodLogsHandler) GetPodLogs(c *gin.Context) {
 		}
 	}
 	if !containerFound {
-		respondError(c, http.StatusNotFound, fmt.Sprintf("容器 '%s' 在 Pod '%s' 中未找到", container, name))
+		ws.WriteMessage(websocket.TextMessage, []byte(fmt.Sprintf("Container '%s' not found in pod '%s'", container, name)))
 		return
 	}
 
-	// 配置日志选项
-	logOptions := buildLogOptions(container, timestamps, tailLinesStr)
+	follow := c.Query("follow") == "true"
 
-	// 获取日志流
+	logOptions := buildLogOptions(container, timestamps, tailLinesStr, follow)
 	logStream, err := h.service.GetPodLogs(k8sClient.Clientset, namespace, name, logOptions)
 	if err != nil {
-		respondError(c, http.StatusInternalServerError, "获取日志失败: "+err.Error())
+		ws.WriteMessage(websocket.TextMessage, []byte("Failed to get log stream: "+err.Error()))
 		return
 	}
-	defer func() {
-		if closeErr := logStream.Close(); closeErr != nil {
-			fmt.Printf("关闭日志流出错: %v\n", closeErr)
-		}
-	}()
+	defer logStream.Close()
 
-	// 设置 SSE 响应头
-	setSSEHeaders(c)
-
-	// 检查是否支持 Flush
-	flusher, ok := c.Writer.(http.Flusher)
-	if !ok {
-		respondError(c, http.StatusInternalServerError, "当前响应不支持 SSE")
-		return
-	}
-
-	// 初始化 Scanner 并设置缓冲区
-	scanner := initScanner(logStream)
-
-	// 异步处理日志流
-	logChan := make(chan string)
-	errChan := make(chan error)
 	ctx, cancel := context.WithCancel(c.Request.Context())
 	defer cancel()
 
 	go func() {
-		defer close(logChan)
-		defer close(errChan)
-		for scanner.Scan() {
-			select {
-			case <-ctx.Done():
-				return
-			case logChan <- scanner.Text():
+		for {
+			_, _, err := ws.ReadMessage()
+			if err != nil {
+				cancel()
+				break
 			}
-		}
-		if err := scanner.Err(); err != nil {
-			errChan <- err
 		}
 	}()
 
-	// 处理日志输出
-	for {
+	scanner := bufio.NewScanner(logStream)
+	for scanner.Scan() {
 		select {
-		case line, ok := <-logChan:
-			if !ok {
-				// 日志流结束，主动推送 event: end
-				fmt.Fprintf(c.Writer, "event: end\ndata: [END]\n\n")
-				flusher.Flush()
-				return
-			}
-			if _, err := fmt.Fprintf(c.Writer, "data: %s\n\n", line); err != nil {
-				fmt.Printf("写入 SSE 数据出错: %v\n", err)
-				return
-			}
-			flusher.Flush()
-		case err := <-errChan:
-			fmt.Printf("读取日志出错: %v\n", err)
-			return
 		case <-ctx.Done():
-			fmt.Println("客户端断开连接")
 			return
+		default:
+			err := ws.WriteMessage(websocket.TextMessage, scanner.Bytes())
+			if err != nil {
+				return
+			}
 		}
 	}
 }
 
-// buildLogOptions 构建日志选项
-func buildLogOptions(container string, timestamps bool, tailLinesStr string) *corev1.PodLogOptions {
-	defaultTailLines := int64(100)
-	var tailLines *int64
-
-	if tailLinesStr != "" {
-		val, err := strconv.ParseInt(tailLinesStr, 10, 64)
-		if err == nil && val > 0 {
-			tailLines = &val
-		}
-	} else {
-		tailLines = &defaultTailLines
+func buildLogOptions(container string, timestamps bool, tailLinesStr string, follow bool) *corev1.PodLogOptions {
+	var tailLines int64 = 1000
+	if val, err := strconv.ParseInt(tailLinesStr, 10, 64); err == nil {
+		tailLines = val
 	}
 
 	return &corev1.PodLogOptions{
 		Container:  container,
+		Follow:     follow,
 		Timestamps: timestamps,
-		TailLines:  tailLines,
+		TailLines:  &tailLines,
 	}
-}
-
-// setSSEHeaders 设置 SSE 响应头
-func setSSEHeaders(c *gin.Context) {
-	c.Header("Content-Type", "text/event-stream")
-	c.Header("Cache-Control", "no-cache")
-	c.Header("Connection", "keep-alive")
-	c.Header("X-Accel-Buffering", "no")
-	c.Header("Access-Control-Allow-Origin", "*") // 支持跨域
-	c.Header("Access-Control-Allow-Credentials", "true")
-}
-
-// initScanner 初始化日志扫描器
-func initScanner(logStream io.ReadCloser) *bufio.Scanner {
-	scanner := bufio.NewScanner(logStream)
-	scanner.Buffer(make([]byte, 4096), 1024*1024) // 设置更大的缓冲区
-	return scanner
 }
