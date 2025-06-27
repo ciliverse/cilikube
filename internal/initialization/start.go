@@ -5,6 +5,8 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"runtime"
+	"time"
 
 	"github.com/ciliverse/cilikube/configs"
 	"github.com/fatih/color"
@@ -37,18 +39,27 @@ func StartServer(cfg *configs.Config, router http.Handler) {
 
 // displayServerInfo 显示服务器运行信息
 func displayServerInfo(serverAddr, mode, version string) {
+	loc, err := time.LoadLocation("Asia/Shanghai")
+	var startTime string
+	if err == nil {
+		startTime = time.Now().In(loc).Format("2006-01-02 15:04:05 MST")
+	} else {
+		startTime = time.Now().Format("2006-01-02 15:04:05")
+	}
 	color.Cyan("🚀 CiliKube Server is running!")
 	color.Green("   ➜  Local:      http://127.0.0.1%s", serverAddr)
 	color.Green("   ➜  Network:    http://%s%s", getLocalIP(), serverAddr)
 	color.Yellow("   ➜  Mode:       %s", mode)
 	color.Magenta("   ➜  Version:    %s", version)
+	color.Blue("   ➜  Go Version: %s", runtime.Version())
+	color.Red("   ➜  Start Time: %s", startTime)
 }
 
 // getVersion 获取版本号
 func getVersion() string {
 	data, err := os.ReadFile("VERSION")
 	if err != nil {
-		return "v0.1.4" // 如果读取失败，返回默认版本号
+		return "v0.1.x" // 如果读取失败，返回默认版本号
 	}
 	return string(data)
 }

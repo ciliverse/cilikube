@@ -6,7 +6,6 @@ import (
 	"log"
 	"os"
 
-	// time is still needed for healthz in main
 	"github.com/casbin/casbin/v2"
 	"github.com/ciliverse/cilikube/configs"
 	"github.com/ciliverse/cilikube/internal/initialization" // Import the new package
