@@ -8,7 +8,10 @@
 <!-- [![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Fciliverse%2Fcilikube.svg?type=shield)](https://app.fossa.com/projects/git%2Bgithub.com%2Fciliverse%2Fcilikube?ref=badge_shield) -->
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](./LICENSE)
 
+
 ## 最新公告（2025年6月）
+
+This project is currently under active development, with the latest release being v0.1.5, which can be found in the release-0.1.5 branch. We are working on a new multi-cluster version that will be released soon. 
 
 在此非常感谢各位小伙伴的贡献支持，每个release分支都可以参与贡献
 
@@ -20,6 +23,34 @@
 诚挚邀请大家参与贡献（小白也可以参与），也欢迎大家加入我们的交流群
 
 ![alt text](docs/run.png)
+
+## ❤️ Support the Project | 支持项目
+
+Open source is not easy. If you find CiliKube helpful or inspiring, please consider giving it a Star ⭐! Your encouragement is the primary motivation for the author to maintain and update the project regularly.
+
+Follow the WeChat Official Account 希里安 to get the latest project updates and tech sharing!
+
+
+开源不易，如果您觉得 CiliKube 对您有帮助或启发，请不吝点亮 Star ⭐！这是对作者持续维护和更新的最大鼓励。
+
+关注公众号 希里安，获取项目最新动态和技术分享！
+
+## ❤️ Thanks To All The Contributors | 感谢所有贡献者
+<a href="https://github.com/ciliverse/cilikube/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=ciliverse/cilikube" />
+</a>
+
+Thanks to all the contributors who have contributed to CiliKube. Your efforts make this project better.
+
+感谢所有为 CiliKube 贡献代码和建议的开发者们！你们的努力让这个项目变得更好。
+
+
+
+## 📝 Thanks Support | 感谢赞助
+
+本项目 CDN 加速及安全防护由 Tencent EdgeOne 赞助
+
+[![EdgeOne](https://edgeone.ai/media/34fe3a45-492d-4ea4-ae5d-ea1087ca7b4b.png)](https://edgeone.ai/zh?from=github)
 
 ## 🤔 What is CiliKube? | CiliKube 是什么？
 
@@ -675,23 +706,6 @@ Please follow the Conventional Commits specification:
 
 - wip: 开发中的提交（不建议合入主分支）
 
-## ❤️ Support the Project | 支持项目
-
-Open source is not easy. If you find CiliKube helpful or inspiring, please consider giving it a Star ⭐! Your encouragement is the primary motivation for the author to maintain and update the project regularly.
-
-Follow the WeChat Official Account 希里安 (cilliantech) to get the latest project updates and tech sharing!
-
-
-开源不易，如果您觉得 CiliKube 对您有帮助或启发，请不吝点亮 Star ⭐！这是对作者持续维护和更新的最大鼓励。
-
-关注公众号 希里安，获取项目最新动态和技术分享！
-
-## ❤️ Thanks To All The Contributors | 感谢所有贡献者
-<a href="https://github.com/ciliverse/cilikube/graphs/contributors">
-  <img src="https://contrib.rocks/image?repo=ciliverse/cilikube" />
-</a>
-
-感谢所有为 CiliKube 贡献代码和建议的开发者们！你们的努力让这个项目变得更好。
 
 
 ## 📞 Contact | 联系方式
@@ -723,3 +737,4 @@ This project is open-sourced under the Apache 2.0 License
    <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=ciliverse/cilikube&type=Date" />
  </picture>
 </a>
+
