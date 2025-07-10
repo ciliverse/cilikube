@@ -9,7 +9,6 @@ import (
 	"github.com/ciliverse/cilikube/configs"
 	"github.com/ciliverse/cilikube/internal/service"
 	"github.com/ciliverse/cilikube/pkg/k8s"
-	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"k8s.io/apimachinery/pkg/runtime"
 )
@@ -23,6 +22,7 @@ func InitializeServices(k8sManager *k8s.ClusterManager, cfg *configs.Config) *se
 		InstallerService:   service.NewInstallerService(cfg),
 		NodeMetricsService: service.NewNodeMetricsService(),
 		PodLogsService:     service.NewPodLogsService(),
+		SummaryService:     service.NewSummaryService(),
 	}
 	// PodExecService 需要 rest.Config
 	if activeClient, err := k8sManager.GetActiveClient(); err == nil && activeClient != nil {
@@ -60,6 +60,9 @@ func InitializeHandlers(router *gin.RouterGroup, services *service.AppServices, 
 	routes.RegisterClusterRoutes(router, handlers.NewClusterHandler(services.ClusterService))
 	routes.RegisterInstallerRoutes(router, handlers.NewInstallerHandler(services.InstallerService))
 	routes.KubernetesProxyRoutes(router, handlers.NewProxyHandler(k8sManager))
+	
+	// --- 注册汇总路由 ---
+	routes.RegisterSummaryRoutes(router, handlers.NewSummaryHandler(services.SummaryService, k8sManager))
 
 	// --- 2. 创建所有资源的 Handler 实例 ---
 	nodesHandler := handlers.NewResourceHandler(services.NodeService, k8sManager, "nodes")
@@ -170,8 +173,20 @@ func SetupRouter(cfg *configs.Config, services *service.AppServices, k8sManager 
 	router := gin.New()
 	router.Use(gin.Recovery(), gin.Logger())
 
-	// 使用官方 gin-contrib/cors 中间件，允许所有跨域请求
-	router.Use(cors.Default())
+	// 配置自定义 CORS 中间件，允许所有需要的头部
+	router.Use(func(c *gin.Context) {
+		c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
+		c.Writer.Header().Set("Access-Control-Allow-Credentials", "true")
+		c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization, accept, origin, Cache-Control, X-Requested-With")
+		c.Writer.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS, GET, PUT, DELETE, PATCH")
+
+		if c.Request.Method == "OPTIONS" {
+			c.AbortWithStatus(204)
+			return
+		}
+
+		c.Next()
+	})
 
 	apiV1 := router.Group("/api/v1")
 	{

@@ -19,15 +19,26 @@ func NewSummaryHandler(svc *service.SummaryService, cm *k8s.ClusterManager) *Sum
 	return &SummaryHandler{service: svc, clusterManager: cm}
 }
 
-// Existing GetResourceSummary handlers...
-func (h *SummaryHandler) GetResourceSummary(c *gin.Context) { /* ... as before ... */
+// GetResourceSummary 获取资源汇总信息
+func (h *SummaryHandler) GetResourceSummary(c *gin.Context) {
 	k8sClient, ok := k8s.GetClientFromQuery(c, h.clusterManager)
 	if !ok {
 		return
 	}
 
-	summary, _ := h.service.GetResourceSummary(k8sClient.Clientset)
-	respondSuccess(c, http.StatusOK, summary)
+	summary, errs := h.service.GetResourceSummary(k8sClient.Clientset)
+	if len(errs) > 0 {
+		// Log errors but still return the summary with available data
+		for resource, err := range errs {
+			c.Header("X-Resource-Error-"+resource, err.Error())
+		}
+	}
+	
+	c.JSON(http.StatusOK, gin.H{
+		"code":    http.StatusOK,
+		"data":    summary,
+		"message": "成功获取资源汇总",
+	})
 }
 
 // --- New Handler for Backend Dependencies ---
@@ -44,7 +55,11 @@ func (h *SummaryHandler) GetResourceSummary(c *gin.Context) { /* ... as before .
 func (h *SummaryHandler) GetBackendDependencies(c *gin.Context) {
 	dependencies, err := h.service.GetBackendDependencies()
 	if err != nil {
-		respondError(c, http.StatusInternalServerError, "获取后端依赖失败: "+err.Error())
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"code":    http.StatusInternalServerError,
+			"data":    nil,
+			"message": "获取后端依赖失败: " + err.Error(),
+		})
 		return
 	}
 	// Use a different response structure if needed, but returning the slice directly is fine

@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"fmt"
 	"net/http"
 
 	"github.com/ciliverse/cilikube/api/v1/models"
@@ -76,15 +77,50 @@ func (h *ClusterHandler) DeleteCluster(c *gin.Context) {
 // SetActiveCluster 设定当前活动集群
 func (h *ClusterHandler) SetActiveCluster(c *gin.Context) {
 	var req struct {
-		ID string `json:"id" binding:"required"`
+		ID   string `json:"id"`
+		Name string `json:"name"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
 		utils.ApiError(c, http.StatusBadRequest, "请求参数错误", err.Error())
 		return
 	}
-	if err := h.service.SetActiveCluster(req.ID); err != nil {
+	
+	var targetID string
+	if req.ID != "" {
+		targetID = req.ID
+	} else if req.Name != "" {
+		// 根据名称查找集群ID
+		clusters := h.service.ListClusters()
+		for _, cluster := range clusters {
+			if cluster.Name == req.Name {
+				targetID = cluster.ID
+				break
+			}
+		}
+		if targetID == "" {
+			utils.ApiError(c, http.StatusNotFound, "集群不存在", fmt.Sprintf("未找到名为 '%s' 的集群", req.Name))
+			return
+		}
+	} else {
+		utils.ApiError(c, http.StatusBadRequest, "请求参数错误", "必须提供 id 或 name 参数")
+		return
+	}
+	
+	if err := h.service.SetActiveCluster(targetID); err != nil {
 		utils.ApiError(c, http.StatusInternalServerError, "切换活动集群失败", err.Error())
 		return
 	}
-	utils.ApiSuccess(c, gin.H{"activeClusterID": req.ID}, "活动集群切换成功")
+	utils.ApiSuccess(c, gin.H{"activeClusterID": targetID}, "活动集群切换成功")
+}
+
+// GetActiveCluster 获取当前活动集群
+func (h *ClusterHandler) GetActiveCluster(c *gin.Context) {
+	activeClusterID := h.service.GetActiveClusterID()
+	if activeClusterID == "" {
+		utils.ApiError(c, http.StatusNotFound, "当前没有活动集群", "请先添加并激活一个集群")
+		return
+	}
+	
+	// 直接返回活动集群的名称，如果需要集群详情，可以通过其他API获取
+	utils.ApiSuccess(c, activeClusterID, "成功获取活动集群")
 }

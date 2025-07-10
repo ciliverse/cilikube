@@ -18,7 +18,7 @@ func RegisterClusterRoutes(router *gin.RouterGroup, handler *handlers.ClusterHan
 		// 激活集群的API
 		activeRoutes := clusterRoutes.Group("/active")
 		{
-			// activeRoutes.GET("", handler.GetActiveCluster)
+			activeRoutes.GET("", handler.GetActiveCluster)
 			activeRoutes.POST("", handler.SetActiveCluster)
 		}
 	}
