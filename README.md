@@ -9,15 +9,25 @@
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](./LICENSE)
 
 
-## 最新公告（2025年6月）
+## 最新公告（2025年7月）
 
-This project is currently under active development, with the latest release being v0.1.5, which can be found in the release-0.1.5 branch. We are working on a new multi-cluster version that will be released soon. 
+欢迎来到 CiliKube 的世界！CiliKube 是一个开源的全栈 Kubernetes 多集群资源管理平台，主要是使用现代主流技术栈（Vue3, TypeScript, Go, Gin）构建的。
 
-在此非常感谢各位小伙伴的贡献支持，每个release分支都可以参与贡献
+
+主打特色：成为入门学习k8s开发的不二之选！
+
+学习之路：0.1.x单集群-->0.2.x多集群-->0.3.x泛型多集群-->..x--> 1.0.0 正式可用版本！
+
+CiliKube is an open-source, full-stack Kubernetes multi-cluster resource management platform built with modern mainstream technology stack (Vue3, TypeScript, Go, Gin). It aims to provide a concise and elegant interface to simplify daily Kubernetes resource management (CRUD operations) while supporting feature extensions. It's an excellent choice for beginners learning k8s development.
+
+This project is currently under active development, with the latest release being v0.1.5, which can be found in the release-0.1.5 branch. We are working on a new multi-cluster version that will be released soon.
+
+在此非常感谢各位小伙伴的贡献支持，目前项目进度如下：
 
 - 单集群版本维护在release-0.1.x最新分支
-- 多集群版本（集群名字为标识符）维护在0.2.x最新分支
-- 泛型多集群版本（集群ID为标识符）维护在0.3.x 最新分支，还在开发中
+
+- 泛型多集群版本（集群ID为标识符）维护在0.3.x 最新分支，后续主要开发方向是泛型多集群版本，支持集群ID作为标识符的多集群管理
+
 - 全新Antd组件web界面即将上线，敬请期待！
 
 诚挚邀请大家参与贡献（小白也可以参与），也欢迎大家加入我们的交流群
