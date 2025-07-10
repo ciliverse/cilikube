@@ -104,3 +104,8 @@ func (s *ClusterService) DeleteClusterByID(id string) error {
 func (s *ClusterService) SetActiveCluster(id string) error {
 	return s.k8sManager.SetActiveClusterByID(id)
 }
+
+// GetActiveClusterID 获取当前活动集群ID
+func (s *ClusterService) GetActiveClusterID() string {
+	return s.k8sManager.GetActiveClusterID()
+}

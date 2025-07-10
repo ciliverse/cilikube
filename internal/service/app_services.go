@@ -15,6 +15,9 @@ type AppServices struct {
 	// [新增] 节点指标服务
 	NodeMetricsService *NodeMetricsService
 
+	// [新增] 汇总服务
+	SummaryService *SummaryService
+
 	// Kubernetes 资源服务
 	NodeService        ResourceService[*corev1.Node]
 	NamespaceService   ResourceService[*corev1.Namespace]
