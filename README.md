@@ -1,12 +1,21 @@
 <div align="center">
   <img alt="CiliKube Logo" width="500" height="100" src="docs/logo.png">
-  <h1>CiliKube</h1>
+
   <span><a href="./README.zh-CN.md">中文</a> | English</span>
 </div>
 
-![Alt](https://repobeats.axiom.co/api/embed/97bc0de802d8faf0f90512177cb349c4e494d76d.svg "Repobeats analytics image")
-<!-- [![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Fciliverse%2Fcilikube.svg?type=shield)](https://app.fossa.com/projects/git%2Bgithub.com%2Fciliverse%2Fcilikube?ref=badge_shield) -->
-[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](./LICENSE)
+<div align="center">
+  <img src="https://img.shields.io/badge/Frontend-Vue3-blue?style=flat-square&logo=vue.js" alt="Vue3">
+    <img src="https://img.shields.io/badge/Frontend-TypeScript-blue?style=flat-square&logo=typescript" alt="TypeScript">
+    <img src="https://img.shields.io/badge/Frontend-Vite-blue?style=flat-square&logo=vite" alt="Vite">
+    <img src="https://img.shields.io/badge/Frontend-Element%20Plus-blue?style=flat-square&logo=element-plus" alt="Element Plus">
+  <img src="https://img.shields.io/badge/Backend-Go-blue?style=flat-square&logo=go" alt="Go">
+    <img src="https://img.shields.io/badge/Backend-Gin-blue?style=flat-square&logo=gin" alt="Gin">
+  <img src="https://img.shields.io/badge/1.33.0-Kubernetes-blue?style=flat-square&logo=kubernetes" alt="Kubernetes">
+  <img src="https://img.shields.io/badge/License-Apache%202.0-blue?style=flat-square" alt="License: Apache 2.0">
+<img src="https://img.shields.io/github/stars/ciliverse/cilikube?style=social" alt="GitHub Stars">
+<img src="https://img.shields.io/github/forks/ciliverse/cilikube?style=social" alt="GitHub Forks">
+</div>
 
 
 ## 最新公告（2025年7月）
