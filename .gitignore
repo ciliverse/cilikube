@@ -2,3 +2,24 @@ node_modules
 .idea/
 minikube-darwin-arm64
 output/
+# Ignore build artifacts
+dist/
+build/
+out/
+.nuxt/
+.next/
+.output/
+.cache/
+.parcel-cache/
+.vite/
+.rollup.cache/
+# Ignore IDE specific files
+.idea/
+# Ignore Minikube binary for macOS ARM64
+minikube-darwin-arm64
+# Ignore output directory
+output/
+# Ignore Cilikube binary and related files
+cilikube
+cilikube.exe
+cilikube-*

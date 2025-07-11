@@ -20,6 +20,14 @@ func NewInstallerHandler(is service.InstallerService) *InstallerHandler {
 	}
 }
 
+// HealthCheck handles health check requests
+func (h *InstallerHandler) HealthCheck(c *gin.Context) {
+	c.JSON(http.StatusOK, gin.H{
+		"status": "ok",
+		"message": "Backend service is running",
+	})
+}
+
 // StreamMinikubeInstallation handles the SSE request.
 func (h *InstallerHandler) StreamMinikubeInstallation(c *gin.Context) {
 	// 设置 SSE 头部
