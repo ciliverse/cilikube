@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/spf13/viper"
 	"gopkg.in/yaml.v3"
 )
 
@@ -22,8 +23,8 @@ type ServerConfig struct {
 	Port            string `yaml:"port" json:"port"`
 	ReadTimeout     int    `yaml:"read_timeout" json:"read_timeout"`
 	WriteTimeout    int    `yaml:"write_timeout" json:"write_timeout"`
-	Mode            string `yaml:"mode" json:"mode"`                       // debug, release
-	ActiveClusterID string `yaml:"activeClusterID" json:"activeClusterID"` // 修改为 ActiveClusterID
+	Mode            string `yaml:"mode" json:"mode"`                         // debug, release
+	ActiveClusterID string `yaml:"activeCluster" json:"activeCluster"`       // 修改为匹配配置文件中的字段名
 	EncryptionKey   string `yaml:"encryptionKey" json:"encryptionKey"`
 }
 
@@ -63,7 +64,7 @@ type ClusterInfo struct {
 var GlobalConfig *Config
 var configFilePath string // Store the path of the loaded config file
 
-// Load 加载配置文件
+// Load 加载配置文件，支持使用viper或yaml解析
 func Load(path string) (*Config, error) {
 	if path == "" {
 		return nil, fmt.Errorf("配置文件路径不能为空")
@@ -76,7 +77,12 @@ func Load(path string) (*Config, error) {
 
 	switch ext {
 	case ".yaml", ".yml":
-		cfg, err = loadYAMLConfig(path)
+		// 尝试使用viper加载配置
+		cfg, err = loadViperConfig(path)
+		if err != nil {
+			// 如果viper失败，回退到原有的yaml解析
+			cfg, err = loadYAMLConfig(path)
+		}
 	default:
 		return nil, fmt.Errorf("不支持的配置文件格式: %s", ext)
 	}
@@ -87,6 +93,33 @@ func Load(path string) (*Config, error) {
 
 	GlobalConfig = cfg
 	setDefaults()
+
+	return cfg, nil
+}
+
+// loadViperConfig 使用viper加载配置文件
+func loadViperConfig(path string) (*Config, error) {
+	v := viper.New()
+	
+	// 设置配置文件路径和名称
+	v.SetConfigFile(path)
+	
+	// 设置环境变量前缀
+	v.SetEnvPrefix("CILIKUBE")
+	v.AutomaticEnv()
+	
+	// 设置字段名映射，使viper能正确映射字段
+	v.RegisterAlias("server.activeCluster", "server.activeClusterID")
+	
+	// 读取配置文件
+	if err := v.ReadInConfig(); err != nil {
+		return nil, fmt.Errorf("viper读取配置文件失败 %s: %w", path, err)
+	}
+
+	cfg := &Config{}
+	if err := v.Unmarshal(cfg); err != nil {
+		return nil, fmt.Errorf("viper解析配置文件失败: %w", err)
+	}
 
 	return cfg, nil
 }
