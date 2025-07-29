@@ -204,16 +204,16 @@ func (c *PVCClient) List(ctx context.Context, clientset kubernetes.Interface, na
 	return clientset.CoreV1().PersistentVolumeClaims(namespace).List(ctx, opts)
 }
 func (c *PVCClient) Create(ctx context.Context, clientset kubernetes.Interface, namespace string, obj *corev1.PersistentVolumeClaim, opts metav1.CreateOptions) (*corev1.PersistentVolumeClaim, error) {
-	return nil, notImplemented()
+	return clientset.CoreV1().PersistentVolumeClaims(namespace).Create(ctx, obj, opts)
 }
 func (c *PVCClient) Update(ctx context.Context, clientset kubernetes.Interface, namespace string, obj *corev1.PersistentVolumeClaim, opts metav1.UpdateOptions) (*corev1.PersistentVolumeClaim, error) {
-	return nil, notImplemented()
+	return clientset.CoreV1().PersistentVolumeClaims(namespace).Update(ctx, obj, opts)
 }
 func (c *PVCClient) Delete(ctx context.Context, clientset kubernetes.Interface, namespace, name string, opts metav1.DeleteOptions) error {
-	return notImplemented()
+	return clientset.CoreV1().PersistentVolumeClaims(namespace).Delete(ctx, name, opts)
 }
 func (c *PVCClient) Watch(ctx context.Context, clientset kubernetes.Interface, namespace string, opts metav1.ListOptions) (watch.Interface, error) {
-	return nil, notImplemented()
+	return clientset.CoreV1().PersistentVolumeClaims(namespace).Watch(ctx, opts)
 }
 
 // --- PVClient (Cluster-scoped) ---
