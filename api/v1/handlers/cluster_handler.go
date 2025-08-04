@@ -78,7 +78,7 @@ func (h *ClusterHandler) DeleteCluster(c *gin.Context) {
 func (h *ClusterHandler) SetActiveCluster(c *gin.Context) {
 	var req struct {
 		ID   string `json:"id"`
-		Name string `json:"name"`
+		Name string `json:"name"` // 保持向后兼容
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
 		utils.ApiError(c, http.StatusBadRequest, "请求参数错误", err.Error())
@@ -89,7 +89,7 @@ func (h *ClusterHandler) SetActiveCluster(c *gin.Context) {
 	if req.ID != "" {
 		targetID = req.ID
 	} else if req.Name != "" {
-		// 根据名称查找集群ID
+		// 向后兼容：根据名称查找集群ID
 		clusters := h.service.ListClusters()
 		for _, cluster := range clusters {
 			if cluster.Name == req.Name {
