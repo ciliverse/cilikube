@@ -23,7 +23,6 @@ import (
 	"github.com/ciliverse/cilikube/pkg/k8s"
 )
 
-// Application 结构体保持不变
 type Application struct {
 	Config *configs.Config
 	Logger *slog.Logger

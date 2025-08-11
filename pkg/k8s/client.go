@@ -10,26 +10,23 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 )
 
-// Client 结构体封装了与 Kubernetes 集群交互所需的 clientset 和 rest.Config。
 type Client struct {
 	Clientset kubernetes.Interface
 	Config    *rest.Config
 }
 
-// NewClient 通过指定的 kubeconfig 文件路径创建一个新的 Kubernetes 客户端
-// 它能够处理 "in-cluster"（在集群内部署）、"default"（默认路径）以及明确的文件路径
 func NewClient(kubeconfig string) (*Client, error) {
 	var config *rest.Config
 	var err error
 
-	// 当应用部署在 Kubernetes 集群内部时，使用 "in-cluster" 配置。
+	// 当应用部署在 Kubernetes 集群内部时，使用 "in-cluster" 配置
 	if kubeconfig == "in-cluster" {
 		config, err = rest.InClusterConfig()
 		if err != nil {
 			return nil, fmt.Errorf("加载 in-cluster 配置失败: %w", err)
 		}
 	} else {
-		// 当 kubeconfig 为空或 "default" 时，使用标准的用户主目录下的 .kube/config 文件。
+		// 当 kubeconfig 为空或 "default" 时，使用标准的用户主目录下的 .kube/config 文件
 		if kubeconfig == "default" || kubeconfig == "" {
 			homeDir, err := os.UserHomeDir()
 			if err != nil {
@@ -38,12 +35,12 @@ func NewClient(kubeconfig string) (*Client, error) {
 			kubeconfig = filepath.Join(homeDir, ".kube", "config")
 		}
 
-		// 检查 kubeconfig 文件是否存在。
+		// 检查 kubeconfig 文件是否存在
 		if _, err := os.Stat(kubeconfig); os.IsNotExist(err) {
 			return nil, fmt.Errorf("kubeconfig 文件不存在: %s", kubeconfig)
 		}
 
-		// 从指定的 kubeconfig 文件路径构建配置。
+		// 从指定的 kubeconfig 文件路径构建配置
 		config, err = clientcmd.BuildConfigFromFlags("", kubeconfig)
 		if err != nil {
 			return nil, fmt.Errorf("从 kubeconfig 文件 '%s' 构建配置失败: %w", kubeconfig, err)

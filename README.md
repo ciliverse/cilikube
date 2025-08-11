@@ -273,13 +273,3 @@ Please follow the Conventional Commits specification:
 This project is open-sourced under the Apache 2.0 License
 
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](./LICENSE)
-
-## 🌟 Star History
-
-<a href="https://star-history.com/#ciliverse/cilikube&Date">
- <picture>
-   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=ciliverse/cilikube&type=Date&theme=dark" />
-   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=ciliverse/cilikube&type=Date" />
-   <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=ciliverse/cilikube&type=Date" />
- </picture>
-</a>
