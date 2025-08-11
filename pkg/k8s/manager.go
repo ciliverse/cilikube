@@ -319,8 +319,7 @@ func (cm *ClusterManager) UpdateDBCluster(id string, req models.UpdateClusterReq
 	return nil
 }
 
-// [核心修正] 添加这个缺失的方法
-// GetStatusFromCache 从内存缓存中获取集群的状态信息。
+// GetStatusFromCache 从内存缓存中获取集群的状态信息
 func (cm *ClusterManager) GetStatusFromCache(id string) (ClusterInfoResponse, bool) {
 	cm.lock.RLock()
 	defer cm.lock.RUnlock()
