@@ -1,28 +1,160 @@
+version: '3.8'
+
 services:
+  # 后端服务
   backend:
-    image: cilliantech/cilikube:v0.1.0
-    container_name: cilikube-server
-    ports:
-      - "8080:8080" # 宿主机端口:容器内应用端口
+    image: cilliantech/cilikube:latest
+    container_name: cilikube-backend
     restart: unless-stopped
-    # 如果后端应用依赖其他服务 (如数据库)，可以在这里添加 depends_on 和 network 配置
-    # networks:
-    #   - cilikube-net
+    ports:
+      - "8080:8080"
+    environment:
+      - GIN_MODE=release
+      - CILIKUBE_CONFIG_PATH=/app/configs/config.yaml
+    volumes:
+      - ~/.kube:/root/.kube:ro
+      - ./configs:/app/configs:ro
+    networks:
+      - cilikube-net
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # 前端服务
   frontend:
-    image: cilliantech/cilikube-web:v0.1.0
-    container_name: cilikube-web
-    ports:
-      - "80:80" # 宿主机端口:容器内 Nginx 端口 (通常是80)
-                # 如果宿主机 80 端口被占用，可改为 "8000:80"
+    image: cilliantech/cilikube-web:latest
+    container_name: cilikube-frontend
     restart: unless-stopped
+    ports:
+      - "80:80"
     depends_on:
-      - backend # 确保后端先启动 (但不保证后端已完全就绪)
-    # 注意：前端 VITE_BASE_API 在构建镜像时仍需正确配置，
-    # 例如指向 http://localhost:8080 (如果从浏览器访问)
-    # 或 http://backend:8080 (如果Nginx配置了反向代理到服务名'backend'，这需要更复杂的Nginx配置)
-    # networks:
-    #   - cilikube-net
-# (可选) 定义网络，如果服务间需要通过服务名通信
-# networks:
-#   cilikube-net:
-#     driver: bridge
+      backend:
+        condition: service_healthy
+    networks:
+      - cilikube-net
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:80/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # Redis 缓存 (可选)
+  redis:
+    image: redis:7-alpine
+    container_name: cilikube-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - cilikube-net
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "5m"
+        max-file: "3"
+
+  # MySQL 数据库 (可选)
+  mysql:
+    image: mysql:8.0
+    container_name: cilikube-mysql
+    restart: unless-stopped
+    ports:
+      - "3306:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: cilikube_root_password
+      MYSQL_DATABASE: cilikube_db
+      MYSQL_USER: cilikube_user
+      MYSQL_PASSWORD: cilikube_password
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./scripts/mysql:/docker-entrypoint-initdb.d:ro
+    networks:
+      - cilikube-net
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # Prometheus 监控 (可选)
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: cilikube-prometheus
+    restart: unless-stopped
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--storage.tsdb.retention.time=200h'
+      - '--web.enable-lifecycle'
+    networks:
+      - cilikube-net
+    profiles:
+      - monitoring
+
+  # Grafana 仪表板 (可选)
+  grafana:
+    image: grafana/grafana:latest
+    container_name: cilikube-grafana
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: admin
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+    networks:
+      - cilikube-net
+    profiles:
+      - monitoring
+
+networks:
+  cilikube-net:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
+
+volumes:
+  mysql_data:
+    driver: local
+  redis_data:
+    driver: local
+  prometheus_data:
+    driver: local
+  grafana_data:
+    driver: local
