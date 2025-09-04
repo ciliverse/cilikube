@@ -219,15 +219,10 @@ kubectl get svc cilikube -n cilikube
 
 ## 🎨 Feature Preview
 
-### New Antd-based UI (Coming Soon!)
-![New UI](docs/newui.png)
-![Antd 2](docs/antd-2.png)
-![Node Ant](docs/node-ant.png)
-![Cluster Ant](docs/cluster-ant.png)
-
-### Current UI
+### UI
 ![Login](docs/login.png)
 ![Dashboard](docs/dashboard.png)
+![navi](docs/cilikube12.png)
 ![Cluster](docs/cluster.png)
 ![Pods](docs/pod.png)
 ![Shell](docs/shell.png)
