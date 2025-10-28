@@ -1,6 +1,6 @@
 module github.com/ciliverse/cilikube
 
-go 1.24.2
+go 1.25.3
 
 require (
 	github.com/casbin/casbin/v2 v2.105.0
