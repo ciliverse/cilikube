@@ -60,17 +60,31 @@ func NewClusterManager(clusterStore store.ClusterStore, config *configs.Config) 
 
 	if len(config.Clusters) > 0 {
 		for _, clusterInfo := range config.Clusters {
-			fileID := clusterInfo.Name
-			if _, exists := manager.clients[fileID]; exists {
+			// 使用集群的ID作为唯一标识符，而不是名称
+			clusterID := clusterInfo.ID
+			if clusterID == "" {
+				log.Printf("警告: 集群 '%s' 没有ID，跳过加载", clusterInfo.Name)
+				continue
+			}
+
+			if _, exists := manager.clients[clusterID]; exists {
 				continue
 			}
 			if _, nameExists := manager.nameToID[clusterInfo.Name]; nameExists {
 				log.Printf("警告: 文件集群 '%s' 与已加载的集群名称冲突，跳过。", clusterInfo.Name)
 				continue
 			}
-			manager.addClient(fileID, clusterInfo.Name, nil, "file", "default", clusterInfo.ConfigPath)
-			manager.clientInfo[fileID] = store.Cluster{ID: fileID, Name: clusterInfo.Name, Provider: "file"}
-			manager.nameToID[clusterInfo.Name] = fileID
+
+			manager.addClient(clusterID, clusterInfo.Name, nil, "file", clusterInfo.Environment, clusterInfo.ConfigPath)
+			manager.clientInfo[clusterID] = store.Cluster{
+				ID:          clusterID,
+				Name:        clusterInfo.Name,
+				Provider:    clusterInfo.Provider,
+				Description: clusterInfo.Description,
+				Environment: clusterInfo.Environment,
+				Region:      clusterInfo.Region,
+			}
+			manager.nameToID[clusterInfo.Name] = clusterID
 		}
 	}
 
