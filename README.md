@@ -1,5 +1,5 @@
 <div align="center">
-  <img alt="CiliKube Logo" width="150" height="150" src="docs/logo.png">
+  <img alt="CiliKube Logo" width="200" height="200" src="docs/logo.png">
   <h1>CiliKube</h1>
   <span>English | <a href="./README.zh-CN.md">中文</a></span>
 </div>
