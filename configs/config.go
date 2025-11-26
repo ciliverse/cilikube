@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/spf13/viper"
 	"gopkg.in/yaml.v3"
 )
@@ -23,8 +24,8 @@ type ServerConfig struct {
 	Port            string `yaml:"port" json:"port"`
 	ReadTimeout     int    `yaml:"read_timeout" json:"read_timeout"`
 	WriteTimeout    int    `yaml:"write_timeout" json:"write_timeout"`
-	Mode            string `yaml:"mode" json:"mode"`                         // debug, release
-	ActiveClusterID string `yaml:"activeCluster" json:"activeCluster"`       // 修改为匹配配置文件中的字段名
+	Mode            string `yaml:"mode" json:"mode"`                   // debug, release
+	ActiveClusterID string `yaml:"activeCluster" json:"activeCluster"` // 修改为匹配配置文件中的字段名
 	EncryptionKey   string `yaml:"encryptionKey" json:"encryptionKey"`
 }
 
@@ -55,10 +56,33 @@ type JWTConfig struct {
 }
 
 type ClusterInfo struct {
-	Name string `yaml:"name" json:"name"` // 集群的唯一标识名称
+	// ID 是集群的唯一标识符，使用 UUID 格式
+	// 如果为空，系统会自动生成一个 UUID
+	ID string `yaml:"id" json:"id"`
+
+	// Name 是用户友好的集群显示名称
+	Name string `yaml:"name" json:"name"`
+
 	// ConfigPath 可以是 kubeconfig 文件的绝对路径，或者是 "in-cluster"
 	ConfigPath string `yaml:"config_path" json:"config_path"`
-	IsActive   bool   `yaml:"is_active" json:"is_active"` // 标记此集群配置是否启用
+
+	// Description 集群描述信息
+	Description string `yaml:"description,omitempty" json:"description,omitempty"`
+
+	// Provider 云服务商或环境类型，如 "aws", "gcp", "minikube", "on-premise"
+	Provider string `yaml:"provider,omitempty" json:"provider,omitempty"`
+
+	// Environment 环境标识，如 "production", "staging", "development"
+	Environment string `yaml:"environment,omitempty" json:"environment,omitempty"`
+
+	// Region 集群所在区域
+	Region string `yaml:"region,omitempty" json:"region,omitempty"`
+
+	// IsActive 标记此集群配置是否启用
+	IsActive bool `yaml:"is_active" json:"is_active"`
+
+	// Labels 自定义标签，用于分组和筛选
+	Labels map[string]string `yaml:"labels,omitempty" json:"labels,omitempty"`
 }
 
 var GlobalConfig *Config
@@ -100,17 +124,17 @@ func Load(path string) (*Config, error) {
 // loadViperConfig 使用viper加载配置文件
 func loadViperConfig(path string) (*Config, error) {
 	v := viper.New()
-	
+
 	// 设置配置文件路径和名称
 	v.SetConfigFile(path)
-	
+
 	// 设置环境变量前缀
 	v.SetEnvPrefix("CILIKUBE")
 	v.AutomaticEnv()
-	
+
 	// 设置字段名映射，使viper能正确映射字段
 	v.RegisterAlias("server.activeCluster", "server.activeClusterID")
-	
+
 	// 读取配置文件
 	if err := v.ReadInConfig(); err != nil {
 		return nil, fmt.Errorf("viper读取配置文件失败 %s: %w", path, err)
@@ -245,6 +269,33 @@ func setDefaults() {
 			}
 		}
 	}
+
+	// 为没有ID的集群自动生成UUID
+	configChanged := false
+	var firstActiveClusterID string
+
+	for i := range GlobalConfig.Clusters {
+		if GlobalConfig.Clusters[i].ID == "" {
+			GlobalConfig.Clusters[i].ID = uuid.New().String()
+			configChanged = true
+		}
+
+		// 记录第一个活跃集群的ID，用于设置默认活跃集群
+		if GlobalConfig.Clusters[i].IsActive && firstActiveClusterID == "" {
+			firstActiveClusterID = GlobalConfig.Clusters[i].ID
+		}
+	}
+
+	// 如果没有设置活跃集群ID，使用第一个活跃集群的ID
+	if GlobalConfig.Server.ActiveClusterID == "" && firstActiveClusterID != "" {
+		GlobalConfig.Server.ActiveClusterID = firstActiveClusterID
+		configChanged = true
+	}
+
+	// 如果生成了新的ID或更新了活跃集群，保存配置文件
+	if configChanged {
+		_ = SaveGlobalConfig() // 忽略错误，因为这是可选的
+	}
 }
 
 func (c *Config) GetDSN() string {
@@ -258,4 +309,33 @@ func (c *Config) GetDSN() string {
 		c.Database.Port,
 		c.Database.Database, // 确保这里是 Database
 		c.Database.Charset)
+}
+
+// GetClusterByID 根据ID获取集群信息
+func (c *Config) GetClusterByID(id string) *ClusterInfo {
+	for i := range c.Clusters {
+		if c.Clusters[i].ID == id {
+			return &c.Clusters[i]
+		}
+	}
+	return nil
+}
+
+// GetClusterByName 根据名称获取集群信息（向后兼容）
+func (c *Config) GetClusterByName(name string) *ClusterInfo {
+	for i := range c.Clusters {
+		if c.Clusters[i].Name == name {
+			return &c.Clusters[i]
+		}
+	}
+	return nil
+}
+
+// GetClusterIDByName 根据名称获取集群ID（向后兼容）
+func (c *Config) GetClusterIDByName(name string) string {
+	cluster := c.GetClusterByName(name)
+	if cluster != nil {
+		return cluster.ID
+	}
+	return ""
 }

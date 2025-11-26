@@ -1,5 +1,5 @@
 <div align="center">
-  <img alt="CiliKube Logo" width="500" height="100" src="docs/logo.png">
+  <img alt="CiliKube Logo" width="150" height="150" src="docs/cilikube-logo.png">
   <h1>CiliKube</h1>
   <span>English | <a href="./README.zh-CN.md">中文</a></span>
 </div>
@@ -11,56 +11,58 @@
   <img src="https://img.shields.io/badge/Frontend-Element%20Plus-blue?style=flat-square&logo=element-plus" alt="Element Plus">
   <img src="https://img.shields.io/badge/Backend-Go-blue?style=flat-square&logo=go" alt="Go">
   <img src="https://img.shields.io/badge/Backend-Gin-blue?style=flat-square&logo=gin" alt="Gin">
-  <img src="https://img.shields.io/badge/1.33.0-Kubernetes-blue?style=flat-square&logo=kubernetes" alt="Kubernetes">
+  <img src="https://img.shields.io/badge/1.34.0-Kubernetes-blue?style=flat-square&logo=kubernetes" alt="Kubernetes">
   <img src="https://img.shields.io/badge/License-Apache%202.0-blue?style=flat-square" alt="License: Apache 2.0">
   <img src="https://img.shields.io/github/stars/ciliverse/cilikube?style=social" alt="GitHub Stars">
   <img src="https://img.shields.io/github/forks/ciliverse/cilikube?style=social" alt="GitHub Forks">
 </div>
 
-## ❤️ Support the Project
+## 🌟 Project Support
 
-Open source is not easy. If you find CiliKube helpful or inspiring, please consider giving it a Star ⭐! Your encouragement is the primary motivation for the author to maintain and update the project regularly.
+We appreciate your interest in CiliKube. If you find this project valuable for your Kubernetes management needs, please consider starring the repository ⭐. Community support drives continuous development and improvement.
 
-Follow the WeChat Official Account **希里安** to get the latest project updates and tech sharing!
+Stay updated with the latest releases and technical insights by following our WeChat Official Account **希里安**.
 
-## ❤️ Thanks To All The Contributors
+## 🤝 Contributors
 
 <a href="https://github.com/ciliverse/cilikube/graphs/contributors">
   <img src="https://contrib.rocks/image?repo=ciliverse/cilikube" />
 </a>
 
-Thanks to all the contributors who have contributed to CiliKube. Your efforts make this project better.
+We extend our gratitude to all contributors who have helped improve CiliKube through code contributions, bug reports, and feature suggestions.
 
-## 📝 Thanks Support
+## 🏢 Sponsorship
 
-CDN acceleration and security protection for this project is sponsored by Tencent EdgeOne
+This project's CDN acceleration and security protection services are generously sponsored by Tencent EdgeOne.
 
-[![EdgeOne](https://edgeone.ai/media/34fe3a45-492d-4ea4-ae5d-ea1087ca7b4b.png)](https://edgeone.ai/zh?from=github)
+<a href="https://edgeone.ai/zh?from=github">
+  <img src="https://edgeone.ai/media/34fe3a45-492d-4ea4-ae5d-ea1087ca7b4b.png" alt="EdgeOne" width="350" height="50">
+</a>
 
-## 🤔 What is CiliKube?
+## 📖 Overview
 
-CiliKube is an open-source, full-stack Kubernetes multi-cluster resource management platform built with modern mainstream technology stack (Vue3, TypeScript, Go, Gin). It aims to provide a concise and elegant interface to simplify daily Kubernetes resource management (CRUD operations) while supporting feature extensions. It's an excellent choice for beginners learning k8s development.
+CiliKube is an enterprise-grade, open-source Kubernetes multi-cluster management platform built with modern web technologies including Vue3, TypeScript, Go, and Gin. The platform provides an intuitive, streamlined interface for comprehensive Kubernetes resource management while maintaining extensibility for custom requirements. CiliKube serves as an ideal foundation for organizations seeking efficient cluster operations and developers learning cloud-native technologies.
 
-![Architecture](docs/architech.png)
 
-## ✨ What Makes CiliKube Special?
+## ✨ Key Differentiators
 
-Unlike complex systems pursuing "large and comprehensive" features, CiliKube focuses on being "small and beautiful." Its core goals are:
+CiliKube distinguishes itself from complex enterprise solutions by prioritizing simplicity and usability without sacrificing functionality:
 
-1. **Core Functionality**: Offers a clear, intuitive interface for managing common K8s resources.
-2. **Learning-Friendly**: Features clean code structure and a modern tech stack, making it an excellent starting point for learning **Vue3/Go Web Development** and **custom Kubernetes tooling/development**.
-3. **Easy to Extend**: Designed with extensibility in mind, allowing users to easily add custom features based on their needs.
+1. **Streamlined Interface**: Provides an intuitive, clean interface for essential Kubernetes resource management operations.
+2. **Developer-Centric Design**: Built with modern development practices and clean architecture, making it an excellent reference for **Vue3/Go web development** and **Kubernetes API integration**.
+3. **Extensible Architecture**: Designed with modularity in mind, enabling seamless integration of custom features and workflows.
 
-## 🎯 Target Users
+## 🎯 Target Audience
 
-- Developers looking to learn **Vue3 + TypeScript + ElementPlus** frontend development.
-- Developers looking to learn **Go + Gin** backend development.
-- Cloud-native enthusiasts interested in using the **Kubernetes API** and **client-go**.
-- Teams or individuals needing a concise K8s management dashboard with the potential for customization.
+- **Frontend Developers**: Seeking hands-on experience with **Vue3 + TypeScript + Element Plus** ecosystem
+- **Backend Developers**: Learning **Go + Gin** web development and microservices architecture
+- **Cloud-Native Engineers**: Exploring **Kubernetes API** integration and **client-go** library implementation
+- **DevOps Teams**: Requiring a lightweight, customizable Kubernetes management interface
+- **Educational Institutions**: Teaching modern web development and cloud-native technologies
 
-## 💡 Project Background
+## 💡 Project Genesis
 
-CiliKube originated from the author's practical project while learning full-stack web development. During the learning process, the author delved deep into Kubernetes and obtained relevant certifications. This project is not just a demonstration of learning outcomes but also aims to be a "Key," helping more learners like the author open the door to the open-source world, contribute, and grow together.
+CiliKube emerged from a comprehensive full-stack development learning initiative, combining practical web development skills with deep Kubernetes expertise. The project represents both a technical achievement and an educational resource, designed to serve as a gateway for developers entering the cloud-native ecosystem. Our mission extends beyond providing a management tool—we aim to foster a community of learners and contributors in the open-source landscape.
 
 ## 🌐 Online Demo
 
@@ -73,34 +75,45 @@ CiliKube originated from the author's practical project while learning full-stac
 
 - Official Documentation: [cilikube.cillian.website](https://cilikube.cillian.website)
 
-## 🚀 Tech Stack
+## 🚀 Technology Stack
 
-This project utilizes popular frontend and backend technology stacks, ensuring developers can engage with the latest tools and libraries.
+CiliKube leverages industry-standard technologies and frameworks to ensure reliability, maintainability, and developer productivity.
 
-**Environment Requirements (Recommended)**:
-- Node.js >= 18.0.0 (Project developed with v22.14.0)
-- Go >= 1.20 (Project developed with v1.24.2)
-- PNPM >= 8.x
+**System Requirements**:
+- Node.js >= 18.0.0 (Developed and tested with v22.14.0)
+- Go >= 1.20 (Developed and tested with v1.24.2)
+- PNPM >= 8.x (Package management)
 
-**Frontend**: `Vue3` `TypeScript` `Vite` `Element Plus` `Pinia` `Vue Router` `Axios` `UnoCSS` `Scss` `ESLint` `Prettier`
-- Developed based on the excellent [v3-admin-vite](https://github.com/un-pany/v3-admin-vite) template, thanks to the original author un-pany.
+**Frontend Architecture**: 
+- **Core**: `Vue3` `TypeScript` `Vite` `Element Plus`
+- **State Management**: `Pinia` `Vue Router`
+- **HTTP Client**: `Axios`
+- **Styling**: `UnoCSS` `Scss`
+- **Code Quality**: `ESLint` `Prettier`
+- Built upon the robust [v3-admin-vite](https://github.com/un-pany/v3-admin-vite) template by un-pany.
 
-**Backend**: `Go` `Gin` `Kubernetes client-go` `JWT` `Gorilla Websocket` `Viper` `Zap Logger`
+**Backend Architecture**: 
+- **Framework**: `Go` `Gin`
+- **Kubernetes Integration**: `client-go`
+- **Authentication**: `JWT`
+- **Real-time Communication**: `Gorilla WebSocket`
+- **Configuration**: `Viper`
+- **Logging**: `Zap Logger`
 
-## ✨ Main Features
+## ✨ Core Features
 
-- **User Authentication**: JWT-based login and authorization.
-- **Dashboard**: Cluster resource overview.
-- **Multi-Cluster Management**: Support for managing multiple Kubernetes clusters.
-- **Resource Management**:
-  - Node Management
-  - Namespace Management
-  - Pod Management (List, Details, Logs, Terminal)
-  - Volume Management (PV/PVC)
-  - Configuration Management (ConfigMap/Secret)
-  - Network Management (Service/Ingress)
-  - Workload Management (Deployment/StatefulSet/DaemonSet)
-- **System Settings**: Theme switching, Internationalization (i18n) support.
+- **Enterprise Authentication**: Secure JWT-based authentication and role-based authorization
+- **Comprehensive Dashboard**: Real-time cluster metrics and resource utilization overview
+- **Multi-Cluster Operations**: Centralized management across multiple Kubernetes environments
+- **Resource Management Suite**:
+  - **Infrastructure**: Node monitoring and management
+  - **Workspaces**: Namespace lifecycle management
+  - **Workloads**: Complete Pod lifecycle with integrated logging and terminal access
+  - **Storage**: Persistent Volume and Persistent Volume Claim administration
+  - **Configuration**: Secure ConfigMap and Secret management
+  - **Networking**: Service discovery and Ingress configuration
+  - **Deployments**: Advanced workload management (Deployment/StatefulSet/DaemonSet)
+- **User Experience**: Customizable themes and comprehensive internationalization support
 
 ## 🛠️ Development Roadmap
 
@@ -219,13 +232,43 @@ kubectl get svc cilikube -n cilikube
 
 ## 🎨 Feature Preview
 
-### UI
-![Login](docs/login.png)
-![Dashboard](docs/dashboard.png)
-![navi](docs/cilikube12.png)
-![Cluster](docs/cluster.png)
-![Pods](docs/pod.png)
-![Shell](docs/shell.png)
+<details>
+<summary>Click to view screenshots</summary>
+
+<table>
+  <tr>
+    <td width="50%">
+      <img src="docs/login.png" alt="Login" width="100%">
+      <p align="center"><strong>Login Interface</strong></p>
+    </td>
+    <td width="50%">
+      <img src="docs/dashboard.png" alt="Dashboard" width="100%">
+      <p align="center"><strong>Dashboard Overview</strong></p>
+    </td>
+  </tr>
+  <tr>
+    <td width="50%">
+      <img src="docs/cilikube12.png" alt="Navigation" width="100%">
+      <p align="center"><strong>Navigation Menu</strong></p>
+    </td>
+    <td width="50%">
+      <img src="docs/cluster.png" alt="Cluster" width="100%">
+      <p align="center"><strong>Cluster Management</strong></p>
+    </td>
+  </tr>
+  <tr>
+    <td width="50%">
+      <img src="docs/pod.png" alt="Pods" width="100%">
+      <p align="center"><strong>Pod Management</strong></p>
+    </td>
+    <td width="50%">
+      <img src="docs/shell.png" alt="Shell" width="100%">
+      <p align="center"><strong>Web Terminal</strong></p>
+    </td>
+  </tr>
+</table>
+
+</details>
 
 ## 🤝 Contribution Guide
 

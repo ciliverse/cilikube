@@ -84,9 +84,10 @@ func (h *ClusterHandler) SetActiveCluster(c *gin.Context) {
 		utils.ApiError(c, http.StatusBadRequest, "请求参数错误", err.Error())
 		return
 	}
-	
+
 	var targetID string
 	if req.ID != "" {
+		// 优先使用ID
 		targetID = req.ID
 	} else if req.Name != "" {
 		// 向后兼容：根据名称查找集群ID
@@ -105,12 +106,23 @@ func (h *ClusterHandler) SetActiveCluster(c *gin.Context) {
 		utils.ApiError(c, http.StatusBadRequest, "请求参数错误", "必须提供 id 或 name 参数")
 		return
 	}
-	
+
 	if err := h.service.SetActiveCluster(targetID); err != nil {
 		utils.ApiError(c, http.StatusInternalServerError, "切换活动集群失败", err.Error())
 		return
 	}
-	utils.ApiSuccess(c, gin.H{"activeClusterID": targetID}, "活动集群切换成功")
+
+	// 返回详细的集群信息
+	activeCluster, err := h.service.GetClusterByID(targetID)
+	if err != nil {
+		utils.ApiSuccess(c, gin.H{"activeClusterID": targetID}, "活动集群切换成功")
+	} else {
+		utils.ApiSuccess(c, gin.H{
+			"activeClusterID":   targetID,
+			"activeClusterName": activeCluster.Name,
+			"cluster":           activeCluster,
+		}, "活动集群切换成功")
+	}
 }
 
 // GetActiveCluster 获取当前活动集群
@@ -120,7 +132,7 @@ func (h *ClusterHandler) GetActiveCluster(c *gin.Context) {
 		utils.ApiError(c, http.StatusNotFound, "当前没有活动集群", "请先添加并激活一个集群")
 		return
 	}
-	
+
 	// 直接返回活动集群的名称，如果需要集群详情，可以通过其他API获取
 	utils.ApiSuccess(c, activeClusterID, "成功获取活动集群")
 }
