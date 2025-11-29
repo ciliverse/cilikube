@@ -11,7 +11,7 @@ import (
 
 	"k8s.io/client-go/kubernetes"
 
-	"github.com/ciliverse/cilikube/api/v1/models" // Adjust import path
+	"github.com/ciliverse/cilikube/internal/models"
 	// k8s imports ... (keep existing ones)
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 

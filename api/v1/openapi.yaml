@@ -1,0 +1,474 @@
+openapi: 3.0.3
+info:
+  title: CiliKube API
+  description: |
+    CiliKube is an enterprise-grade, open-source Kubernetes multi-cluster management platform.
+    This API provides comprehensive Kubernetes resource management capabilities.
+  version: 1.0.0
+  contact:
+    name: CiliKube Team
+    email: cilliantech@gmail.com
+    url: https://www.cillian.website
+  license:
+    name: Apache 2.0
+    url: https://www.apache.org/licenses/LICENSE-2.0.html
+
+servers:
+  - url: http://localhost:8080/api/v1
+    description: Development server
+  - url: https://api.cilikube.example.com/api/v1
+    description: Production server
+
+security:
+  - BearerAuth: []
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    Error:
+      type: object
+      properties:
+        code:
+          type: integer
+          example: 400
+        message:
+          type: string
+          example: "Error message"
+      required:
+        - code
+        - message
+
+    Success:
+      type: object
+      properties:
+        code:
+          type: integer
+          example: 200
+        message:
+          type: string
+          example: "success"
+        data:
+          type: object
+      required:
+        - code
+        - message
+
+    LoginRequest:
+      type: object
+      properties:
+        username:
+          type: string
+          example: "admin"
+        password:
+          type: string
+          example: "password"
+      required:
+        - username
+        - password
+
+    LoginResponse:
+      type: object
+      properties:
+        token:
+          type: string
+          example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+        user:
+          $ref: '#/components/schemas/User'
+      required:
+        - token
+        - user
+
+    User:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        username:
+          type: string
+          example: "admin"
+        email:
+          type: string
+          example: "admin@example.com"
+        role:
+          type: string
+          example: "admin"
+        is_active:
+          type: boolean
+          example: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    ClusterInfo:
+      type: object
+      properties:
+        id:
+          type: string
+          example: "550e8400-e29b-41d4-a716-446655440000"
+        name:
+          type: string
+          example: "production-cluster"
+        config_path:
+          type: string
+          example: "/path/to/kubeconfig"
+        description:
+          type: string
+          example: "Production Kubernetes cluster"
+        provider:
+          type: string
+          example: "aws"
+        environment:
+          type: string
+          example: "production"
+        region:
+          type: string
+          example: "us-west-2"
+        is_active:
+          type: boolean
+          example: true
+        labels:
+          type: object
+          additionalProperties:
+            type: string
+
+paths:
+  /auth/login:
+    post:
+      tags:
+        - Authentication
+      summary: User login
+      description: Authenticate user with username and password
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Success'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/LoginResponse'
+        '401':
+          description: Authentication failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /auth/profile:
+    get:
+      tags:
+        - Authentication
+      summary: Get user profile
+      description: Get current user profile information
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Profile retrieved successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Success'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/User'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /clusters:
+    get:
+      tags:
+        - Clusters
+      summary: List clusters
+      description: Get list of all configured clusters
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Clusters retrieved successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Success'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/ClusterInfo'
+
+    post:
+      tags:
+        - Clusters
+      summary: Create cluster
+      description: Add a new cluster configuration
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ClusterInfo'
+      responses:
+        '200':
+          description: Cluster created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Success'
+
+  /clusters/{id}:
+    get:
+      tags:
+        - Clusters
+      summary: Get cluster
+      description: Get specific cluster information
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Cluster retrieved successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Success'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/ClusterInfo'
+
+  /proxy/{path}:
+    get:
+      tags:
+        - Kubernetes Proxy
+      summary: Kubernetes API Proxy (GET)
+      description: Proxy GET requests to Kubernetes API server
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: path
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Kubernetes API path
+        - name: clusterId
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Target cluster ID
+      responses:
+        '200':
+          description: Proxy request successful
+          content:
+            application/json:
+              schema:
+                type: object
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    
+    post:
+      tags:
+        - Kubernetes Proxy
+      summary: Kubernetes API Proxy (POST)
+      description: Proxy POST requests to Kubernetes API server
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: path
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Kubernetes API path
+        - name: clusterId
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Target cluster ID
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Proxy request successful
+          content:
+            application/json:
+              schema:
+                type: object
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    
+    put:
+      tags:
+        - Kubernetes Proxy
+      summary: Kubernetes API Proxy (PUT)
+      description: Proxy PUT requests to Kubernetes API server
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: path
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Kubernetes API path
+        - name: clusterId
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Target cluster ID
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Proxy request successful
+          content:
+            application/json:
+              schema:
+                type: object
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    
+    delete:
+      tags:
+        - Kubernetes Proxy
+      summary: Kubernetes API Proxy (DELETE)
+      description: Proxy DELETE requests to Kubernetes API server
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: path
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Kubernetes API path
+        - name: clusterId
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Target cluster ID
+      responses:
+        '200':
+          description: Proxy request successful
+          content:
+            application/json:
+              schema:
+                type: object
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+tags:
+  - name: Authentication
+    description: User authentication and authorization
+  - name: Clusters
+    description: Cluster management operations
+  - name: Kubernetes Proxy
+    description: Kubernetes API proxy operations

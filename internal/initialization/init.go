@@ -4,9 +4,9 @@ import (
 	"log"
 
 	"github.com/casbin/casbin/v2"
-	"github.com/ciliverse/cilikube/api/v1/handlers"
-	"github.com/ciliverse/cilikube/api/v1/routes"
 	"github.com/ciliverse/cilikube/configs"
+	"github.com/ciliverse/cilikube/internal/handlers"
+	"github.com/ciliverse/cilikube/internal/routes"
 	"github.com/ciliverse/cilikube/internal/service"
 	"github.com/ciliverse/cilikube/pkg/k8s"
 	"github.com/gin-gonic/gin"
