@@ -10,21 +10,21 @@ import (
 )
 
 func TestHealthCheck(t *testing.T) {
-	// 设置 Gin 为测试模式
+	// Set Gin to test mode
 	gin.SetMode(gin.TestMode)
 
-	// 创建路由器
+	// Create router
 	router := gin.New()
 	router.GET("/health", HealthCheck)
 
-	// 创建测试请求
+	// Create test request
 	req, _ := http.NewRequest("GET", "/health", nil)
 	w := httptest.NewRecorder()
 
-	// 执行请求
+	// Execute request
 	router.ServeHTTP(w, req)
 
-	// 验证响应
+	// Verify response
 	assert.Equal(t, http.StatusOK, w.Code)
 	assert.Contains(t, w.Body.String(), "healthy")
 	assert.Contains(t, w.Body.String(), "timestamp")

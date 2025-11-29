@@ -9,31 +9,31 @@ import (
 	"k8s.io/client-go/kubernetes"
 )
 
-// PodLogsService 处理 Pod 日志相关操作
+// PodLogsService handles Pod logs related operations
 type PodLogsService struct{}
 
-// NewPodLogsService 创建 Pod 日志服务
+// NewPodLogsService creates Pod logs service
 func NewPodLogsService() *PodLogsService {
 	return &PodLogsService{}
 }
 
-// Get 获取 Pod 信息
+// Get retrieves Pod information
 func (s *PodLogsService) Get(clientset kubernetes.Interface, namespace, name string) (*v1.Pod, error) {
 	return clientset.CoreV1().Pods(namespace).Get(context.Background(), name, metav1.GetOptions{})
 }
 
-// GetPodLogs 获取 Pod 日志流
+// GetPodLogs retrieves Pod log stream
 func (s *PodLogsService) GetPodLogs(clientset kubernetes.Interface, namespace, name string, opts *v1.PodLogOptions) (io.ReadCloser, error) {
 	req := clientset.CoreV1().Pods(namespace).GetLogs(name, opts)
 	stream, err := req.Stream(context.Background())
 	if err != nil {
 		return nil, err
 	}
-	// 自动检测并转码 GBK -> UTF-8
+	// Automatically detect and convert GBK -> UTF-8
 	return ConvertIfGBK(stream), nil
 }
 
-// GetLogs 获取 Pod 日志
+// GetLogs retrieves Pod logs
 func (s *PodLogsService) GetLogs(clientset kubernetes.Interface, namespace, podName, container string, follow, previous bool, tailLines int64, writer io.Writer) error {
 	opts := &v1.PodLogOptions{
 		Container: container,

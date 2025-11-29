@@ -21,7 +21,7 @@
 
 We appreciate your interest in CiliKube. If you find this project valuable for your Kubernetes management needs, please consider starring the repository ⭐. Community support drives continuous development and improvement.
 
-Stay updated with the latest releases and technical insights by following our WeChat Official Account **希里安**.
+Stay updated with the latest releases and technical insights by following our WeChat Official Account **cilliantech**.
 
 ## 🤝 Contributors
 

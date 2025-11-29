@@ -6,7 +6,7 @@ import (
 )
 
 func RegisterClusterRoutes(router *gin.RouterGroup, handler *handlers.ClusterHandler) {
-	// 这个路由组现在只负责集群本身的元数据管理
+	// This route group is now only responsible for cluster metadata management
 	clusterRoutes := router.Group("/clusters")
 	{
 		clusterRoutes.GET("", handler.ListClusters)
@@ -15,7 +15,7 @@ func RegisterClusterRoutes(router *gin.RouterGroup, handler *handlers.ClusterHan
 		clusterRoutes.PUT("/:id", handler.UpdateCluster)
 		clusterRoutes.DELETE("/:id", handler.DeleteCluster)
 
-		// 激活集群的API
+		// Active cluster API
 		activeRoutes := clusterRoutes.Group("/active")
 		{
 			activeRoutes.GET("", handler.GetActiveCluster)

@@ -6,18 +6,18 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// [核心修改] 函数名改为 RegisterAuthRoutes 并接收 *gin.RouterGroup
-// 这样它就和其他 Register... 函数保持一致了
+// [Core Change] Function name changed to RegisterAuthRoutes and receives *gin.RouterGroup
+// This way it stays consistent with other Register... functions
 func RegisterAuthRoutes(authGroup *gin.RouterGroup) {
 	authHandler := handlers.NewAuthHandler()
 
-	// 路由直接注册在传入的 authGroup 上，不再自己创建
+	// Routes are registered directly on the passed authGroup, no longer creating our own
 
-	// 公开路由（不需要认证）
+	// Public routes (no authentication required)
 	authGroup.POST("/login", authHandler.Login)
 	authGroup.POST("/register", authHandler.Register)
 
-	// 需要认证的路由
+	// Routes requiring authentication
 	authenticated := authGroup.Group("")
 	authenticated.Use(auth.JWTAuthMiddleware())
 	{
@@ -27,8 +27,8 @@ func RegisterAuthRoutes(authGroup *gin.RouterGroup) {
 		authenticated.POST("/logout", authHandler.Logout)
 	}
 
-	// 管理员专用路由
-	admin := authGroup.Group("/admin") // 将管理路由分组到 /admin 下更清晰
+	// Admin-only routes
+	admin := authGroup.Group("/admin") // Grouping admin routes under /admin for clarity
 	admin.Use(auth.JWTAuthMiddleware(), auth.AdminRequiredMiddleware())
 	{
 		admin.GET("/users", authHandler.GetUserList)

@@ -4,7 +4,7 @@ import "time"
 
 type CreateClusterRequest struct {
 	Name           string `json:"name" binding:"required"`
-	KubeconfigData string `json:"kubeconfigData" binding:"required"` // Base64 编码的 kubeconfig 字符串
+	KubeconfigData string `json:"kubeconfigData" binding:"required"`
 	Provider       string `json:"provider"`
 	Description    string `json:"description"`
 	Environment    string `json:"environment"`

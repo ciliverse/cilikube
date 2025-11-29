@@ -31,13 +31,13 @@ type Application struct {
 }
 
 func New(configPath string) (*Application, error) {
-	// --- 1. 加载配置 ---
+	// --- 1. Load configuration ---
 	cfg, err := configs.Load(configPath)
 	if err != nil {
-		return nil, fmt.Errorf("加载配置失败: %w", err)
+		return nil, fmt.Errorf("failed to load configuration: %w", err)
 	}
 
-	// --- 2. 初始化日志 ---
+	// --- 2. Initialize logger ---
 	var logLevel slog.Level
 	if cfg.Server.Mode == "debug" {
 		logLevel = slog.LevelDebug
@@ -48,60 +48,60 @@ func New(configPath string) (*Application, error) {
 	appLogger := logger.New(logLevel)
 	slog.SetDefault(appLogger)
 
-	// --- 3. 加载配置 ---
-	slog.Info("配置加载成功", "path", configPath)
+	// --- 3. Configuration loaded ---
+	slog.Info("configuration loaded successfully", "path", configPath)
 
-	// --- 4. 数据库和 Store 初始化 ---
+	// --- 4. Database and Store initialization ---
 	var clusterStore store.ClusterStore
 	if cfg.Database.Enabled {
-		slog.Info("数据库已启用，正在初始化...")
+		slog.Info("database enabled, initializing...")
 		if err := database.InitDatabase(); err != nil {
-			return nil, fmt.Errorf("数据库连接失败: %w", err)
+			return nil, fmt.Errorf("failed to connect to database: %w", err)
 		}
 		if err := database.AutoMigrate(); err != nil {
-			return nil, fmt.Errorf("数据库自动迁移失败: %w", err)
+			return nil, fmt.Errorf("failed to auto-migrate database: %w", err)
 		}
 		if err := database.CreateDefaultAdmin(); err != nil {
-			return nil, fmt.Errorf("创建默认管理员失败: %w", err)
+			return nil, fmt.Errorf("failed to create default admin: %w", err)
 		}
 
 		if cfg.Server.EncryptionKey == "" {
-			return nil, errors.New("数据库已启用，但配置中未设置 EncryptionKey")
+			return nil, errors.New("database is enabled but EncryptionKey is not set in configuration")
 		}
 		encryptionKey := []byte(cfg.Server.EncryptionKey)
 		clusterStore, err = store.NewGormClusterStore(database.DB, encryptionKey)
 		if err != nil {
-			return nil, fmt.Errorf("初始化 Cluster Store 失败: %w", err)
+			return nil, fmt.Errorf("failed to initialize Cluster Store: %w", err)
 		}
-		slog.Info("数据库和 Cluster Store 初始化成功")
+		slog.Info("database and Cluster Store initialized successfully")
 	} else {
-		slog.Warn("数据库未启用，跳过相关初始化。ClusterStore 将为 nil")
+		slog.Warn("database not enabled, skipping related initialization. ClusterStore will be nil")
 	}
 
-	// --- 5. 初始化 ClusterManager ---
+	// --- 5. Initialize ClusterManager ---
 	k8sManager, err := k8s.NewClusterManager(clusterStore, cfg)
 	if err != nil {
-		return nil, fmt.Errorf("初始化 Kubernetes 集群管理器失败: %w", err)
+		return nil, fmt.Errorf("failed to initialize Kubernetes cluster manager: %w", err)
 	}
-	slog.Info("Kubernetes 集群管理器初始化成功")
+	slog.Info("Kubernetes cluster manager initialized successfully")
 
-	// --- 6. 初始化应用服务 ---
+	// --- 6. Initialize application services ---
 	services := initialization.InitializeServices(k8sManager, cfg)
 
-	// --- 7. Casbin 初始化 ---
+	// --- 7. Casbin initialization ---
 	var e *casbin.Enforcer
 	if cfg.Database.Enabled {
 		var casbinErr error
 		e, casbinErr = auth.InitCasbin(database.DB)
 		if casbinErr != nil {
-			return nil, fmt.Errorf("初始化 Casbin 失败: %w", casbinErr)
+			return nil, fmt.Errorf("failed to initialize Casbin: %w", casbinErr)
 		}
-		slog.Info("Casbin 初始化成功")
+		slog.Info("Casbin initialized successfully")
 	}
 
-	// --- 8. Gin 路由器设置 ---
+	// --- 8. Gin router setup ---
 	router := initialization.SetupRouter(cfg, services, k8sManager, e)
-	slog.Info("Gin 路由器设置完成")
+	slog.Info("Gin router setup completed")
 
 	return &Application{
 		Config: cfg,
@@ -120,25 +120,25 @@ func (app *Application) Run() {
 		WriteTimeout: time.Duration(app.Config.Server.WriteTimeout) * time.Second,
 	}
 	go func() {
-		app.Logger.Info("服务器正在监听...", "address", app.Server.Addr)
+		app.Logger.Info("server is listening...", "address", app.Server.Addr)
 		if err := app.Server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
-			app.Logger.Error("服务器意外关闭", "error", err)
+			app.Logger.Error("server closed unexpectedly", "error", err)
 			os.Exit(1)
 		}
 	}()
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 	<-quit
-	app.Logger.Info("收到关闭信号，正在关闭服务器...")
+	app.Logger.Info("received shutdown signal, shutting down server...")
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	if app.Config.Database.Enabled {
 		database.CloseDatabase()
-		app.Logger.Info("数据库连接已关闭")
+		app.Logger.Info("database connection closed")
 	}
 	if err := app.Server.Shutdown(ctx); err != nil {
-		app.Logger.Error("服务器关闭失败", "error", err)
+		app.Logger.Error("failed to shutdown server", "error", err)
 		os.Exit(1)
 	}
-	app.Logger.Info("服务器已优雅关闭")
+	app.Logger.Info("server shutdown gracefully")
 }

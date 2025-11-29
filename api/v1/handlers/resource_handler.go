@@ -11,14 +11,14 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
-// ResourceHandler 通用处理器
+// ResourceHandler generic handler
 type ResourceHandler[T runtime.Object] struct {
 	service        service.ResourceService[T]
 	clusterManager *k8s.ClusterManager
 	resourceType   string
 }
 
-// NewResourceHandler 创建通用处理器
+// NewResourceHandler creates generic handler
 func NewResourceHandler[T runtime.Object](svc service.ResourceService[T], k8sManager *k8s.ClusterManager, resourceType string) *ResourceHandler[T] {
 	return &ResourceHandler[T]{
 		service:        svc,
@@ -27,14 +27,14 @@ func NewResourceHandler[T runtime.Object](svc service.ResourceService[T], k8sMan
 	}
 }
 
-// List 处理列表请求
+// List handles list requests
 func (h *ResourceHandler[T]) List(c *gin.Context) {
 	k8sClient, ok := k8s.GetClientFromQuery(c, h.clusterManager)
 	if !ok {
-		return // 错误已在 GetClientFromQuery 中处理
+		return // Error already handled in GetClientFromQuery
 	}
 
-	// 对于命名空间资源，从路径获取；对于集群资源，此参数为空
+	// For namespaced resources, get from path; for cluster resources, this parameter is empty
 	namespace := c.Param("namespace")
 	selector := c.Query("labelSelector")
 	limit, _ := strconv.ParseInt(c.DefaultQuery("limit", "0"), 10, 64)
@@ -42,14 +42,14 @@ func (h *ResourceHandler[T]) List(c *gin.Context) {
 
 	items, err := h.service.List(k8sClient.Clientset, namespace, selector, limit, continueToken)
 	if err != nil {
-		utils.ApiError(c, http.StatusInternalServerError, "获取资源列表失败", err.Error())
+		utils.ApiError(c, http.StatusInternalServerError, "failed to get resource list", err.Error())
 		return
 	}
 
-	utils.ApiSuccess(c, items, "成功获取资源列表")
+	utils.ApiSuccess(c, items, "successfully retrieved resource list")
 }
 
-// Get 处理获取单个资源请求
+// Get handles single resource retrieval requests
 func (h *ResourceHandler[T]) Get(c *gin.Context) {
 	k8sClient, ok := k8s.GetClientFromQuery(c, h.clusterManager)
 	if !ok {
@@ -60,13 +60,13 @@ func (h *ResourceHandler[T]) Get(c *gin.Context) {
 
 	item, err := h.service.Get(k8sClient.Clientset, namespace, name)
 	if err != nil {
-		utils.ApiError(c, http.StatusInternalServerError, "获取资源失败", err.Error())
+		utils.ApiError(c, http.StatusInternalServerError, "failed to get resource", err.Error())
 		return
 	}
-	utils.ApiSuccess(c, item, "成功获取资源")
+	utils.ApiSuccess(c, item, "successfully retrieved resource")
 }
 
-// Create 处理创建资源请求
+// Create handles resource creation requests
 func (h *ResourceHandler[T]) Create(c *gin.Context) {
 	k8sClient, ok := k8s.GetClientFromQuery(c, h.clusterManager)
 	if !ok {
@@ -75,31 +75,31 @@ func (h *ResourceHandler[T]) Create(c *gin.Context) {
 	namespace := c.Param("namespace")
 
 	var obj T
-	// Kubernetes 的 Create API 需要一个完整的对象，所以我们从请求体中绑定
+	// Kubernetes Create API requires a complete object, so we bind from request body
 	if err := c.ShouldBindJSON(&obj); err != nil {
-		utils.ApiError(c, http.StatusBadRequest, "请求体格式无效", err.Error())
+		utils.ApiError(c, http.StatusBadRequest, "invalid request body format", err.Error())
 		return
 	}
 
 	created, err := h.service.Create(k8sClient.Clientset, namespace, obj)
 	if err != nil {
-		utils.ApiError(c, http.StatusInternalServerError, "创建资源失败", err.Error())
+		utils.ApiError(c, http.StatusInternalServerError, "failed to create resource", err.Error())
 		return
 	}
-	utils.ApiSuccess(c, created, "资源创建成功")
+	utils.ApiSuccess(c, created, "resource created successfully")
 }
 
-// Update 处理更新资源请求
+// Update handles resource update requests
 func (h *ResourceHandler[T]) Update(c *gin.Context) {
-	utils.ApiError(c, http.StatusNotImplemented, "Update尚未实现", "")
+	utils.ApiError(c, http.StatusNotImplemented, "Update not yet implemented", "")
 }
 
-// Delete 处理删除资源请求
+// Delete handles resource deletion requests
 func (h *ResourceHandler[T]) Delete(c *gin.Context) {
-	utils.ApiError(c, http.StatusNotImplemented, "Delete尚未实现", "")
+	utils.ApiError(c, http.StatusNotImplemented, "Delete not yet implemented", "")
 }
 
-// Watch 处理监听资源请求
+// Watch handles resource watch requests
 func (h *ResourceHandler[T]) Watch(c *gin.Context) {
-	utils.ApiError(c, http.StatusNotImplemented, "Watch尚未实现", "")
+	utils.ApiError(c, http.StatusNotImplemented, "Watch not yet implemented", "")
 }

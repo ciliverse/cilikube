@@ -14,7 +14,7 @@ import (
 )
 
 func InitializeServices(k8sManager *k8s.ClusterManager, cfg *configs.Config) *service.AppServices {
-	log.Println("正在初始化服务层...")
+	log.Println("initializing service layer...")
 	resourceFactory := service.NewResourceServiceFactory()
 	resourceFactory.InitializeDefaultServices()
 	appServices := &service.AppServices{
@@ -24,11 +24,11 @@ func InitializeServices(k8sManager *k8s.ClusterManager, cfg *configs.Config) *se
 		PodLogsService:     service.NewPodLogsService(),
 		SummaryService:     service.NewSummaryService(),
 	}
-	// PodExecService 需要 rest.Config
+	// PodExecService requires rest.Config
 	if activeClient, err := k8sManager.GetActiveClient(); err == nil && activeClient != nil {
 		appServices.PodExecService = service.NewPodExecService(activeClient.Config)
 	} else {
-		appServices.PodExecService = nil // 或可 panic/log
+		appServices.PodExecService = nil // or can panic/log
 	}
 	initializeResourceService(resourceFactory, "nodes", &appServices.NodeService)
 	initializeResourceService(resourceFactory, "pods", &appServices.PodService)
@@ -49,22 +49,22 @@ func initializeResourceService[T runtime.Object](factory *service.ResourceServic
 	if svc, ok := factory.GetService(resourceName).(service.ResourceService[T]); ok {
 		*serviceField = svc
 	} else {
-		log.Fatalf("初始化 %s 服务失败: 类型断言失败或服务未找到", resourceName)
+		log.Fatalf("failed to initialize %s service: type assertion failed or service not found", resourceName)
 	}
 }
 
-// InitializeHandlers 函数
+// Initialize Handlers function
 func InitializeHandlers(router *gin.RouterGroup, services *service.AppServices, k8sManager *k8s.ClusterManager) {
-	// --- 1. 注册非资源类的特殊路由 ---
+	// --- 1. Register special routes for non-resource types ---
 	routes.RegisterAuthRoutes(router.Group("/auth"))
 	routes.RegisterClusterRoutes(router, handlers.NewClusterHandler(services.ClusterService))
 	routes.RegisterInstallerRoutes(router, handlers.NewInstallerHandler(services.InstallerService))
 	routes.KubernetesProxyRoutes(router, handlers.NewProxyHandler(k8sManager))
-	
-	// --- 注册汇总路由 ---
+
+	// --- Register summary routes ---
 	routes.RegisterSummaryRoutes(router, handlers.NewSummaryHandler(services.SummaryService, k8sManager))
 
-	// --- 2. 创建所有资源的 Handler 实例 ---
+	// --- 2. Create Handler instances for all resources ---
 	nodesHandler := handlers.NewResourceHandler(services.NodeService, k8sManager, "nodes")
 	pvHandler := handlers.NewResourceHandler(services.PVService, k8sManager, "persistentvolumes")
 	namespacesHandler := handlers.NewResourceHandler(services.NamespaceService, k8sManager, "namespaces")
@@ -79,23 +79,23 @@ func InitializeHandlers(router *gin.RouterGroup, services *service.AppServices, 
 	statefulsetsHandler := handlers.NewResourceHandler(services.StatefulSetService, k8sManager, "statefulsets")
 	nodeMetricsHandler := handlers.NewNodeMetricsHandler(services.NodeMetricsService, k8sManager)
 
-	// Pod 日志与终端 Handler
+	// Pod logs and terminal Handler
 	podLogsHandler := handlers.NewPodLogsHandler(services.PodLogsService, k8sManager)
 	podExecHandler := handlers.NewPodExecHandler(services.PodExecService, k8sManager)
 
-	// a. 集群作用域的资源
+	// a. Cluster-scoped resources
 	nodesRoutes := router.Group("/nodes")
 	{
 		nodesRoutes.GET("", nodesHandler.List)
 		nodesRoutes.POST("", nodesHandler.Create)
-		// 针对单个节点的操作
+		// Operations for individual nodes
 		nodeMemberRoutes := nodesRoutes.Group("/:name")
 		{
 			nodeMemberRoutes.GET("", nodesHandler.Get)
 			nodeMemberRoutes.PUT("", nodesHandler.Update)
 			nodeMemberRoutes.DELETE("", nodesHandler.Delete)
 			nodeMemberRoutes.GET("/watch", nodesHandler.Watch)
-			// 注册 metrics 子路由
+			// Register metrics sub-routes
 			nodeMemberRoutes.GET("/metrics", nodeMetricsHandler.GetNodeMetrics)
 		}
 	}
@@ -115,20 +115,20 @@ func InitializeHandlers(router *gin.RouterGroup, services *service.AppServices, 
 		podsTopLevelRoutes.GET("", podsHandler.List)
 	}
 
-	// b. Namespace 资源本身，以及所有嵌套在其下的资源
+	// b. Namespace resources themselves, and all resources nested under them
 	namespacesRoutes := router.Group("/namespaces")
 	{
 		namespacesRoutes.GET("", namespacesHandler.List)
 		namespacesRoutes.POST("", namespacesHandler.Create)
 
-		// 针对单个 Namespace 的操作
+		// Operations for individual Namespace
 		nsMemberRoutes := namespacesRoutes.Group(":namespace")
 		{
 			nsMemberRoutes.GET("", namespacesHandler.Get)
 			nsMemberRoutes.PUT("", namespacesHandler.Update)
 			nsMemberRoutes.DELETE("", namespacesHandler.Delete)
 
-			// 嵌套资源
+			// Nested resources
 			registerResourceInNamespace(nsMemberRoutes, "pods", podsHandler)
 			registerResourceInNamespace(nsMemberRoutes, "deployments", deploymentsHandler)
 			registerResourceInNamespace(nsMemberRoutes, "services", servicesHandler)
@@ -139,7 +139,7 @@ func InitializeHandlers(router *gin.RouterGroup, services *service.AppServices, 
 			registerResourceInNamespace(nsMemberRoutes, "persistentvolumeclaims", pvcHandler)
 			registerResourceInNamespace(nsMemberRoutes, "statefulsets", statefulsetsHandler)
 
-			// 新增：Pod 日志与终端路由
+			// New: Pod logs and terminal routes
 			podsMemberRoutes := nsMemberRoutes.Group("/pods/:name")
 			{
 				podsMemberRoutes.GET("/logs", podLogsHandler.GetPodLogs)
@@ -168,12 +168,12 @@ func registerResourceInNamespace[T runtime.Object](nsRouter *gin.RouterGroup, re
 	}
 }
 
-// SetupRouter 设置并返回 Gin 引擎
+// SetupRouter sets up and returns Gin engine
 func SetupRouter(cfg *configs.Config, services *service.AppServices, k8sManager *k8s.ClusterManager, e *casbin.Enforcer) *gin.Engine {
 	router := gin.New()
 	router.Use(gin.Recovery(), gin.Logger())
 
-	// 配置自定义 CORS 中间件，允许所有需要的头部
+	// Configure custom CORS middleware, allow all required headers
 	router.Use(func(c *gin.Context) {
 		c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
 		c.Writer.Header().Set("Access-Control-Allow-Credentials", "true")

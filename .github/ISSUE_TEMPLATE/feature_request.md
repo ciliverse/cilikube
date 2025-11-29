@@ -1,30 +1,30 @@
 ---
-name: 功能请求
-about: 为这个项目提出一个想法
+name: Feature Request
+about: Suggest an idea for this project
 title: "[Feature Request] "
 labels: enhancement
 assignees: ''
 
 ---
 
-**⚠️ 请在提交前检查以下事项：**
+**⚠️ Please check the following before submitting:**
 
-* [ ] 我已经搜索过现有的 Issues，确认这个功能请求没有被提出过。
-* [ ] 我已经考虑过这个功能是否符合项目的核心目标。
+* [ ] I have searched existing Issues to confirm this feature request hasn't been proposed before.
+* [ ] I have considered whether this feature aligns with the project's core goals.
 
-**你的功能请求与什么问题相关？请描述一下。**
-清晰简洁地描述你希望解决的问题。例如：我总是遇到 [...] 的问题，所以 [...] 会很有帮助。
+**Is your feature request related to a problem? Please describe.**
+A clear and concise description of what the problem is. Ex. I'm always frustrated when [...]
 
-**描述你想要的解决方案**
-清晰简洁地描述你希望实现的功能。
+**Describe the solution you'd like**
+A clear and concise description of what you want to happen.
 
-**描述你考虑过的替代方案 (可选)**
-清晰简洁地描述你考虑过的任何替代解决方案或功能。
+**Describe alternatives you've considered (optional)**
+A clear and concise description of any alternative solutions or features you've considered.
 
-**为什么这个功能对其他用户也有价值？**
-解释为什么你认为这个功能对项目的其他用户也会有帮助。
+**Why would this feature be valuable to other users?**
+Explain why you think this feature would be helpful to other users of the project.
 
-**额外信息 (可选)**
-任何其他关于功能请求的上下文或截图。例如，这个功能与 K8s 的哪个特定方面相关（例如，部署、服务、存储、网络策略等）？它将如何简化 K8s 管理？
+**Additional context (optional)**
+Add any other context or screenshots about the feature request here. For example, how does this feature relate to specific aspects of K8s (e.g., deployments, services, storage, network policies, etc.)? How would it simplify K8s management?
 
 ---

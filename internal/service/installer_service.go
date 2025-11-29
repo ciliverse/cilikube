@@ -49,16 +49,16 @@ func NewInstallerService(cfg *configs.Config) InstallerService {
 	return &installerService{cfg: &cfg.Installer}
 }
 
-// --- InstallMinikube Method (调用实际安装步骤) ---
+// --- InstallMinikube Method (calls actual installation steps) ---
 func (s *installerService) InstallMinikube(messageChan chan<- ProgressUpdate, clientGone <-chan struct{}) {
 	defer close(messageChan)
 
 	var minikubeURL string
 	var targetFileName string = "minikube-download"
-	// ** 定义标准的安装目标路径 **
+	// ** Define standard installation target path **
 	standardInstallTarget := "/usr/local/bin/minikube"
 	if runtime.GOOS == "windows" {
-		s.sendFinalUpdate(messageChan, StepError, 32, 0, "Windows 尚不支持自动执行安装步骤", true, true)
+		s.sendFinalUpdate(messageChan, StepError, 32, 0, "Windows does not yet support automatic installation steps", true, true)
 		return
 	}
 
@@ -84,48 +84,48 @@ func (s *installerService) InstallMinikube(messageChan chan<- ProgressUpdate, cl
 		}
 	}
 	if minikubeURL == "" {
-		s.sendFinalUpdate(messageChan, StepError, 0, 0, fmt.Sprintf("不支持的 OS/Arch 组合: %s/%s", osType, arch), true, true)
+		s.sendFinalUpdate(messageChan, StepError, 0, 0, fmt.Sprintf("Unsupported OS/Arch combination: %s/%s", osType, arch), true, true)
 		return
 	}
 
 	downloadPath := filepath.Join(s.cfg.DownloadDir, targetFileName)
-	log.Printf("将下载到: %s", downloadPath)
+	log.Printf("Will download to: %s", downloadPath)
 	if err := os.MkdirAll(s.cfg.DownloadDir, 0755); err != nil {
-		s.sendFinalUpdate(messageChan, StepError, 2, 0, fmt.Sprintf("无法创建下载目录 '%s': %v", s.cfg.DownloadDir, err), true, true)
+		s.sendFinalUpdate(messageChan, StepError, 2, 0, fmt.Sprintf("Unable to create download directory '%s': %v", s.cfg.DownloadDir, err), true, true)
 		return
 	}
-	defer func() { /* ... cleanup logic 保持不变 ... */
-		log.Printf("尝试清理下载的文件: %s", downloadPath)
+	defer func() { /* ... cleanup logic remains unchanged ... */
+		log.Printf("Attempting to clean up downloaded file: %s", downloadPath)
 		err := os.Remove(downloadPath)
 		if err != nil && !os.IsNotExist(err) {
-			log.Printf("警告: 清理下载文件 %s 失败: %v", downloadPath, err)
+			log.Printf("Warning: Failed to clean up download file %s: %v", downloadPath, err)
 		} else if err == nil {
-			log.Printf("成功清理下载的文件: %s", downloadPath)
+			log.Printf("Successfully cleaned up downloaded file: %s", downloadPath)
 		}
 	}()
 
-	// --- 步骤 1: 下载 ---
+	// --- Step 1: Download ---
 	if !s.executeDownloadStep(messageChan, clientGone, minikubeURL, downloadPath) {
 		return
 	}
 
-	// --- 步骤 2: 实际安装 (使用 sudo install) ---
-	// **调用修改后的 executeInstallStep**
+	// --- Step 2: Actual installation (using sudo install) ---
+	// **Call modified executeInstallStep**
 	if !s.executeInstallStep(messageChan, clientGone, downloadPath, standardInstallTarget) {
 		return
 	}
 
-	// --- 步骤 3: 启动 ---
-	// 启动步骤现在假设 minikube 已被成功安装到 standardInstallTarget 并可能位于 PATH 中
-	// 我们仍然传递 configuredPath (来自 config.yaml) 作为备选检查路径
+	// --- Step 3: Start ---
+	// Start step now assumes minikube has been successfully installed to standardInstallTarget and may be in PATH
+	// We still pass configuredPath (from config.yaml) as an alternative check path
 	s.executeMinikubeStartStep(messageChan, clientGone, s.cfg.MinikubePath)
 }
 
-// --- executeDownloadStep (保持不变) ---
+// --- executeDownloadStep (remains unchanged) ---
 func (s *installerService) executeDownloadStep(messageChan chan<- ProgressUpdate, clientGone <-chan struct{}, downloadURL, downloadPath string) bool {
 	step := StepDownload
-	log.Printf("步骤 [%s]: 开始从 %s 下载到 %s", step, downloadURL, downloadPath)
-	s.sendProgressUpdate(messageChan, step, 5, 0, fmt.Sprintf("开始下载 Minikube (%s)...", filepath.Base(downloadPath)), "", clientGone)
+	log.Printf("Step [%s]: Starting download from %s to %s", step, downloadURL, downloadPath)
+	s.sendProgressUpdate(messageChan, step, 5, 0, fmt.Sprintf("Starting Minikube download (%s)...", filepath.Base(downloadPath)), "", clientGone)
 	if s.isClientGone(clientGone) {
 		return false
 	}
@@ -138,19 +138,19 @@ func (s *installerService) executeDownloadStep(messageChan chan<- ProgressUpdate
 	err := cmd.Run()
 	duration := time.Since(startTime)
 	if err != nil {
-		errMsg := fmt.Sprintf("下载失败: %v", err)
-		log.Printf("步骤 [%s]: 错误 - %s", step, errMsg)
+		errMsg := fmt.Sprintf("Download failed: %v", err)
+		log.Printf("Step [%s]: Error - %s", step, errMsg)
 		s.sendFinalUpdate(messageChan, StepError, 15, 0, errMsg, true, true)
 		return false
 	}
 	if _, err := os.Stat(downloadPath); os.IsNotExist(err) {
-		errMsg := fmt.Sprintf("下载后文件未找到: %s", downloadPath)
-		log.Printf("步骤 [%s]: 错误 - %s", step, errMsg)
+		errMsg := fmt.Sprintf("File not found after download: %s", downloadPath)
+		log.Printf("Step [%s]: Error - %s", step, errMsg)
 		s.sendFinalUpdate(messageChan, StepError, 20, 0, errMsg, true, true)
 		return false
 	}
-	successMsg := fmt.Sprintf("下载完成 (%s) in %s", filepath.Base(downloadPath), duration.Round(time.Second))
-	log.Printf("步骤 [%s]: 成功 - %s", step, successMsg)
+	successMsg := fmt.Sprintf("Download completed (%s) in %s", filepath.Base(downloadPath), duration.Round(time.Second))
+	log.Printf("Step [%s]: Success - %s", step, successMsg)
 	s.sendProgressUpdate(messageChan, step, 30, 100, successMsg, "", clientGone)
 	return true
 }
@@ -171,7 +171,7 @@ func (s *installerService) parseCurlProgress(stderr io.ReadCloser, messageChan c
 						stepProgress := int(percent)
 						overallProgress := 5 + int(float64(stepProgress)*0.25)
 						if overallProgress > lastOverallProgress {
-							s.sendProgressUpdate(messageChan, StepDownload, overallProgress, stepProgress, fmt.Sprintf("下载中... %.1f%%", percent), line, clientGone)
+							s.sendProgressUpdate(messageChan, StepDownload, overallProgress, stepProgress, fmt.Sprintf("Downloading... %.1f%%", percent), line, clientGone)
 							lastOverallProgress = overallProgress
 						}
 					}
@@ -180,141 +180,141 @@ func (s *installerService) parseCurlProgress(stderr io.ReadCloser, messageChan c
 		}
 	}
 	if err := scanner.Err(); err != nil && !errors.Is(err, io.EOF) {
-		log.Printf("解析 curl stderr 时出错: %v", err)
+		log.Printf("Error parsing curl stderr: %v", err)
 	}
 }
 
-// --- **修改:** executeInstallStep (执行实际的 sudo install) ---
+// --- **Modified:** executeInstallStep (executes actual sudo install) ---
 func (s *installerService) executeInstallStep(messageChan chan<- ProgressUpdate, clientGone <-chan struct{}, downloadedFile, installTarget string) bool {
 	step := StepInstall
-	log.Printf("步骤 [%s]: 尝试将 %s 安装到 %s (需要免密 sudo)", step, downloadedFile, installTarget)
-	s.sendProgressUpdate(messageChan, step, 31, 10, fmt.Sprintf("准备执行安装命令 (sudo install %s %s)...", downloadedFile, installTarget), "", clientGone)
+	log.Printf("Step [%s]: Attempting to install %s to %s (requires passwordless sudo)", step, downloadedFile, installTarget)
+	s.sendProgressUpdate(messageChan, step, 31, 10, fmt.Sprintf("Preparing to execute install command (sudo install %s %s)...", downloadedFile, installTarget), "", clientGone)
 
-	// **安全警告**
-	warningMsg := "警告：即将执行需要 sudo 权限的安装命令。请确保运行此服务的用户已被正确配置为可以免密码执行 'sudo install'。这存在安全风险！"
+	// **Security Warning**
+	warningMsg := "Warning: About to execute installation command requiring sudo privileges. Please ensure the user running this service is properly configured for passwordless 'sudo install' execution. This poses security risks!"
 	log.Println(warningMsg)
-	s.sendProgressUpdate(messageChan, step, 32, 20, warningMsg, warningMsg, clientGone) // 发送警告
+	s.sendProgressUpdate(messageChan, step, 32, 20, warningMsg, warningMsg, clientGone) // Send warning
 
 	if s.isClientGone(clientGone) {
 		return false
 	}
 
-	// --- 执行 sudo install 命令 ---
+	// --- Execute sudo install command ---
 	cmd := exec.Command("sudo", "install", downloadedFile, installTarget)
-	log.Printf("执行命令: %s", cmd.String())
+	log.Printf("Executing command: %s", cmd.String())
 
-	outputBytes, err := cmd.CombinedOutput() // 同时捕获 stdout 和 stderr
+	outputBytes, err := cmd.CombinedOutput() // Capture both stdout and stderr
 	output := string(outputBytes)
-	if len(output) > 0 { // 只在有输出时记录
+	if len(output) > 0 { // Only log when there's output
 		log.Printf("sudo install output:\n%s", output)
-		// 将 sudo 的输出也发送给前端日志
-		s.sendProgressUpdate(messageChan, step, 35, 50, "安装命令输出:", output, clientGone)
+		// Also send sudo output to frontend logs
+		s.sendProgressUpdate(messageChan, step, 35, 50, "Install command output:", output, clientGone)
 	}
 
 	if err != nil {
-		errMsg := fmt.Sprintf("安装命令 'sudo install' 执行失败: %v", err)
-		// 尝试从输出中解析更具体的错误
+		errMsg := fmt.Sprintf("Installation command 'sudo install' execution failed: %v", err)
+		// Try to parse more specific errors from output
 		if strings.Contains(output, "incorrect password attempt") || strings.Contains(output, "sudo: a password is required") {
-			errMsg = "安装失败：执行 'sudo install' 需要密码或未配置免密 sudo。"
-			log.Println("错误: sudo 需要密码。请配置免密 sudo。")
+			errMsg = "Installation failed: 'sudo install' requires password or passwordless sudo is not configured."
+			log.Println("Error: sudo requires password. Please configure passwordless sudo.")
 		} else if strings.Contains(output, "Permission denied") {
-			errMsg = fmt.Sprintf("安装失败：权限被拒绝。无法写入目标目录 %s 或 sudo 配置不正确。", installTarget)
-			log.Println("错误: 权限被拒绝。")
+			errMsg = fmt.Sprintf("Installation failed: Permission denied. Cannot write to target directory %s or sudo configuration is incorrect.", installTarget)
+			log.Println("Error: Permission denied.")
 		} else if strings.Contains(output, "No such file or directory") && strings.Contains(output, downloadedFile) {
-			errMsg = fmt.Sprintf("安装失败：源文件 '%s' 未找到 (可能下载失败或已被清理)。", downloadedFile)
-			log.Printf("错误: 源文件 %s 未找到。", downloadedFile)
+			errMsg = fmt.Sprintf("Installation failed: Source file '%s' not found (possibly download failed or already cleaned up).", downloadedFile)
+			log.Printf("Error: Source file %s not found.", downloadedFile)
 		} else if strings.Contains(output, "No such file or directory") && strings.Contains(output, filepath.Dir(installTarget)) {
-			errMsg = fmt.Sprintf("安装失败：目标目录 '%s' 不存在。", filepath.Dir(installTarget))
-			log.Printf("错误: 目标目录 %s 不存在。", filepath.Dir(installTarget))
+			errMsg = fmt.Sprintf("Installation failed: Target directory '%s' does not exist.", filepath.Dir(installTarget))
+			log.Printf("Error: Target directory %s does not exist.", filepath.Dir(installTarget))
 		} else {
-			log.Printf("错误: 'sudo install' 失败，错误: %v, 输出: %s", err, output)
+			log.Printf("Error: 'sudo install' failed, error: %v, output: %s", err, output)
 		}
-		s.sendFinalUpdate(messageChan, StepError, 38, 80, errMsg, true, true) // 在失败时更新进度为接近完成安装步骤
+		s.sendFinalUpdate(messageChan, StepError, 38, 80, errMsg, true, true) // Update progress to near completion of install step on failure
 		return false
 	}
 
-	// 安装命令成功执行
-	successMsg := fmt.Sprintf("成功将 Minikube 安装到 %s", installTarget)
-	log.Printf("步骤 [%s]: %s", step, successMsg)
+	// Installation command executed successfully
+	successMsg := fmt.Sprintf("Successfully installed Minikube to %s", installTarget)
+	log.Printf("Step [%s]: %s", step, successMsg)
 	s.sendProgressUpdate(messageChan, step, 40, 100, successMsg, "", clientGone) // Install step complete
 	return true
 }
 
-// --- executeMinikubeStartStep (查找逻辑调整) ---
+// --- executeMinikubeStartStep (search logic adjusted) ---
 func (s *installerService) executeMinikubeStartStep(messageChan chan<- ProgressUpdate, clientGone <-chan struct{}, configuredPath string) {
 	step := StepStart
-	log.Printf("步骤 [%s]: 准备启动 'minikube start --force'...", step)
-	s.sendProgressUpdate(messageChan, step, 40, 0, "准备启动 Minikube...", "", clientGone)
+	log.Printf("Step [%s]: Preparing to start 'minikube start --force'...", step)
+	s.sendProgressUpdate(messageChan, step, 40, 0, "Preparing to start Minikube...", "", clientGone)
 	if s.isClientGone(clientGone) {
 		return
 	}
 
 	minikubeCmdPath := ""
-	standardInstallPath := "/usr/local/bin/minikube" // 再次定义标准路径以供检查
+	standardInstallPath := "/usr/local/bin/minikube" // Define standard path again for checking
 
-	// 1. 优先尝试 PATH
+	// 1. Try PATH first
 	foundPath, err := exec.LookPath("minikube")
 	if err == nil {
-		log.Printf("步骤 [%s]: 在 PATH 中找到 'minikube': %s", step, foundPath)
+		log.Printf("Step [%s]: Found 'minikube' in PATH: %s", step, foundPath)
 		minikubeCmdPath = foundPath
 	} else {
-		log.Printf("步骤 [%s]: 'minikube' 未在 PATH 中找到。", step)
-		// 2. 尝试检查标准安装路径 (如果与 PATH 不同)
+		log.Printf("Step [%s]: 'minikube' not found in PATH.", step)
+		// 2. Try checking standard installation path (if different from PATH)
 		if _, statErr := os.Stat(standardInstallPath); statErr == nil {
-			// 检查执行权限
+			// Check execution permissions
 			if info, _ := os.Stat(standardInstallPath); info.Mode()&0111 != 0 {
-				log.Printf("步骤 [%s]: 在标准路径 %s 中找到可执行文件。", step, standardInstallPath)
+				log.Printf("Step [%s]: Found executable file at standard path %s.", step, standardInstallPath)
 				minikubeCmdPath = standardInstallPath
 			} else {
-				log.Printf("步骤 [%s]: 在标准路径 %s 中找到文件但无执行权限。", step, standardInstallPath)
+				log.Printf("Step [%s]: Found file at standard path %s but no execution permissions.", step, standardInstallPath)
 			}
 		} else {
-			log.Printf("步骤 [%s]: 标准路径 %s 不存在或无法访问: %v", step, standardInstallPath, statErr)
+			log.Printf("Step [%s]: Standard path %s does not exist or is inaccessible: %v", step, standardInstallPath, statErr)
 		}
 
-		// 3. 如果上面都没找到，最后尝试配置文件中的路径 (如果提供了)
+		// 3. If none found above, finally try the path from config file (if provided)
 		if minikubeCmdPath == "" && configuredPath != "" {
-			log.Printf("步骤 [%s]: 尝试使用配置的路径: %s", step, configuredPath)
+			log.Printf("Step [%s]: Trying to use configured path: %s", step, configuredPath)
 			if info, statErr := os.Stat(configuredPath); statErr == nil && (info.Mode()&0111 != 0) {
 				minikubeCmdPath = configuredPath
-				log.Printf("步骤 [%s]: 使用配置的路径: %s", step, minikubeCmdPath)
+				log.Printf("Step [%s]: Using configured path: %s", step, minikubeCmdPath)
 			} else {
-				log.Printf("步骤 [%s]: 配置的路径 '%s' 不存在或不可执行。", step, configuredPath)
+				log.Printf("Step [%s]: Configured path '%s' does not exist or is not executable.", step, configuredPath)
 			}
 		}
 	}
 
-	// 4. 如果最终还是没找到命令路径
+	// 4. If still no command path found
 	if minikubeCmdPath == "" {
-		errMsg := "'minikube' 命令在 PATH、标准路径和配置路径中均未找到或不可执行。请检查安装步骤日志或手动验证安装。"
-		log.Printf("步骤 [%s]: 错误 - %s", step, errMsg)
+		errMsg := "'minikube' command not found or not executable in PATH, standard path, and configured path. Please check installation step logs or manually verify installation."
+		log.Printf("Step [%s]: Error - %s", step, errMsg)
 		s.sendFinalUpdate(messageChan, StepError, 42, 0, errMsg, true, true)
 		return
 	}
 
-	// --- 使用找到的 minikubeCmdPath 执行命令 ---
+	// --- Execute command using found minikubeCmdPath ---
 	minikubeDriver := s.cfg.MinikubeDriver
 	cmd := exec.Command(minikubeCmdPath, "start", "--force", fmt.Sprintf("--driver=%s", minikubeDriver))
-	log.Printf("执行命令: %s", cmd.String())
+	log.Printf("Executing command: %s", cmd.String())
 	stdoutPipe, err := cmd.StdoutPipe()
 	if err != nil {
-		s.sendFinalUpdate(messageChan, StepError, 43, 0, fmt.Sprintf("创建 stdout pipe 失败: %v", err), true, true)
+		s.sendFinalUpdate(messageChan, StepError, 43, 0, fmt.Sprintf("Failed to create stdout pipe: %v", err), true, true)
 		return
 	}
 	stderrPipe, err := cmd.StderrPipe()
 	if err != nil {
-		s.sendFinalUpdate(messageChan, StepError, 43, 0, fmt.Sprintf("创建 stderr pipe 失败: %v", err), true, true)
+		s.sendFinalUpdate(messageChan, StepError, 43, 0, fmt.Sprintf("Failed to create stderr pipe: %v", err), true, true)
 		return
 	}
 	if err := cmd.Start(); err != nil {
-		s.sendFinalUpdate(messageChan, StepError, 44, 0, fmt.Sprintf("启动 minikube 命令失败: %v", err), true, true)
+		s.sendFinalUpdate(messageChan, StepError, 44, 0, fmt.Sprintf("Failed to start minikube command: %v", err), true, true)
 		return
 	}
 
 	var wg sync.WaitGroup
 	wg.Add(2)
 	var lastOverallProgress int = 40
-	// ... (启动步骤的 Goroutine 和 Wait 逻辑保持不变) ...
+	// ... (start step Goroutine and Wait logic remains unchanged) ...
 	go func() {
 		defer wg.Done()
 		scanner := bufio.NewScanner(stdoutPipe)
@@ -333,7 +333,7 @@ func (s *installerService) executeMinikubeStartStep(messageChan chan<- ProgressU
 			s.sendProgressUpdate(messageChan, step, lastOverallProgress, stepProgress, message, line, clientGone)
 		}
 		if err := scanner.Err(); err != nil && !errors.Is(err, io.EOF) {
-			log.Printf("读取 stdout 时出错: %v", err)
+			log.Printf("Error reading stdout: %v", err)
 		}
 	}()
 	go func() {
@@ -357,12 +357,12 @@ func (s *installerService) executeMinikubeStartStep(messageChan chan<- ProgressU
 			}
 			displayMessage := fmt.Sprintf("[Log] %s", message)
 			if strings.Contains(strings.ToLower(line), "error") || strings.Contains(strings.ToLower(line), "fail") {
-				displayMessage = fmt.Sprintf("[错误日志] %s", message)
+				displayMessage = fmt.Sprintf("[Error Log] %s", message)
 			}
 			s.sendProgressUpdate(messageChan, step, currentProg, stepProgress, displayMessage, line, clientGone)
 		}
 		if err := scanner.Err(); err != nil && !errors.Is(err, io.EOF) {
-			log.Printf("读取 stderr 时出错: %v", err)
+			log.Printf("Error reading stderr: %v", err)
 		}
 	}()
 
@@ -371,14 +371,14 @@ func (s *installerService) executeMinikubeStartStep(messageChan chan<- ProgressU
 	log.Println("Minikube start command finished execution and output processing.")
 	select {
 	case <-clientGone:
-		log.Println("Minikube start 完成, 但客户端已断开连接.")
+		log.Println("Minikube start completed, but client has disconnected.")
 	default:
 		if cmdErr != nil {
-			errMsg := fmt.Sprintf("Minikube start 失败: %v", cmdErr)
+			errMsg := fmt.Sprintf("Minikube start failed: %v", cmdErr)
 			log.Println(errMsg)
 			s.sendFinalUpdate(messageChan, StepError, lastOverallProgress, 100, errMsg, true, true)
 		} else {
-			successMsg := "Minikube 启动成功!"
+			successMsg := "Minikube started successfully!"
 			log.Println(successMsg)
 			s.sendFinalUpdate(messageChan, StepFinished, 100, 100, successMsg, false, true)
 		}
@@ -386,7 +386,7 @@ func (s *installerService) executeMinikubeStartStep(messageChan chan<- ProgressU
 }
 
 func (s *installerService) parseMinikubeOutput(line string) (progress int, message string) {
-	// ... (代码与之前版本相同) ...
+	// ... (code same as previous version) ...
 	lineLower := strings.ToLower(line)
 	message = line
 	if strings.Contains(line, "minikube v") {
@@ -449,37 +449,37 @@ func (s *installerService) parseMinikubeOutput(line string) (progress int, messa
 	return -1, message
 }
 
-func (s *installerService) isClientGone(clientGone <-chan struct{}) bool { /* ... 与你提供的版本相同 ... */
+func (s *installerService) isClientGone(clientGone <-chan struct{}) bool { /* ... same as your provided version ... */
 	select {
 	case <-clientGone:
-		log.Println("SSE Service: 检测到客户端断开。")
+		log.Println("SSE Service: Client disconnection detected.")
 		return true
 	default:
 		return false
 	}
 }
-func (s *installerService) sendProgressUpdate(messageChan chan<- ProgressUpdate, step Step, overallProgress, stepProgress int, message string, rawLine string, clientGone <-chan struct{}) { /* ... 与你提供的版本相同 ... */
+func (s *installerService) sendProgressUpdate(messageChan chan<- ProgressUpdate, step Step, overallProgress, stepProgress int, message string, rawLine string, clientGone <-chan struct{}) { /* ... same as your provided version ... */
 	if s.isClientGone(clientGone) {
-		log.Println("SSE Service: 客户端已断开，不发送进度更新。")
+		log.Println("SSE Service: Client has disconnected, not sending progress update.")
 		return
 	}
 	update := ProgressUpdate{Step: step, Progress: overallProgress, StepProgress: stepProgress, Message: message, Done: false, RawLine: rawLine}
 	select {
 	case messageChan <- update:
 	default:
-		log.Printf("警告: SSE 消息通道阻塞或前端未接收，跳过更新: Step=%s, Progress=%d", step, overallProgress)
+		log.Printf("Warning: SSE message channel blocked or frontend not receiving, skipping update: Step=%s, Progress=%d", step, overallProgress)
 	}
 }
-func (s *installerService) sendFinalUpdate(messageChan chan<- ProgressUpdate, step Step, overallProgress, stepProgress int, message string, isError bool, done bool) { /* ... 与你提供的版本相同 ... */
-	log.Printf("尝试发送最终更新: Step=%s, Progress=%d, Error=%t, Done=%t, Message=%s", step, overallProgress, isError, done, message)
+func (s *installerService) sendFinalUpdate(messageChan chan<- ProgressUpdate, step Step, overallProgress, stepProgress int, message string, isError bool, done bool) { /* ... same as your provided version ... */
+	log.Printf("Attempting to send final update: Step=%s, Progress=%d, Error=%t, Done=%t, Message=%s", step, overallProgress, isError, done, message)
 	update := ProgressUpdate{Step: step, Progress: overallProgress, StepProgress: stepProgress, Message: message, Done: done}
 	if isError {
 		update.Error = message
 	}
 	select {
 	case messageChan <- update:
-		log.Println("最终更新已发送到通道。")
+		log.Println("Final update sent to channel.")
 	case <-time.After(1 * time.Second):
-		log.Println("警告: 最终 SSE 更新发送超时 (通道阻塞或前端未接收)。")
+		log.Println("Warning: Final SSE update send timeout (channel blocked or frontend not receiving).")
 	}
 }

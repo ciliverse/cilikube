@@ -4,27 +4,28 @@ import (
 	"bytes"
 	"fmt"
 	"io"
-	appsv1 "k8s.io/api/apps/v1"
-	"k8s.io/apimachinery/pkg/util/yaml"
 	"regexp"
 	"strconv"
+
+	appsv1 "k8s.io/api/apps/v1"
+	"k8s.io/apimachinery/pkg/util/yaml"
 )
 
 var (
 	dns1123Regex = regexp.MustCompile(`^[a-z0-9]([-a-z0-9]*[a-z0-9])?$`)
 )
 
-// ValidateNamespace 验证命名空间格式
+// ValidateNamespace validates namespace format
 func ValidateNamespace(ns string) bool {
 	return dns1123Regex.MatchString(ns) && len(ns) <= 63
 }
 
-// ValidateResourceName 验证资源名称格式
+// ValidateResourceName validates resource name format
 func ValidateResourceName(name string) bool {
 	return dns1123Regex.MatchString(name) && len(name) <= 253
 }
 
-// ParseInt 安全转换字符串为整数
+// ParseInt safely converts string to integer
 func ParseInt(s string, defaultValue int) int {
 	if s == "" {
 		return defaultValue
@@ -36,9 +37,9 @@ func ParseInt(s string, defaultValue int) int {
 	return val
 }
 
-// ParseDeploymentFromFile 解析 YAML/JSON 文件为 Deployment 对象（使用 Kubernetes 原生解码器）
+// ParseDeploymentFromFile parses YAML/JSON file to Deployment object (using Kubernetes native decoder)
 func ParseDeploymentFromFile(data []byte) (*appsv1.Deployment, error) {
-	// 使用 Kubernetes 提供的 YAML/JSON 解码器
+	// Use YAML/JSON decoder provided by Kubernetes
 	decoder := yaml.NewYAMLOrJSONDecoder(
 		io.NopCloser(
 			io.NewSectionReader(
