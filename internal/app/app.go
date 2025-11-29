@@ -3,6 +3,7 @@ package app
 import (
 	"context"
 	"errors"
+	"flag"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -141,4 +142,21 @@ func (app *Application) Run() {
 		os.Exit(1)
 	}
 	app.Logger.Info("server shutdown gracefully")
+}
+
+// GetConfigPath returns the configuration file path based on command line flags,
+// environment variables, or default value
+func GetConfigPath() string {
+	config := flag.String("config", "", "config file path")
+	flag.Parse()
+
+	if *config != "" {
+		return *config
+	}
+
+	if env := os.Getenv("CILIKUBE_CONFIG_PATH"); env != "" {
+		return env
+	}
+
+	return "configs/config.yaml"
 }
