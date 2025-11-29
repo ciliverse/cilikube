@@ -8,6 +8,7 @@ import (
 	"go.uber.org/zap/zapcore"
 )
 
+// why use slog? because you guess...
 var Logger *zap.Logger
 
 func Init(production bool) {

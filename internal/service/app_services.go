@@ -6,19 +6,19 @@ import (
 	networkingv1 "k8s.io/api/networking/v1"
 )
 
-// AppServices 作为所有应用服务的集合，在这里统一定义
+// AppServices serves as a collection of all application services, defined here uniformly
 type AppServices struct {
-	// 集群与安装服务
+	// Cluster and installer services
 	ClusterService   *ClusterService
 	InstallerService InstallerService
 
-	// [新增] 节点指标服务
+	// [Added] Node metrics service
 	NodeMetricsService *NodeMetricsService
 
-	// [新增] 汇总服务
+	// [Added] Summary service
 	SummaryService *SummaryService
 
-	// Kubernetes 资源服务
+	// Kubernetes resource services
 	NodeService        ResourceService[*corev1.Node]
 	NamespaceService   ResourceService[*corev1.Namespace]
 	PVService          ResourceService[*corev1.PersistentVolume]
@@ -32,7 +32,7 @@ type AppServices struct {
 	PVCService         ResourceService[*corev1.PersistentVolumeClaim]
 	StatefulSetService ResourceService[*appsv1.StatefulSet]
 
-	// Pod 日志与终端服务
+	// Pod logs and terminal services
 	PodLogsService *PodLogsService
 	PodExecService *PodExecService
 }

@@ -28,12 +28,12 @@ func (h *ProxyHandler) Proxy(c *gin.Context) {
 	config := k8sClient.Config
 	transport, err := rest.TransportFor(config)
 	if err != nil {
-		respondError(c, http.StatusInternalServerError, "服务器内部错误: "+err.Error())
+		respondError(c, http.StatusInternalServerError, "internal server error: "+err.Error())
 		return
 	}
 	target, err := h.validateTarget(*c.Request.URL, config.Host)
 	if err != nil {
-		respondError(c, http.StatusInternalServerError, "服务器内部错误: "+err.Error())
+		respondError(c, http.StatusInternalServerError, "internal server error: "+err.Error())
 		return
 	}
 	httpProxy := proxy.NewUpgradeAwareHandler(target, transport, false, false, nil)

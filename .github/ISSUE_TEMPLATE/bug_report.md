@@ -1,44 +1,44 @@
 ---
-name: Bug 报告
-about: 创建一个报告来帮助我们改进
+name: Bug Report
+about: Create a report to help us improve
 title: "[Bug] "
 labels: bug
 assignees: ''
 
 ---
 
-**⚠️ 请在提交前检查以下事项：**
+**⚠️ Please check the following before submitting:**
 
-* [ ] 我已经搜索过现有的 Issues，确认这个问题没有被报告过。
-* [ ] 我正在使用最新版本的 [项目名称]。
+* [ ] I have searched existing Issues to confirm this problem hasn't been reported before.
+* [ ] I am using the latest version of CiliKube.
 
-**描述 Bug**
-清晰简洁地描述这个 Bug 是什么。
+**Describe the Bug**
+A clear and concise description of what the bug is.
 
-**复现步骤**
-详细描述如何复现这个 Bug：
-1.  执行 '...'
-2.  点击 '....'
-3.  看到错误 '....'
+**Steps to Reproduce**
+Detailed steps to reproduce this bug:
+1. Execute '...'
+2. Click on '....'
+3. See error '....'
 
-**期望行为**
-清晰简洁地描述你期望发生什么。
+**Expected Behavior**
+A clear and concise description of what you expected to happen.
 
-**实际行为**
-清晰简洁地描述实际发生了什么。
+**Actual Behavior**
+A clear and concise description of what actually happened.
 
-**截图/日志 (如果适用)**
-如果可以，请添加截图或相关的日志片段来帮助解释你的问题。
+**Screenshots/Logs (if applicable)**
+If applicable, add screenshots or relevant log snippets to help explain your problem.
 
-**环境信息：**
-* **[项目名称] 版本：** [例如 v1.2.3]
-* **Kubernetes 版本 (kubectl version)：** `clientVersion` 和 `serverVersion`
-* **云提供商 (如果适用)：** [例如 AWS, GCP, Azure, 本地 Kubeadm, Minikube, Kind 等]
-* **操作系统 (节点和客户端)：** [例如 Ubuntu 20.04, macOS Big Sur]
-* **浏览器 (如果 Bug 与 UI 相关)：** [例如 Chrome 90, Firefox 88]
-* **其他相关工具/版本：** [例如 Helm 版本, kubectl 插件等]
+**Environment Information:**
+* **CiliKube Version:** [e.g. v1.2.3]
+* **Kubernetes Version (kubectl version):** `clientVersion` and `serverVersion`
+* **Cloud Provider (if applicable):** [e.g. AWS, GCP, Azure, local Kubeadm, Minikube, Kind, etc.]
+* **Operating System (node and client):** [e.g. Ubuntu 20.04, macOS Big Sur]
+* **Browser (if UI-related bug):** [e.g. Chrome 90, Firefox 88]
+* **Other relevant tools/versions:** [e.g. Helm version, kubectl plugins, etc.]
 
-**额外信息 (可选)**
-任何其他关于问题的上下文信息。例如，这个问题是在特定配置下发生的吗？最近是否有相关的环境变更？
+**Additional Information (optional)**
+Any other context about the problem. For example, does this issue occur under specific configurations? Have there been any recent environment changes?
 
 ---

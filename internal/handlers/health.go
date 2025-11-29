@@ -7,7 +7,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// HealthResponse 健康检查响应结构
+// HealthResponse health check response structure
 type HealthResponse struct {
 	Status    string            `json:"status"`
 	Timestamp time.Time         `json:"timestamp"`
@@ -18,7 +18,7 @@ type HealthResponse struct {
 
 var startTime = time.Now()
 
-// HealthCheck 基础健康检查
+// HealthCheck basic health check
 func HealthCheck(c *gin.Context) {
 	c.JSON(http.StatusOK, HealthResponse{
 		Status:    "healthy",
@@ -27,17 +27,17 @@ func HealthCheck(c *gin.Context) {
 	})
 }
 
-// ReadinessCheck 就绪检查
+// ReadinessCheck readiness check
 func ReadinessCheck(c *gin.Context) {
 	checks := make(map[string]string)
 
-	// 检查 Kubernetes 连接
+	// Check Kubernetes connection
 	checks["kubernetes"] = "ok"
 
-	// 检查数据库连接（如果启用）
+	// Check database connection (if enabled)
 	checks["database"] = "ok"
 
-	// 所有检查都通过
+	// All checks passed
 	allHealthy := true
 	for _, status := range checks {
 		if status != "ok" {
@@ -61,7 +61,7 @@ func ReadinessCheck(c *gin.Context) {
 	})
 }
 
-// LivenessCheck 存活检查
+// LivenessCheck liveness check
 func LivenessCheck(c *gin.Context) {
 	c.JSON(http.StatusOK, HealthResponse{
 		Status:    "alive",

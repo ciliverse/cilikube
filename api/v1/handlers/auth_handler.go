@@ -20,13 +20,13 @@ func NewAuthHandler() *AuthHandler {
 	}
 }
 
-// Login 用户登录
-// @Summary 用户登录
-// @Description 用户通过用户名和密码登录系统
+// Login user login
+// @Summary User login
+// @Description User logs into the system with username and password
 // @Tags Auth
 // @Accept json
 // @Produce json
-// @Param login body models.LoginRequest true "登录信息"
+// @Param login body models.LoginRequest true "Login information"
 // @Success 200 {object} models.LoginResponse
 // @Failure 400 {object} map[string]interface{}
 // @Failure 401 {object} map[string]interface{}
@@ -36,7 +36,7 @@ func (h *AuthHandler) Login(c *gin.Context) {
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"code":    400,
-			"message": "参数错误: " + err.Error(),
+			"message": "parameter error: " + err.Error(),
 		})
 		return
 	}
@@ -52,18 +52,18 @@ func (h *AuthHandler) Login(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{
 		"code":    200,
-		"message": "登录成功",
+		"message": "login successful",
 		"data":    response,
 	})
 }
 
-// Register 用户注册
-// @Summary 用户注册
-// @Description 新用户注册账号
+// Register user registration
+// @Summary User registration
+// @Description New user registers an account
 // @Tags Auth
 // @Accept json
 // @Produce json
-// @Param register body models.RegisterRequest true "注册信息"
+// @Param register body models.RegisterRequest true "Registration information"
 // @Success 200 {object} models.UserResponse
 // @Failure 400 {object} map[string]interface{}
 // @Router /api/v1/auth/register [post]
@@ -72,7 +72,7 @@ func (h *AuthHandler) Register(c *gin.Context) {
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"code":    400,
-			"message": "参数错误: " + err.Error(),
+			"message": "parameter error: " + err.Error(),
 		})
 		return
 	}
@@ -88,14 +88,14 @@ func (h *AuthHandler) Register(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{
 		"code":    200,
-		"message": "注册成功",
+		"message": "registration successful",
 		"data":    response,
 	})
 }
 
-// GetProfile 获取当前用户资料
-// @Summary 获取用户资料
-// @Description 获取当前登录用户的资料信息
+// GetProfile gets current user profile
+// @Summary Get user profile
+// @Description Get profile information of currently logged in user
 // @Tags Auth
 // @Accept json
 // @Produce json
@@ -108,7 +108,7 @@ func (h *AuthHandler) GetProfile(c *gin.Context) {
 	if !ok {
 		c.JSON(http.StatusUnauthorized, gin.H{
 			"code":    401,
-			"message": "用户信息不存在",
+			"message": "user information does not exist",
 		})
 		return
 	}
@@ -124,19 +124,19 @@ func (h *AuthHandler) GetProfile(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{
 		"code":    200,
-		"message": "获取成功",
+		"message": "retrieved successfully",
 		"data":    response,
 	})
 }
 
-// UpdateProfile 更新用户资料
-// @Summary 更新用户资料
-// @Description 更新当前登录用户的资料信息
+// UpdateProfile updates user profile
+// @Summary Update user profile
+// @Description Update profile information of currently logged in user
 // @Tags Auth
 // @Accept json
 // @Produce json
 // @Security BearerAuth
-// @Param profile body models.UpdateProfileRequest true "用户资料"
+// @Param profile body models.UpdateProfileRequest true "User profile"
 // @Success 200 {object} models.UserResponse
 // @Failure 400 {object} map[string]interface{}
 // @Failure 401 {object} map[string]interface{}
@@ -146,7 +146,7 @@ func (h *AuthHandler) UpdateProfile(c *gin.Context) {
 	if !ok {
 		c.JSON(http.StatusUnauthorized, gin.H{
 			"code":    401,
-			"message": "用户信息不存在",
+			"message": "user information does not exist",
 		})
 		return
 	}
@@ -155,7 +155,7 @@ func (h *AuthHandler) UpdateProfile(c *gin.Context) {
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"code":    400,
-			"message": "参数错误: " + err.Error(),
+			"message": "parameter error: " + err.Error(),
 		})
 		return
 	}
@@ -171,19 +171,19 @@ func (h *AuthHandler) UpdateProfile(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{
 		"code":    200,
-		"message": "更新成功",
+		"message": "updated successfully",
 		"data":    response,
 	})
 }
 
-// ChangePassword 修改密码
-// @Summary 修改密码
-// @Description 修改当前登录用户的密码
+// ChangePassword changes password
+// @Summary Change password
+// @Description Change password of currently logged in user
 // @Tags Auth
 // @Accept json
 // @Produce json
 // @Security BearerAuth
-// @Param password body models.ChangePasswordRequest true "密码信息"
+// @Param password body models.ChangePasswordRequest true "Password information"
 // @Success 200 {object} map[string]interface{}
 // @Failure 400 {object} map[string]interface{}
 // @Failure 401 {object} map[string]interface{}
@@ -193,7 +193,7 @@ func (h *AuthHandler) ChangePassword(c *gin.Context) {
 	if !ok {
 		c.JSON(http.StatusUnauthorized, gin.H{
 			"code":    401,
-			"message": "用户信息不存在",
+			"message": "user information does not exist",
 		})
 		return
 	}
@@ -202,7 +202,7 @@ func (h *AuthHandler) ChangePassword(c *gin.Context) {
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"code":    400,
-			"message": "参数错误: " + err.Error(),
+			"message": "parameter error: " + err.Error(),
 		})
 		return
 	}
@@ -218,13 +218,13 @@ func (h *AuthHandler) ChangePassword(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{
 		"code":    200,
-		"message": "密码修改成功",
+		"message": "password changed successfully",
 	})
 }
 
-// Logout 用户登出
-// @Summary 用户登出
-// @Description 用户登出系统（前端清除token即可）
+// Logout user logout
+// @Summary User logout
+// @Description User logs out of the system (frontend clears token)
 // @Tags Auth
 // @Accept json
 // @Produce json
@@ -234,19 +234,19 @@ func (h *AuthHandler) ChangePassword(c *gin.Context) {
 func (h *AuthHandler) Logout(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"code":    200,
-		"message": "登出成功",
+		"message": "logout successful",
 	})
 }
 
-// GetUserList 获取用户列表（管理员）
-// @Summary 获取用户列表
-// @Description 管理员获取系统中所有用户列表
+// GetUserList gets user list (admin)
+// @Summary Get user list
+// @Description Admin gets list of all users in the system
 // @Tags Auth
 // @Accept json
 // @Produce json
 // @Security BearerAuth
-// @Param page query int false "页码" default(1)
-// @Param page_size query int false "每页大小" default(10)
+// @Param page query int false "Page number" default(1)
+// @Param page_size query int false "Page size" default(10)
 // @Success 200 {object} map[string]interface{}
 // @Failure 401 {object} map[string]interface{}
 // @Failure 403 {object} map[string]interface{}
@@ -266,14 +266,14 @@ func (h *AuthHandler) GetUserList(c *gin.Context) {
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"code":    500,
-			"message": "获取用户列表失败: " + err.Error(),
+			"message": "failed to get user list: " + err.Error(),
 		})
 		return
 	}
 
 	c.JSON(http.StatusOK, gin.H{
 		"code":    200,
-		"message": "获取成功",
+		"message": "retrieved successfully",
 		"data": gin.H{
 			"users":     users,
 			"total":     total,
@@ -283,15 +283,15 @@ func (h *AuthHandler) GetUserList(c *gin.Context) {
 	})
 }
 
-// UpdateUserStatus 更新用户状态（管理员）
-// @Summary 更新用户状态
-// @Description 管理员启用或禁用用户账号
+// UpdateUserStatus updates user status (admin)
+// @Summary Update user status
+// @Description Admin enables or disables user account
 // @Tags Auth
 // @Accept json
 // @Produce json
 // @Security BearerAuth
-// @Param id path int true "用户ID"
-// @Param status body map[string]bool true "状态信息"
+// @Param id path int true "User ID"
+// @Param status body map[string]bool true "Status information"
 // @Success 200 {object} map[string]interface{}
 // @Failure 400 {object} map[string]interface{}
 // @Failure 401 {object} map[string]interface{}
@@ -302,7 +302,7 @@ func (h *AuthHandler) UpdateUserStatus(c *gin.Context) {
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"code":    400,
-			"message": "无效的用户ID",
+			"message": "invalid user ID",
 		})
 		return
 	}
@@ -313,7 +313,7 @@ func (h *AuthHandler) UpdateUserStatus(c *gin.Context) {
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"code":    400,
-			"message": "参数错误: " + err.Error(),
+			"message": "parameter error: " + err.Error(),
 		})
 		return
 	}
@@ -322,25 +322,25 @@ func (h *AuthHandler) UpdateUserStatus(c *gin.Context) {
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"code":    500,
-			"message": "更新用户状态失败: " + err.Error(),
+			"message": "failed to update user status: " + err.Error(),
 		})
 		return
 	}
 
 	c.JSON(http.StatusOK, gin.H{
 		"code":    200,
-		"message": "用户状态更新成功",
+		"message": "user status updated successfully",
 	})
 }
 
-// DeleteUser 删除用户（管理员）
-// @Summary 删除用户
-// @Description 管理员删除用户账号
+// DeleteUser deletes user (admin)
+// @Summary Delete user
+// @Description Admin deletes user account
 // @Tags Auth
 // @Accept json
 // @Produce json
 // @Security BearerAuth
-// @Param id path int true "用户ID"
+// @Param id path int true "User ID"
 // @Success 200 {object} map[string]interface{}
 // @Failure 400 {object} map[string]interface{}
 // @Failure 401 {object} map[string]interface{}
@@ -351,17 +351,17 @@ func (h *AuthHandler) DeleteUser(c *gin.Context) {
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"code":    400,
-			"message": "无效的用户ID",
+			"message": "invalid user ID",
 		})
 		return
 	}
 
-	// 防止删除自己
+	// Prevent deleting oneself
 	currentUserID, _, _, ok := auth.GetCurrentUser(c)
 	if ok && currentUserID == uint(userID) {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"code":    400,
-			"message": "不能删除自己的账号",
+			"message": "cannot delete your own account",
 		})
 		return
 	}
@@ -370,13 +370,13 @@ func (h *AuthHandler) DeleteUser(c *gin.Context) {
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"code":    500,
-			"message": "删除用户失败: " + err.Error(),
+			"message": "failed to delete user: " + err.Error(),
 		})
 		return
 	}
 
 	c.JSON(http.StatusOK, gin.H{
 		"code":    200,
-		"message": "用户删除成功",
+		"message": "user deleted successfully",
 	})
 }

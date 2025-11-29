@@ -21,7 +21,7 @@ func (r *AuthRepository) FindUserByUsername(username string) (*models.User, erro
 	var user models.User
 	if err := r.DB.Where("username = ?", username).First(&user).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, errors.New("用户不存在")
+			return nil, errors.New("user does not exist")
 		}
 		return nil, err
 	}

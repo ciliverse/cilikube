@@ -1,8 +1,8 @@
 package service
 
-// ProxyService 结构体不再持有 restConfig 字段
+// ProxyService struct no longer holds restConfig field
 type ProxyService struct {
-	// 不需要 restConfig *rest.Config 字段了
+	// No longer need restConfig *rest.Config field
 }
 
 func NewProxyService() *ProxyService {

@@ -8,34 +8,34 @@ import (
 	networkingv1 "k8s.io/api/networking/v1"
 )
 
-// ResourceServiceFactory 资源服务工厂
+// ResourceServiceFactory resource service factory
 type ResourceServiceFactory struct {
 	services map[string]interface{}
 	mu       sync.RWMutex
 }
 
-// NewResourceServiceFactory 创建资源服务工厂
+// NewResourceServiceFactory creates resource service factory
 func NewResourceServiceFactory() *ResourceServiceFactory {
 	return &ResourceServiceFactory{
 		services: make(map[string]interface{}),
 	}
 }
 
-// RegisterService 注册资源服务
+// RegisterService registers resource service
 func (f *ResourceServiceFactory) RegisterService(name string, service interface{}) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	f.services[name] = service
 }
 
-// GetService 获取资源服务
+// GetService gets resource service
 func (f *ResourceServiceFactory) GetService(name string) interface{} {
 	f.mu.RLock()
 	defer f.mu.RUnlock()
 	return f.services[name]
 }
 
-// InitializeDefaultServices 初始化所有默认服务
+// InitializeDefaultServices initializes all default services
 func (f *ResourceServiceFactory) InitializeDefaultServices() {
 	f.RegisterService("nodes", NewBaseResourceService[*corev1.Node](new(NodeClient)))
 	f.RegisterService("pods", NewBaseResourceService[*corev1.Pod](new(PodClient)))

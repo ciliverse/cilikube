@@ -7,7 +7,7 @@ import (
 	"gorm.io/gorm"
 )
 
-// User 用户模型
+// User user model
 type User struct {
 	ID        uint           `json:"id" gorm:"primaryKey"`
 	Username  string         `json:"username" gorm:"uniqueIndex;not null;size:50"`
@@ -21,14 +21,14 @@ type User struct {
 	DeletedAt gorm.DeletedAt `json:"-" gorm:"index"`
 }
 
-//// UserRole 用户角色关联表
+//// UserRole user role association table
 //type UserRole struct {
 //	ID     uint   `gorm:"primaryKey" json:"id"`
 //	UserID uint   `gorm:"index" json:"user_id"`
 //	Role   string `gorm:"size:50" json:"role"`
 //}
 //
-//// TableName 指定表名
+//// TableName specifies table name
 //func (UserRole) TableName() string {
 //	return "user_roles"
 //}
@@ -39,7 +39,7 @@ type LoginRequest struct {
 	Password string `json:"password" binding:"required,min=6"`
 }
 
-// LoginResponse 登录成功后返回 jwt token
+// LoginResponse returns jwt token after successful login
 type RegisterRequest struct {
 	Username string `json:"username" binding:"required,min=3,max=50"`
 	Email    string `json:"email" binding:"required,email"`
@@ -71,12 +71,12 @@ type LoginResponse struct {
 	User      UserResponse `json:"user"`
 }
 
-// TableName 指定表名
+// TableName specifies table name
 func (User) TableName() string {
 	return "users"
 }
 
-// HashPassword 加密密码
+// HashPassword encrypts password
 func (u *User) HashPassword() error {
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(u.Password), bcrypt.DefaultCost)
 	if err != nil {
@@ -86,13 +86,13 @@ func (u *User) HashPassword() error {
 	return nil
 }
 
-// CheckPassword 验证密码
+// CheckPassword verifies password
 func (u *User) CheckPassword(password string) bool {
 	err := bcrypt.CompareHashAndPassword([]byte(u.Password), []byte(password))
 	return err == nil
 }
 
-// ToResponse 转换为响应格式
+// ToResponse converts to response format
 func (u *User) ToResponse() UserResponse {
 	return UserResponse{
 		ID:        u.ID,
@@ -105,12 +105,12 @@ func (u *User) ToResponse() UserResponse {
 	}
 }
 
-// IsAdmin 检查是否为管理员
+// IsAdmin checks if user is administrator
 func (u *User) IsAdmin() bool {
 	return u.Role == "admin"
 }
 
-// BeforeCreate GORM钩子：创建前加密密码
+// BeforeCreate GORM hook: encrypt password before creation
 func (u *User) BeforeCreate(tx *gorm.DB) error {
 	return u.HashPassword()
 }

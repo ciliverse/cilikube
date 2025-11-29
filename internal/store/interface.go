@@ -1,6 +1,6 @@
 package store
 
-// ClusterStore 定义了与集群数据持久化存储交互所需的所有方法。
+// ClusterStore defines all methods required for interacting with cluster data persistent storage.
 type ClusterStore interface {
 	CreateCluster(cluster *Cluster) error
 	GetClusterByID(id string) (*Cluster, error)

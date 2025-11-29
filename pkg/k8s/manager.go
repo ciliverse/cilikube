@@ -41,12 +41,12 @@ func NewClusterManager(clusterStore store.ClusterStore, config *configs.Config) 
 		store:       clusterStore,
 		statusCache: make(map[string]ClusterInfoResponse),
 	}
-	log.Println("正在初始化集群管理器...")
+	log.Println("initializing cluster manager...")
 
 	if clusterStore != nil {
 		dbClusters, err := clusterStore.GetAllClusters()
 		if err != nil {
-			log.Printf("警告: 从数据库加载集群失败: %v", err)
+			log.Printf("warning: failed to load clusters from database: %v", err)
 		} else {
 			for _, cluster := range dbClusters {
 				manager.addClient(cluster.ID, cluster.Name, cluster.KubeconfigData, "database", cluster.Environment, "")
@@ -55,15 +55,15 @@ func NewClusterManager(clusterStore store.ClusterStore, config *configs.Config) 
 			}
 		}
 	} else {
-		log.Println("提示: 数据库存储未初始化，跳过从数据库加载集群。")
+		log.Println("Note: Database storage not initialized, skipping loading clusters from database.")
 	}
 
 	if len(config.Clusters) > 0 {
 		for _, clusterInfo := range config.Clusters {
-			// 使用集群的ID作为唯一标识符，而不是名称
+			// Use cluster ID as unique identifier, not name
 			clusterID := clusterInfo.ID
 			if clusterID == "" {
-				log.Printf("警告: 集群 '%s' 没有ID，跳过加载", clusterInfo.Name)
+				log.Printf("Warning: Cluster '%s' has no ID, skipping loading", clusterInfo.Name)
 				continue
 			}
 
@@ -71,7 +71,7 @@ func NewClusterManager(clusterStore store.ClusterStore, config *configs.Config) 
 				continue
 			}
 			if _, nameExists := manager.nameToID[clusterInfo.Name]; nameExists {
-				log.Printf("警告: 文件集群 '%s' 与已加载的集群名称冲突，跳过。", clusterInfo.Name)
+				log.Printf("Warning: File cluster '%s' conflicts with already loaded cluster name, skipping.", clusterInfo.Name)
 				continue
 			}
 
@@ -92,7 +92,7 @@ func NewClusterManager(clusterStore store.ClusterStore, config *configs.Config) 
 
 	if config.Server.ActiveClusterID != "" {
 		if err := manager.SetActiveClusterByID(config.Server.ActiveClusterID); err != nil {
-			log.Printf("警告: 无法将配置文件中的活动集群 ID '%s' 设置为活动: %v", config.Server.ActiveClusterID, err)
+			log.Printf("Warning: Unable to set active cluster ID '%s' from config file as active: %v", config.Server.ActiveClusterID, err)
 		}
 	} else if len(manager.clients) > 0 {
 		for id := range manager.clients {
@@ -102,7 +102,7 @@ func NewClusterManager(clusterStore store.ClusterStore, config *configs.Config) 
 		}
 	}
 
-	log.Printf("集群管理器初始化完成，共加载 %d 个客户端。活动集群ID: '%s'", len(manager.clients), manager.GetActiveClusterID())
+	log.Printf("Cluster manager initialization completed, loaded %d clients. Active cluster ID: '%s'", len(manager.clients), manager.GetActiveClusterID())
 	return manager, nil
 }
 
@@ -116,12 +116,12 @@ func (cm *ClusterManager) addClient(id, name string, kubeconfigData []byte, sour
 	} else if source == "file" {
 		client, err = NewClient(configPath)
 	} else {
-		err = fmt.Errorf("无效的 addClient 调用 for ID %s", id)
+		err = fmt.Errorf("invalid addClient call for ID %s", id)
 	}
 
 	if err != nil {
-		log.Printf("警告: 为集群 '%s' (ID: %s) 创建客户端失败: %v", name, id, err)
-		cm.statusCache[id] = ClusterInfoResponse{ID: id, Name: name, Status: fmt.Sprintf("初始化失败: %v", err), Source: source}
+		log.Printf("Warning: Failed to create client for cluster '%s' (ID: %s): %v", name, id, err)
+		cm.statusCache[id] = ClusterInfoResponse{ID: id, Name: name, Status: fmt.Sprintf("Initialization failed: %v", err), Source: source}
 		return
 	}
 	cm.clients[id] = client
@@ -129,7 +129,7 @@ func (cm *ClusterManager) addClient(id, name string, kubeconfigData []byte, sour
 		ID:          id,
 		Name:        name,
 		Server:      client.Config.Host,
-		Status:      "检查中...",
+		Status:      "Checking...",
 		Source:      source,
 		Environment: environment,
 	}
@@ -137,7 +137,7 @@ func (cm *ClusterManager) addClient(id, name string, kubeconfigData []byte, sour
 
 func (cm *ClusterManager) startStatusUpdater() {
 	time.Sleep(5 * time.Second)
-	log.Println("正在执行首次集群状态检查...")
+	log.Println("Performing initial cluster status check...")
 	cm.RefreshAllClusterStatus()
 
 	ticker := time.NewTicker(5 * time.Minute)
@@ -163,10 +163,10 @@ func (cm *ClusterManager) RefreshAllClusterStatus() {
 			var status, version string
 			serverVersion, err := client.Clientset.Discovery().ServerVersion()
 			if err != nil {
-				status = fmt.Sprintf("不可用: %v", err)
+				status = fmt.Sprintf("Unavailable: %v", err)
 				version = "N/A"
 			} else {
-				status = "可用"
+				status = "Available"
 				version = serverVersion.GitVersion
 			}
 			cm.lock.Lock()
@@ -201,13 +201,13 @@ func (cm *ClusterManager) AddDBCluster(cluster *store.Cluster) error {
 	cm.lock.Lock()
 	defer cm.lock.Unlock()
 	if cm.store == nil {
-		return fmt.Errorf("数据库未初始化，无法添加集群")
+		return fmt.Errorf("database not initialized, cannot add cluster")
 	}
 	if _, nameExists := cm.nameToID[cluster.Name]; nameExists {
-		return fmt.Errorf("集群名称 '%s' 已存在", cluster.Name)
+		return fmt.Errorf("cluster name '%s' already exists", cluster.Name)
 	}
 	if err := cm.store.CreateCluster(cluster); err != nil {
-		return fmt.Errorf("保存集群到数据库失败: %w", err)
+		return fmt.Errorf("failed to save cluster to database: %w", err)
 	}
 	cm.addClient(cluster.ID, cluster.Name, cluster.KubeconfigData, "database", cluster.Environment, "")
 	cm.clientInfo[cluster.ID] = *cluster
@@ -221,16 +221,16 @@ func (cm *ClusterManager) RemoveDBClusterByID(id string) error {
 	defer cm.lock.Unlock()
 	clientInfo, clientInfoExists := cm.clientInfo[id]
 	if !clientInfoExists {
-		return fmt.Errorf("集群ID '%s' 未找到", id)
+		return fmt.Errorf("cluster ID '%s' not found", id)
 	}
 	if info, ok := cm.statusCache[id]; ok && info.Source == "file" {
-		return fmt.Errorf("集群 '%s' (ID: %s) 是一个基于文件的集群，无法通过API删除", clientInfo.Name, id)
+		return fmt.Errorf("cluster '%s' (ID: %s) is a file-based cluster, cannot be deleted via API", clientInfo.Name, id)
 	}
 	if cm.store == nil {
-		return fmt.Errorf("数据库未初始化，无法删除集群 '%s' (ID: %s)", clientInfo.Name, id)
+		return fmt.Errorf("database not initialized, cannot delete cluster '%s' (ID: %s)", clientInfo.Name, id)
 	}
 	if err := cm.store.DeleteClusterByID(id); err != nil {
-		return fmt.Errorf("从数据库删除集群 '%s' (ID: %s) 失败: %w", clientInfo.Name, id, err)
+		return fmt.Errorf("failed to delete cluster '%s' (ID: %s) from database: %w", clientInfo.Name, id, err)
 	}
 	delete(cm.clients, id)
 	delete(cm.statusCache, id)
@@ -252,11 +252,11 @@ func (cm *ClusterManager) SetActiveClusterByID(id string) error {
 	defer cm.lock.Unlock()
 	client, exists := cm.clients[id]
 	if !exists {
-		return fmt.Errorf("集群ID '%s' 未找到或未初始化", id)
+		return fmt.Errorf("cluster ID '%s' not found or not initialized", id)
 	}
 	cm.activeClient = client
 	cm.activeClientID = id
-	log.Printf("活动集群已设置为 ID: %s (名称: %s)", id, cm.clientInfo[id].Name)
+	log.Printf("Active cluster set to ID: %s (name: %s)", id, cm.clientInfo[id].Name)
 	return nil
 }
 
@@ -264,7 +264,7 @@ func (cm *ClusterManager) GetActiveClient() (*Client, error) {
 	cm.lock.RLock()
 	defer cm.lock.RUnlock()
 	if cm.activeClient == nil {
-		return nil, fmt.Errorf("当前没有配置或可用的活动集群")
+		return nil, fmt.Errorf("no active cluster currently configured or available")
 	}
 	return cm.activeClient, nil
 }
@@ -280,14 +280,14 @@ func (cm *ClusterManager) GetClientByID(id string) (*Client, error) {
 	defer cm.lock.RUnlock()
 	client, exists := cm.clients[id]
 	if !exists {
-		return nil, fmt.Errorf("ID为 '%s' 的客户端未在内存中找到", id)
+		return nil, fmt.Errorf("client with ID '%s' not found in memory", id)
 	}
 	return client, nil
 }
 
 func (cm *ClusterManager) GetClusterDetailFromDB(id string) (*store.Cluster, error) {
 	if cm.store == nil {
-		return nil, fmt.Errorf("数据库未初始化")
+		return nil, fmt.Errorf("database not initialized")
 	}
 	return cm.store.GetClusterByID(id)
 }
@@ -296,28 +296,28 @@ func (cm *ClusterManager) UpdateDBCluster(id string, req models.UpdateClusterReq
 	cm.lock.Lock()
 	defer cm.lock.Unlock()
 	if cm.store == nil {
-		return fmt.Errorf("数据库未初始化，无法更新集群")
+		return fmt.Errorf("database not initialized, cannot update cluster")
 	}
 	cluster, err := cm.store.GetClusterByID(id)
 	if err != nil {
-		return fmt.Errorf("集群 ID '%s' 未找到: %w", id, err)
+		return fmt.Errorf("cluster ID '%s' not found: %w", id, err)
 	}
 	oldName := cluster.Name
 	kubeconfigUpdated := false
 	if req.Name != "" {
 		cluster.Name = req.Name
 	}
-	// ... 其他字段更新 ...
+	// ... other field updates ...
 	if req.KubeconfigData != "" {
 		kubeconfigBytes, err := base64.StdEncoding.DecodeString(req.KubeconfigData)
 		if err != nil {
-			return fmt.Errorf("kubeconfig 数据不是有效的 Base64 编码: %w", err)
+			return fmt.Errorf("kubeconfig data is not valid Base64 encoding: %w", err)
 		}
 		cluster.KubeconfigData = kubeconfigBytes
 		kubeconfigUpdated = true
 	}
 	if err := cm.store.UpdateCluster(cluster); err != nil {
-		return fmt.Errorf("更新数据库失败: %w", err)
+		return fmt.Errorf("failed to update database: %w", err)
 	}
 	cm.clientInfo[id] = *cluster
 	if oldName != cluster.Name {
@@ -333,7 +333,7 @@ func (cm *ClusterManager) UpdateDBCluster(id string, req models.UpdateClusterReq
 	return nil
 }
 
-// GetStatusFromCache 从内存缓存中获取集群的状态信息
+// GetStatusFromCache gets cluster status information from memory cache
 func (cm *ClusterManager) GetStatusFromCache(id string) (ClusterInfoResponse, bool) {
 	cm.lock.RLock()
 	defer cm.lock.RUnlock()

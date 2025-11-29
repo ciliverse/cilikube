@@ -8,6 +8,7 @@ import (
 	"github.com/ciliverse/cilikube/internal/app"
 )
 
+// just do it ! go!go!go!
 func main() {
 	configPath := getConfigPath()
 
@@ -21,6 +22,7 @@ func main() {
 	application.Run()
 }
 
+// better way to do
 func getConfigPath() string {
 	config := flag.String("config", "", "config file path")
 	flag.Parse()
