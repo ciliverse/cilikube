@@ -4,7 +4,7 @@ import (
 	"errors"
 	"time"
 
-	"github.com/ciliverse/cilikube/api/v1/models"
+	"github.com/ciliverse/cilikube/internal/models"
 	"github.com/ciliverse/cilikube/pkg/auth"
 	"github.com/ciliverse/cilikube/pkg/database"
 	"gorm.io/gorm"

@@ -5,8 +5,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/ciliverse/cilikube/api/v1/models"
 	"github.com/ciliverse/cilikube/configs"
+	"github.com/ciliverse/cilikube/internal/models"
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
 )
