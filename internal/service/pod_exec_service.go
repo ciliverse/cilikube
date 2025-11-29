@@ -10,7 +10,7 @@ import (
 	"k8s.io/client-go/tools/remotecommand"
 )
 
-// ExecOptions 执行选项
+// ExecOptions execution options
 type ExecOptions struct {
 	Command   []string
 	Container string
@@ -20,19 +20,19 @@ type ExecOptions struct {
 	TTY       bool
 }
 
-// PodExecService 处理 Pod 执行相关操作
+// PodExecService handles Pod execution related operations
 type PodExecService struct {
 	config *rest.Config
 }
 
-// NewPodExecService 创建 Pod 执行服务
+// NewPodExecService creates Pod execution service
 func NewPodExecService(config *rest.Config) *PodExecService {
 	return &PodExecService{
 		config: config,
 	}
 }
 
-// Exec 在 Pod 中执行命令
+// Exec executes command in Pod
 func (s *PodExecService) Exec(clientset kubernetes.Interface, namespace, podName string, options *ExecOptions, stdout io.Writer, stdin io.Reader) error {
 	req := clientset.CoreV1().RESTClient().Post().
 		Resource("pods").

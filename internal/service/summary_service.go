@@ -3,12 +3,13 @@ package service
 import (
 	"bufio"
 	"context"
-	"k8s.io/client-go/kubernetes"
 	"log"
 	"os"
 	"path/filepath"
 	"strings"
 	"sync"
+
+	"k8s.io/client-go/kubernetes"
 
 	"github.com/ciliverse/cilikube/api/v1/models" // Adjust import path
 	// k8s imports ... (keep existing ones)
@@ -18,9 +19,9 @@ import (
 	"golang.org/x/mod/modfile"
 )
 
-// SummaryService 结构体不再持有 client 字段
+// SummaryService struct no longer holds client field
 type SummaryService struct {
-	// 不需要 client kubernetes.Interface 字段了
+	// No longer need client kubernetes.Interface field
 }
 
 func NewSummaryService() *SummaryService {

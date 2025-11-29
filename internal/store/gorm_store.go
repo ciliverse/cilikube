@@ -12,7 +12,7 @@ type gormClusterStore struct {
 	encryptionKey []byte
 }
 
-// NewGormClusterStore 创建一个新的 ClusterStore GORM 实现。
+// NewGormClusterStore creates a new ClusterStore GORM implementation.
 func NewGormClusterStore(db *gorm.DB, encryptionKey []byte) (ClusterStore, error) {
 	if len(encryptionKey) != 32 {
 		return nil, fmt.Errorf("encryption key must be 32 bytes long for AES-256")

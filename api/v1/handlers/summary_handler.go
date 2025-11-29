@@ -19,7 +19,7 @@ func NewSummaryHandler(svc *service.SummaryService, cm *k8s.ClusterManager) *Sum
 	return &SummaryHandler{service: svc, clusterManager: cm}
 }
 
-// GetResourceSummary 获取资源汇总信息
+// GetResourceSummary gets resource summary information
 func (h *SummaryHandler) GetResourceSummary(c *gin.Context) {
 	k8sClient, ok := k8s.GetClientFromQuery(c, h.clusterManager)
 	if !ok {
@@ -33,11 +33,11 @@ func (h *SummaryHandler) GetResourceSummary(c *gin.Context) {
 			c.Header("X-Resource-Error-"+resource, err.Error())
 		}
 	}
-	
+
 	c.JSON(http.StatusOK, gin.H{
 		"code":    http.StatusOK,
 		"data":    summary,
-		"message": "成功获取资源汇总",
+		"message": "successfully retrieved resource summary",
 	})
 }
 
@@ -58,7 +58,7 @@ func (h *SummaryHandler) GetBackendDependencies(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"code":    http.StatusInternalServerError,
 			"data":    nil,
-			"message": "获取后端依赖失败: " + err.Error(),
+			"message": "Failed to get backend dependencies: " + err.Error(),
 		})
 		return
 	}

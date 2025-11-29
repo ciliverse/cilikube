@@ -8,10 +8,10 @@ import (
 	"io"
 )
 
-// !!! 重要安全警告 !!!
-// 在生产环境中，加密密钥 (encryptionKey) 绝不能硬编码在代码中。
-// 必须从一个安全的位置加载它，例如环境变量或 Secrets Manager。
-// 此密钥必须是 32 字节长，对应 AES-256。
+// !!! IMPORTANT SECURITY WARNING !!!
+// In production environments, the encryption key (encryptionKey) must never be hardcoded in the code.
+// It must be loaded from a secure location, such as environment variables or Secrets Manager.
+// This key must be 32 bytes long, corresponding to AES-256.
 
 func Encrypt(data []byte, key []byte) ([]byte, error) {
 	if len(key) != 32 {

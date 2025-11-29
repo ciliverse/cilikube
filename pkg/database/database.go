@@ -15,10 +15,10 @@ import (
 
 var DB *gorm.DB
 
-// InitDatabase 初始化数据库连接
+// InitDatabase initializes database connection
 func InitDatabase() error {
 	if !configs.GlobalConfig.Database.Enabled {
-		log.Println("数据库未启用，无需初始化。")
+		log.Println("database not enabled, no initialization needed.")
 		return nil
 	}
 
@@ -26,34 +26,34 @@ func InitDatabase() error {
 
 	dsn := configs.GlobalConfig.GetDSN()
 
-	// 配置GORM
+	// Configure GORM
 	gormConfig := &gorm.Config{
 		Logger: logger.Default.LogMode(logger.Info),
 	}
 
-	// // 设置日志级别
+	// // Set log level
 	// if configs.GlobalConfig.Server.Mode == "release" {
 	// 	gormConfig.Logger = logger.Default.LogMode(logger.Error)
 	// }
 
-	// 连接数据库
+	// Connect to database
 	DB, err = gorm.Open(mysql.Open(dsn), gormConfig)
 	if err != nil {
 		return fmt.Errorf("failed to connect to database: %v", err)
 	}
 
-	// 配置连接池
+	// Configure connection pool
 	sqlDB, err := DB.DB()
 	if err != nil {
 		return fmt.Errorf("failed to get underlying sql.DB: %v", err)
 	}
 
-	// 设置连接池参数
-	sqlDB.SetMaxIdleConns(10)           // 设置空闲连接池中连接的最大数量
-	sqlDB.SetMaxOpenConns(100)          // 设置打开数据库连接的最大数量
-	sqlDB.SetConnMaxLifetime(time.Hour) // 设置了连接可复用的最大时间
+	// Set connection pool parameters
+	sqlDB.SetMaxIdleConns(10)           // Set maximum number of connections in idle connection pool
+	sqlDB.SetMaxOpenConns(100)          // Set maximum number of open database connections
+	sqlDB.SetConnMaxLifetime(time.Hour) // Set maximum time a connection can be reused
 
-	// 测试连接
+	// Test connection
 	if err := sqlDB.Ping(); err != nil {
 		return fmt.Errorf("failed to ping database: %v", err)
 	}
@@ -62,15 +62,15 @@ func InitDatabase() error {
 	return nil
 }
 
-// AutoMigrate 自动迁移数据库表
+// AutoMigrate automatically migrates database tables
 func AutoMigrate() error {
-	// 首先检查数据库是否启用并且 DB 实例已成功创建
+	// First check if database is enabled and DB instance is successfully created
 	if !configs.GlobalConfig.Database.Enabled || DB == nil {
-		log.Println("数据库未启用或未初始化，跳过迁移。")
-		return nil // 不启用或未初始化，不算错误，直接返回
+		log.Println("database not enabled or not initialized, skipping migration.")
+		return nil // Not enabled or not initialized, not an error, return directly
 	}
 
-	log.Println("开始数据库自动迁移...") // 添加日志
+	log.Println("starting database auto migration...") // Add log
 	err := DB.AutoMigrate(
 		&models.User{},
 		&store.Cluster{},
@@ -83,17 +83,17 @@ func AutoMigrate() error {
 	return nil
 }
 
-// CreateDefaultAdmin 创建默认管理员账户
+// CreateDefaultAdmin creates default admin account
 func CreateDefaultAdmin() error {
 	var count int64
 	DB.Model(&models.User{}).Count(&count)
 
-	// 如果没有用户，创建默认管理员
+	// If no users exist, create default admin
 	if count == 0 {
 		admin := &models.User{
 			Username: "admin",
 			Email:    "admin@cilikube.com",
-			Password: "admin123", // 这个密码会在BeforeCreate钩子中被加密
+			Password: "admin123", // This password will be encrypted in BeforeCreate hook
 			Role:     "admin",
 			IsActive: true,
 		}
@@ -108,11 +108,11 @@ func CreateDefaultAdmin() error {
 	return nil
 }
 
-// CloseDatabase 关闭数据库连接
+// CloseDatabase closes database connection
 func CloseDatabase() error {
-	// 同样检查 DB 是否为 nil
+	// Also check if DB is nil
 	if DB == nil {
-		log.Println("数据库未初始化，无需关闭。")
+		log.Println("database not initialized, no need to close.")
 		return nil
 	}
 	sqlDB, err := DB.DB()

@@ -25,7 +25,7 @@ type ServerConfig struct {
 	ReadTimeout     int    `yaml:"read_timeout" json:"read_timeout"`
 	WriteTimeout    int    `yaml:"write_timeout" json:"write_timeout"`
 	Mode            string `yaml:"mode" json:"mode"`                   // debug, release
-	ActiveClusterID string `yaml:"activeCluster" json:"activeCluster"` // 修改为匹配配置文件中的字段名
+	ActiveClusterID string `yaml:"activeCluster" json:"activeCluster"` // Modified to match field name in config file
 	EncryptionKey   string `yaml:"encryptionKey" json:"encryptionKey"`
 }
 
@@ -43,9 +43,9 @@ type DatabaseConfig struct {
 	Enabled  bool   `yaml:"enabled" json:"enabled"`
 	Host     string `yaml:"host" json:"host"`
 	Port     int    `yaml:"port" json:"port"`
-	Username string `yaml:"username" json:"username"` // 确保这里是 username
+	Username string `yaml:"username" json:"username"` // Ensure this is username
 	Password string `yaml:"password" json:"password"`
-	Database string `yaml:"database" json:"database"` // 确保这里是 database
+	Database string `yaml:"database" json:"database"` // Ensure this is database
 	Charset  string `yaml:"charset" json:"charset"`
 }
 
@@ -56,42 +56,42 @@ type JWTConfig struct {
 }
 
 type ClusterInfo struct {
-	// ID 是集群的唯一标识符，使用 UUID 格式
-	// 如果为空，系统会自动生成一个 UUID
+	// ID is the unique identifier for the cluster, using UUID format
+	// If empty, the system will automatically generate a UUID
 	ID string `yaml:"id" json:"id"`
 
-	// Name 是用户友好的集群显示名称
+	// Name is the user-friendly display name for the cluster
 	Name string `yaml:"name" json:"name"`
 
-	// ConfigPath 可以是 kubeconfig 文件的绝对路径，或者是 "in-cluster"
+	// ConfigPath can be the absolute path to kubeconfig file, or "in-cluster"
 	ConfigPath string `yaml:"config_path" json:"config_path"`
 
-	// Description 集群描述信息
+	// Description cluster description information
 	Description string `yaml:"description,omitempty" json:"description,omitempty"`
 
-	// Provider 云服务商或环境类型，如 "aws", "gcp", "minikube", "on-premise"
+	// Provider cloud service provider or environment type, such as "aws", "gcp", "minikube", "on-premise"
 	Provider string `yaml:"provider,omitempty" json:"provider,omitempty"`
 
-	// Environment 环境标识，如 "production", "staging", "development"
+	// Environment environment identifier, such as "production", "staging", "development"
 	Environment string `yaml:"environment,omitempty" json:"environment,omitempty"`
 
-	// Region 集群所在区域
+	// Region the region where the cluster is located
 	Region string `yaml:"region,omitempty" json:"region,omitempty"`
 
-	// IsActive 标记此集群配置是否启用
+	// IsActive marks whether this cluster configuration is enabled
 	IsActive bool `yaml:"is_active" json:"is_active"`
 
-	// Labels 自定义标签，用于分组和筛选
+	// Labels custom labels for grouping and filtering
 	Labels map[string]string `yaml:"labels,omitempty" json:"labels,omitempty"`
 }
 
 var GlobalConfig *Config
 var configFilePath string // Store the path of the loaded config file
 
-// Load 加载配置文件，支持使用viper或yaml解析
+// Load loads configuration file, supports using viper or yaml parsing
 func Load(path string) (*Config, error) {
 	if path == "" {
-		return nil, fmt.Errorf("配置文件路径不能为空")
+		return nil, fmt.Errorf("configuration file path cannot be empty")
 	}
 	configFilePath = path // Store for saving later
 
@@ -101,14 +101,14 @@ func Load(path string) (*Config, error) {
 
 	switch ext {
 	case ".yaml", ".yml":
-		// 尝试使用viper加载配置
+		// Try to load configuration using viper
 		cfg, err = loadViperConfig(path)
 		if err != nil {
-			// 如果viper失败，回退到原有的yaml解析
+			// If viper fails, fallback to original yaml parsing
 			cfg, err = loadYAMLConfig(path)
 		}
 	default:
-		return nil, fmt.Errorf("不支持的配置文件格式: %s", ext)
+		return nil, fmt.Errorf("unsupported configuration file format: %s", ext)
 	}
 
 	if err != nil {
@@ -121,28 +121,28 @@ func Load(path string) (*Config, error) {
 	return cfg, nil
 }
 
-// loadViperConfig 使用viper加载配置文件
+// loadViperConfig loads configuration file using viper
 func loadViperConfig(path string) (*Config, error) {
 	v := viper.New()
 
-	// 设置配置文件路径和名称
+	// Set configuration file path and name
 	v.SetConfigFile(path)
 
-	// 设置环境变量前缀
+	// Set environment variable prefix
 	v.SetEnvPrefix("CILIKUBE")
 	v.AutomaticEnv()
 
-	// 设置字段名映射，使viper能正确映射字段
+	// Set field name mapping so viper can correctly map fields
 	v.RegisterAlias("server.activeCluster", "server.activeClusterID")
 
-	// 读取配置文件
+	// Read configuration file
 	if err := v.ReadInConfig(); err != nil {
-		return nil, fmt.Errorf("viper读取配置文件失败 %s: %w", path, err)
+		return nil, fmt.Errorf("viper failed to read configuration file %s: %w", path, err)
 	}
 
 	cfg := &Config{}
 	if err := v.Unmarshal(cfg); err != nil {
-		return nil, fmt.Errorf("viper解析配置文件失败: %w", err)
+		return nil, fmt.Errorf("viper failed to parse configuration file: %w", err)
 	}
 
 	return cfg, nil
@@ -150,54 +150,54 @@ func loadViperConfig(path string) (*Config, error) {
 
 func loadYAMLConfig(path string) (*Config, error) {
 	if _, err := os.Stat(path); os.IsNotExist(err) {
-		return nil, fmt.Errorf("配置文件不存在: %s", path)
+		return nil, fmt.Errorf("configuration file does not exist: %s", path)
 	}
 
 	data, err := os.ReadFile(path)
 	if err != nil {
-		return nil, fmt.Errorf("无法读取配置文件 %s: %w", path, err)
+		return nil, fmt.Errorf("unable to read configuration file %s: %w", path, err)
 	}
 
 	cfg := &Config{}
 	if err := yaml.Unmarshal(data, cfg); err != nil {
-		return nil, fmt.Errorf("解析 YAML 配置文件失败: %w", err)
+		return nil, fmt.Errorf("failed to parse YAML configuration file: %w", err)
 	}
 
 	return cfg, nil
 }
 
-// SaveGlobalConfig 将当前的 GlobalConfig 保存到其原始加载路径
+// SaveGlobalConfig saves the current GlobalConfig to its original loading path
 func SaveGlobalConfig() error {
 	if GlobalConfig == nil {
-		return fmt.Errorf("全局配置尚未加载, 无法保存")
+		return fmt.Errorf("global configuration not yet loaded, cannot save")
 	}
 	if configFilePath == "" {
-		return fmt.Errorf("配置文件路径未知, 无法保存")
+		return fmt.Errorf("configuration file path unknown, cannot save")
 	}
 
 	data, err := yaml.Marshal(GlobalConfig)
 	if err != nil {
-		return fmt.Errorf("序列化配置到 YAML 失败: %w", err)
+		return fmt.Errorf("failed to serialize configuration to YAML: %w", err)
 	}
 
 	// Create a temporary file
 	tempFile, err := os.CreateTemp(filepath.Dir(configFilePath), filepath.Base(configFilePath)+".tmp")
 	if err != nil {
-		return fmt.Errorf("创建临时配置文件失败: %w", err)
+		return fmt.Errorf("failed to create temporary configuration file: %w", err)
 	}
 	defer os.Remove(tempFile.Name()) // Clean up temp file
 
 	if _, err := tempFile.Write(data); err != nil {
 		tempFile.Close()
-		return fmt.Errorf("写入临时配置文件失败: %w", err)
+		return fmt.Errorf("failed to write temporary configuration file: %w", err)
 	}
 	if err := tempFile.Close(); err != nil {
-		return fmt.Errorf("关闭临时配置文件失败: %w", err)
+		return fmt.Errorf("failed to close temporary configuration file: %w", err)
 	}
 
 	// Replace the original file with the temporary file
 	if err := os.Rename(tempFile.Name(), configFilePath); err != nil {
-		return fmt.Errorf("替换原配置文件失败: %w", err)
+		return fmt.Errorf("failed to replace original configuration file: %w", err)
 	}
 
 	return nil
@@ -216,22 +216,22 @@ func setDefaults() {
 	if GlobalConfig.Server.WriteTimeout == 0 {
 		GlobalConfig.Server.WriteTimeout = 30
 	}
-	// ... (其他 database, jwt, installer, kubernetes 的默认值设置保持不变) ...
-	if GlobalConfig.Database.Enabled { // 修正：只在 enabled 时设置数据库默认值
+	// ... (other default value settings for database, jwt, installer, kubernetes remain unchanged) ...
+	if GlobalConfig.Database.Enabled { // Fix: only set database default values when enabled
 		if GlobalConfig.Database.Host == "" {
 			GlobalConfig.Database.Host = "localhost"
 		}
 		if GlobalConfig.Database.Port == 0 {
-			// 对于 MySQL 通常是 3306，PostgreSQL 是 5432。这里以 MySQL 为例。
+			// For MySQL it's usually 3306, PostgreSQL is 5432. Here we use MySQL as example.
 			GlobalConfig.Database.Port = 3306
 		}
-		if GlobalConfig.Database.Username == "" { // 对应 DatabaseConfig 中的 Username
+		if GlobalConfig.Database.Username == "" { // Corresponds to Username in DatabaseConfig
 			GlobalConfig.Database.Username = "root"
 		}
 		if GlobalConfig.Database.Password == "" {
 			GlobalConfig.Database.Password = "cilikube-password-change-in-production"
 		}
-		if GlobalConfig.Database.Database == "" { // 对应 DatabaseConfig 中的 Database
+		if GlobalConfig.Database.Database == "" { // Corresponds to Database in DatabaseConfig
 			GlobalConfig.Database.Database = "cilikube"
 		}
 		if GlobalConfig.Database.Charset == "" {
@@ -270,7 +270,7 @@ func setDefaults() {
 		}
 	}
 
-	// 为没有ID的集群自动生成UUID
+	// Automatically generate UUID for clusters without ID
 	configChanged := false
 	var firstActiveClusterID string
 
@@ -280,38 +280,38 @@ func setDefaults() {
 			configChanged = true
 		}
 
-		// 记录第一个活跃集群的ID，用于设置默认活跃集群
+		// Record the ID of the first active cluster for setting default active cluster
 		if GlobalConfig.Clusters[i].IsActive && firstActiveClusterID == "" {
 			firstActiveClusterID = GlobalConfig.Clusters[i].ID
 		}
 	}
 
-	// 如果没有设置活跃集群ID，使用第一个活跃集群的ID
+	// If no active cluster ID is set, use the first active cluster's ID
 	if GlobalConfig.Server.ActiveClusterID == "" && firstActiveClusterID != "" {
 		GlobalConfig.Server.ActiveClusterID = firstActiveClusterID
 		configChanged = true
 	}
 
-	// 如果生成了新的ID或更新了活跃集群，保存配置文件
+	// If new ID was generated or active cluster was updated, save configuration file
 	if configChanged {
-		_ = SaveGlobalConfig() // 忽略错误，因为这是可选的
+		_ = SaveGlobalConfig() // Ignore errors as this is optional
 	}
 }
 
 func (c *Config) GetDSN() string {
 	if !c.Database.Enabled {
-		return "" // 如果数据库未启用，返回空 DSN
+		return "" // If database is not enabled, return empty DSN
 	}
 	return fmt.Sprintf("%s:%s@tcp(%s:%d)/%s?charset=%s&parseTime=true",
-		c.Database.Username, // 确保这里是 Username
+		c.Database.Username, // Ensure this is Username
 		c.Database.Password,
 		c.Database.Host,
 		c.Database.Port,
-		c.Database.Database, // 确保这里是 Database
+		c.Database.Database, // Ensure this is Database
 		c.Database.Charset)
 }
 
-// GetClusterByID 根据ID获取集群信息
+// GetClusterByID gets cluster information by ID
 func (c *Config) GetClusterByID(id string) *ClusterInfo {
 	for i := range c.Clusters {
 		if c.Clusters[i].ID == id {
@@ -321,7 +321,7 @@ func (c *Config) GetClusterByID(id string) *ClusterInfo {
 	return nil
 }
 
-// GetClusterByName 根据名称获取集群信息（向后兼容）
+// GetClusterByName gets cluster information by name (backward compatibility)
 func (c *Config) GetClusterByName(name string) *ClusterInfo {
 	for i := range c.Clusters {
 		if c.Clusters[i].Name == name {
@@ -331,7 +331,7 @@ func (c *Config) GetClusterByName(name string) *ClusterInfo {
 	return nil
 }
 
-// GetClusterIDByName 根据名称获取集群ID（向后兼容）
+// GetClusterIDByName gets cluster ID by name (backward compatibility)
 func (c *Config) GetClusterIDByName(name string) string {
 	cluster := c.GetClusterByName(name)
 	if cluster != nil {

@@ -18,7 +18,7 @@ type JWTClaims struct {
 	jwt.RegisteredClaims
 }
 
-// GenerateToken 生成JWT token
+// GenerateToken generates JWT token
 func GenerateToken(user *models.User) (string, time.Time, error) {
 	expirationTime := time.Now().Add(configs.GlobalConfig.JWT.ExpireDuration)
 
@@ -40,7 +40,7 @@ func GenerateToken(user *models.User) (string, time.Time, error) {
 	return tokenString, expirationTime, err
 }
 
-// ParseToken 解析JWT token
+// ParseToken parses JWT token
 func ParseToken(tokenString string) (*JWTClaims, error) {
 	token, err := jwt.ParseWithClaims(tokenString, &JWTClaims{}, func(token *jwt.Token) (interface{}, error) {
 		return []byte(configs.GlobalConfig.JWT.SecretKey), nil
@@ -57,10 +57,10 @@ func ParseToken(tokenString string) (*JWTClaims, error) {
 	return nil, jwt.ErrInvalidKey
 }
 
-// JWTAuthMiddleware JWT认证中间件
+// JWTAuthMiddleware JWT authentication middleware
 func JWTAuthMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		// 从header中获取token
+		// Get token from header
 		authHeader := c.GetHeader("Authorization")
 		if authHeader == "" {
 			c.JSON(http.StatusUnauthorized, gin.H{
@@ -71,10 +71,10 @@ func JWTAuthMiddleware() gin.HandlerFunc {
 			return
 		}
 
-		// 检查Bearer前缀
+		// Check Bearer prefix
 		tokenString := ""
 		if strings.HasPrefix(authHeader, "Bearer ") {
-			tokenString = authHeader[7:] // 去掉"Bearer "前缀
+			tokenString = authHeader[7:] // Remove "Bearer " prefix
 		} else {
 			c.JSON(http.StatusUnauthorized, gin.H{
 				"code":    401,
@@ -84,7 +84,7 @@ func JWTAuthMiddleware() gin.HandlerFunc {
 			return
 		}
 
-		// 解析token
+		// Parse token
 		claims, err := ParseToken(tokenString)
 		if err != nil {
 			c.JSON(http.StatusUnauthorized, gin.H{
@@ -95,7 +95,7 @@ func JWTAuthMiddleware() gin.HandlerFunc {
 			return
 		}
 
-		// 检查token是否过期
+		// Check if token is expired
 		if claims.ExpiresAt.Time.Before(time.Now()) {
 			c.JSON(http.StatusUnauthorized, gin.H{
 				"code":    401,
@@ -105,7 +105,7 @@ func JWTAuthMiddleware() gin.HandlerFunc {
 			return
 		}
 
-		// 将用户信息存储到上下文中
+		// Store user information in context
 		c.Set("user_id", claims.UserID)
 		c.Set("username", claims.Username)
 		c.Set("user_role", claims.Role)
@@ -114,7 +114,7 @@ func JWTAuthMiddleware() gin.HandlerFunc {
 	}
 }
 
-// AdminRequiredMiddleware 管理员权限中间件
+// AdminRequiredMiddleware admin privilege middleware
 func AdminRequiredMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		role, exists := c.Get("user_role")
@@ -140,7 +140,7 @@ func AdminRequiredMiddleware() gin.HandlerFunc {
 	}
 }
 
-// OptionalAuthMiddleware 可选的认证中间件（不强制要求登录）
+// OptionalAuthMiddleware optional authentication middleware (does not require mandatory login)
 func OptionalAuthMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		authHeader := c.GetHeader("Authorization")
@@ -168,7 +168,7 @@ func OptionalAuthMiddleware() gin.HandlerFunc {
 			return
 		}
 
-		// 设置用户信息到上下文
+		// Set user information to context
 		c.Set("user_id", claims.UserID)
 		c.Set("username", claims.Username)
 		c.Set("user_role", claims.Role)
@@ -177,7 +177,7 @@ func OptionalAuthMiddleware() gin.HandlerFunc {
 	}
 }
 
-// GetCurrentUser 从上下文中获取当前用户信息
+// GetCurrentUser gets current user information from context
 func GetCurrentUser(c *gin.Context) (uint, string, string, bool) {
 	userID, exists1 := c.Get("user_id")
 	username, exists2 := c.Get("username")
