@@ -11,16 +11,16 @@ import (
 	"github.com/fatih/color"
 )
 
-// Version 允许通过编译参数注入（go build -ldflags "-X 'github.com/ciliverse/cilikube/internal/initialization.Version=v0.3.1'")
+// Version allows injection via build parameters (go build -ldflags "-X 'github.com/ciliverse/cilikube/internal/initialization.Version=v0.3.1'")
 var Version = ""
 
-// DisplayServerInfo 打印服务启动信息，包括本地/局域网地址、模式、版本号、Go版本、启动时间等
+// DisplayServerInfo prints service startup information, including local/LAN addresses, mode, version, Go version, startup time, etc.
 func DisplayServerInfo(serverAddr, mode string) {
 	version := getVersion()
 	goVersion := runtime.Version()
 	buildTime := getBuildTime()
 	hostname, _ := os.Hostname()
-	// 设置为北京时间（东八区）
+	// Set to Beijing time (UTC+8)
 	loc, err := time.LoadLocation("Asia/Shanghai")
 	var startTime string
 	if err == nil {
@@ -42,7 +42,7 @@ func DisplayServerInfo(serverAddr, mode string) {
 	color.White("-------------------------------------------------")
 }
 
-// getVersion 获取版本号，优先级：环境变量 > 编译变量 > VERSION 文件 > 默认值
+// getVersion gets version number, priority: environment variable > build variable > VERSION file > default value
 func getVersion() string {
 	if v := os.Getenv("CILIKUBE_VERSION"); v != "" {
 		return v
@@ -54,18 +54,18 @@ func getVersion() string {
 	if err == nil {
 		return strings.TrimSpace(string(data))
 	}
-	log.Printf("[WARN] 获取版本号失败（环境变量、编译变量、VERSION 文件均无效），使用默认版本号: %v", err)
-	return "v0.3.1"
+	log.Printf("[WARN] Failed to get version number (environment variable, build variable, VERSION file all invalid), using default version: %v", err)
+	return "v0.0.1"
 }
 
-// getBuildTime 支持通过编译参数注入构建时间（go build -ldflags "-X 'github.com/ciliverse/cilikube/internal/initialization.BuildTime=2025-06-24T12:00:00Z'")
+// getBuildTime supports injecting build time via build parameters (go build -ldflags "-X 'github.com/ciliverse/cilikube/internal/initialization.BuildTime=2025-06-24T12:00:00Z'")
 var BuildTime = ""
 
 func getBuildTime() string {
 	return BuildTime
 }
 
-// getLocalIP 获取本机第一个非回环 IPv4 地址，常用于局域网访问
+// getLocalIP gets the first non-loopback IPv4 address of the local machine, commonly used for LAN access
 func getLocalIP() string {
 	addrs, err := net.InterfaceAddrs()
 	if err != nil {

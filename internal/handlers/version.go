@@ -7,14 +7,14 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// 这些变量将在编译时通过 ldflags 设置
+// These variables will be set at compile time via ldflags
 var (
 	Version   = "dev"
 	BuildTime = "unknown"
 	GitCommit = "unknown"
 )
 
-// VersionInfo 版本信息结构
+// VersionInfo version information structure
 type VersionInfo struct {
 	Version   string `json:"version"`
 	BuildTime string `json:"build_time"`
@@ -24,7 +24,7 @@ type VersionInfo struct {
 	Arch      string `json:"arch"`
 }
 
-// GetVersion 获取版本信息
+// GetVersion retrieves version information
 func GetVersion(c *gin.Context) {
 	versionInfo := VersionInfo{
 		Version:   Version,

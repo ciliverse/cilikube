@@ -2,103 +2,287 @@ package k8s
 
 import (
 	"fmt"
-	"os"
 	"path/filepath"
 
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/client-go/discovery"
+	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
+	"k8s.io/client-go/util/homedir"
 )
+
+type ClusterInfo struct {
+	ServerVersion  string                    `json:"serverVersion"`
+	APIResources   []*metav1.APIResourceList `json:"apiResources,omitempty"`
+	NodeCount      int                       `json:"nodeCount"`
+	NamespaceCount int                       `json:"namespaceCount"`
+	Status         string                    `json:"status"`
+	LastUpdated    metav1.Time               `json:"lastUpdated"`
+}
 
 type Client struct {
 	Clientset kubernetes.Interface
-	Config    *rest.Config
+
+	DynamicClient dynamic.Interface
+
+	DiscoveryClient discovery.DiscoveryInterface
+
+	Config *rest.Config
+
+	clusterInfo *ClusterInfo
 }
 
 func NewClient(kubeconfig string) (*Client, error) {
-	var config *rest.Config
-	var err error
-
-	// 当应用部署在 Kubernetes 集群内部时，使用 "in-cluster" 配置
-	if kubeconfig == "in-cluster" {
-		config, err = rest.InClusterConfig()
-		if err != nil {
-			return nil, fmt.Errorf("加载 in-cluster 配置失败: %w", err)
-		}
-	} else {
-		// 当 kubeconfig 为空或 "default" 时，使用标准的用户主目录下的 .kube/config 文件
-		if kubeconfig == "default" || kubeconfig == "" {
-			homeDir, err := os.UserHomeDir()
-			if err != nil {
-				return nil, fmt.Errorf("获取用户主目录失败: %w", err)
-			}
-			kubeconfig = filepath.Join(homeDir, ".kube", "config")
-		}
-
-		// 检查 kubeconfig 文件是否存在
-		if _, err := os.Stat(kubeconfig); os.IsNotExist(err) {
-			return nil, fmt.Errorf("kubeconfig 文件不存在: %s", kubeconfig)
-		}
-
-		// 从指定的 kubeconfig 文件路径构建配置
-		config, err = clientcmd.BuildConfigFromFlags("", kubeconfig)
-		if err != nil {
-			return nil, fmt.Errorf("从 kubeconfig 文件 '%s' 构建配置失败: %w", kubeconfig, err)
-		}
+	config, err := buildConfig(kubeconfig)
+	if err != nil {
+		return nil, fmt.Errorf("failed to build Kubernetes config: %w", err)
 	}
 
-	// 使用生成的配置创建 clientset。
+	return newClientFromConfig(config)
+}
+
+func buildConfig(kubeconfig string) (*rest.Config, error) {
+
+	if kubeconfig == "in-cluster" {
+		return rest.InClusterConfig()
+	}
+
+	loadingRules := clientcmd.NewDefaultClientConfigLoadingRules()
+
+	kubeconfigPath := resolveKubeconfigPath(kubeconfig)
+	if kubeconfigPath != "" {
+		loadingRules.ExplicitPath = kubeconfigPath
+	}
+
+	configOverrides := &clientcmd.ConfigOverrides{}
+	clientConfig := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(loadingRules, configOverrides)
+
+	return clientConfig.ClientConfig()
+}
+
+func resolveKubeconfigPath(kubeconfig string) string {
+
+	if kubeconfig != "" && kubeconfig != "default" {
+		return kubeconfig
+	}
+
+	home := homedir.HomeDir()
+	if home == "" {
+		return ""
+	}
+
+	defaultKubeconfig := filepath.Join(home, ".kube", "config")
+	return defaultKubeconfig
+}
+
+func newClientFromConfig(config *rest.Config) (*Client, error) {
+
+	if config.QPS == 0 {
+		config.QPS = 50.0
+	}
+	if config.Burst == 0 {
+		config.Burst = 100
+	}
+
 	clientset, err := kubernetes.NewForConfig(config)
 	if err != nil {
-		return nil, fmt.Errorf("创建 Kubernetes clientset 失败: %w", err)
+		return nil, fmt.Errorf("failed to create Kubernetes clientset: %w", err)
 	}
 
-	return &Client{
-		Clientset: clientset,
-		Config:    config,
-	}, nil
+	dynamicClient, err := dynamic.NewForConfig(config)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create dynamic client: %w", err)
+	}
+
+	discoveryClient, err := discovery.NewDiscoveryClientForConfig(config)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create discovery client: %w", err)
+	}
+
+	client := &Client{
+		Clientset:       clientset,
+		DynamicClient:   dynamicClient,
+		DiscoveryClient: discoveryClient,
+		Config:          config,
+	}
+
+	if err := client.initClusterInfo(); err != nil {
+		fmt.Printf("warning: failed to initialize cluster info: %v\n", err)
+	}
+
+	return client, nil
 }
 
-// NewClientFromContent 通过内存中的 kubeconfig 文件内容创建一个新的 Kubernetes 客户端
-// 这是实现动态集群管理（例如，从前端API接收kubeconfig）的关键函数
 func NewClientFromContent(kubeconfigData []byte) (*Client, error) {
 	if len(kubeconfigData) == 0 {
-		return nil, fmt.Errorf("kubeconfig 内容不能为空")
+		return nil, fmt.Errorf("kubeconfig content cannot be empty")
 	}
 
-	// 从字节切片创建 clientcmd 配置
 	clientConfig, err := clientcmd.NewClientConfigFromBytes(kubeconfigData)
 	if err != nil {
-		return nil, fmt.Errorf("从字节内容创建客户端配置失败: %w", err)
+		return nil, fmt.Errorf("failed to create client config from bytes: %w", err)
 	}
 
-	// 从 clientcmd 配置中获取 REST 客户端配置
 	restConfig, err := clientConfig.ClientConfig()
 	if err != nil {
-		return nil, fmt.Errorf("从客户端配置中获取 REST 配置失败: %w", err)
+		return nil, fmt.Errorf("failed to get REST config from client config: %w", err)
 	}
 
-	// 使用 REST 配置创建 clientset
-	clientset, err := kubernetes.NewForConfig(restConfig)
-	if err != nil {
-		return nil, fmt.Errorf("创建 Kubernetes clientset 失败: %w", err)
-	}
-
-	return &Client{
-		Clientset: clientset,
-		Config:    restConfig,
-	}, nil
+	return newClientFromConfig(restConfig)
 }
 
-// CheckConnection 对 Kubernetes API Server 执行一次轻量级的健康检查
+func (c *Client) initClusterInfo() error {
+
+	serverVersion, err := c.DiscoveryClient.ServerVersion()
+	if err != nil {
+		return fmt.Errorf("failed to get server version: %w", err)
+	}
+
+	apiResources, err := c.DiscoveryClient.ServerPreferredResources()
+	if err != nil {
+
+		fmt.Printf("warning: failed to get API resource list: %v\n", err)
+	}
+
+	c.clusterInfo = &ClusterInfo{
+		ServerVersion: serverVersion.GitVersion,
+		APIResources:  apiResources,
+		Status:        "connected",
+		LastUpdated:   metav1.Now(),
+	}
+
+	return nil
+}
+
 func (c *Client) CheckConnection() error {
 	if c == nil || c.Clientset == nil {
-		return fmt.Errorf("kubernetes 客户端未初始化")
+		return fmt.Errorf("kubernetes client not initialized")
 	}
-	// 使用 discovery 客户端获取服务器版本作为一种低成本的连接检查方式
-	_, err := c.Clientset.Discovery().ServerVersion()
+
+	_, err := c.DiscoveryClient.ServerVersion()
 	if err != nil {
-		return fmt.Errorf("检查 Kubernetes API Server 连接失败: %w", err)
+		return fmt.Errorf("failed to check Kubernetes API Server connection: %w", err)
 	}
 	return nil
+}
+
+func (c *Client) GetServerVersion() (string, error) {
+	if c.clusterInfo != nil && c.clusterInfo.ServerVersion != "" {
+		return c.clusterInfo.ServerVersion, nil
+	}
+
+	version, err := c.DiscoveryClient.ServerVersion()
+	if err != nil {
+		return "", fmt.Errorf("failed to get server version: %w", err)
+	}
+
+	return version.GitVersion, nil
+}
+
+func (c *Client) GetAPIResources() ([]*metav1.APIResourceList, error) {
+	if c.clusterInfo != nil && c.clusterInfo.APIResources != nil {
+		return c.clusterInfo.APIResources, nil
+	}
+
+	resources, err := c.DiscoveryClient.ServerPreferredResources()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get API resource list: %w", err)
+	}
+
+	return resources, nil
+}
+
+func (c *Client) RefreshClusterInfo() error {
+	return c.initClusterInfo()
+}
+
+// GetClusterInfo gets cluster information
+func (c *Client) GetClusterInfo() *ClusterInfo {
+	return c.clusterInfo
+}
+
+func (c *Client) GetCustomResource(gvr schema.GroupVersionResource, namespace, name string) (dynamic.ResourceInterface, error) {
+	if c.DynamicClient == nil {
+		return nil, fmt.Errorf("dynamic client not initialized")
+	}
+
+	if namespace != "" {
+		return c.DynamicClient.Resource(gvr).Namespace(namespace), nil
+	}
+	return c.DynamicClient.Resource(gvr), nil
+}
+
+func (c *Client) ListCustomResources(gvr schema.GroupVersionResource, namespace string) (dynamic.ResourceInterface, error) {
+	if c.DynamicClient == nil {
+		return nil, fmt.Errorf("dynamic client not initialized")
+	}
+
+	if namespace != "" {
+		return c.DynamicClient.Resource(gvr).Namespace(namespace), nil
+	}
+	return c.DynamicClient.Resource(gvr), nil
+}
+
+func (c *Client) HasCustomResourceDefinition(group, version, kind string) (bool, error) {
+	if c.clusterInfo == nil || c.clusterInfo.APIResources == nil {
+		if err := c.RefreshClusterInfo(); err != nil {
+			return false, fmt.Errorf("failed to refresh cluster info: %w", err)
+		}
+	}
+
+	for _, resourceList := range c.clusterInfo.APIResources {
+		if resourceList.GroupVersion == group+"/"+version {
+			for _, resource := range resourceList.APIResources {
+				if resource.Kind == kind {
+					return true, nil
+				}
+			}
+		}
+	}
+
+	return false, nil
+}
+
+func (c *Client) GetSupportedAPIVersions() ([]string, error) {
+	groups, err := c.DiscoveryClient.ServerGroups()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get API groups: %w", err)
+	}
+
+	var versions []string
+	for _, group := range groups.Groups {
+		for _, version := range group.Versions {
+			versions = append(versions, version.GroupVersion)
+		}
+	}
+
+	return versions, nil
+}
+
+func (c *Client) IsResourceNamespaced(gvr schema.GroupVersionResource) (bool, error) {
+	if c.clusterInfo == nil || c.clusterInfo.APIResources == nil {
+		if err := c.RefreshClusterInfo(); err != nil {
+			return false, fmt.Errorf("failed to refresh cluster info: %w", err)
+		}
+	}
+
+	groupVersion := gvr.Group + "/" + gvr.Version
+	if gvr.Group == "" {
+		groupVersion = gvr.Version
+	}
+
+	for _, resourceList := range c.clusterInfo.APIResources {
+		if resourceList.GroupVersion == groupVersion {
+			for _, resource := range resourceList.APIResources {
+				if resource.Name == gvr.Resource {
+					return resource.Namespaced, nil
+				}
+			}
+		}
+	}
+
+	return false, fmt.Errorf("resource %s not found", gvr.String())
 }
