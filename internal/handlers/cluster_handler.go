@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/ciliverse/cilikube/api/v1/models"
+	"github.com/ciliverse/cilikube/internal/models"
 	"github.com/ciliverse/cilikube/internal/service"
 	"github.com/ciliverse/cilikube/pkg/utils"
 	"github.com/gin-gonic/gin"
