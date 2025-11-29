@@ -4,7 +4,7 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/ciliverse/cilikube/api/v1/models"
+	"github.com/ciliverse/cilikube/internal/models"
 	"github.com/ciliverse/cilikube/internal/service"
 	"github.com/ciliverse/cilikube/pkg/auth"
 	"github.com/gin-gonic/gin"

@@ -4,7 +4,7 @@ import (
 	"encoding/base64"
 	"fmt"
 
-	"github.com/ciliverse/cilikube/api/v1/models"
+	"github.com/ciliverse/cilikube/internal/models"
 	"github.com/ciliverse/cilikube/internal/store"
 	"github.com/ciliverse/cilikube/pkg/k8s"
 )
