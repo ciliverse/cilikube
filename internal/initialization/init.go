@@ -8,12 +8,13 @@ import (
 	"github.com/ciliverse/cilikube/internal/handlers"
 	"github.com/ciliverse/cilikube/internal/routes"
 	"github.com/ciliverse/cilikube/internal/service"
+	"github.com/ciliverse/cilikube/internal/store"
 	"github.com/ciliverse/cilikube/pkg/k8s"
 	"github.com/gin-gonic/gin"
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
-func InitializeServices(k8sManager *k8s.ClusterManager, cfg *configs.Config) *service.AppServices {
+func InitializeServices(k8sManager *k8s.ClusterManager, store store.Store, cfg *configs.Config) *service.AppServices {
 	log.Println("initializing service layer...")
 	resourceFactory := service.NewResourceServiceFactory()
 	resourceFactory.InitializeDefaultServices()
@@ -23,6 +24,11 @@ func InitializeServices(k8sManager *k8s.ClusterManager, cfg *configs.Config) *se
 		NodeMetricsService: service.NewNodeMetricsService(),
 		PodLogsService:     service.NewPodLogsService(),
 		SummaryService:     service.NewSummaryService(),
+		EventService:       service.NewEventService(k8sManager),
+		CRDService:         service.NewCRDService(),
+		AuthService:        service.NewAuthService(store, cfg),
+		OAuthService:       service.NewOAuthService(store, cfg),
+		RoleService:        service.NewRoleService(store),
 	}
 	// PodExecService requires rest.Config
 	if activeClient, err := k8sManager.GetActiveClient(); err == nil && activeClient != nil {
@@ -56,13 +62,26 @@ func initializeResourceService[T runtime.Object](factory *service.ResourceServic
 // Initialize Handlers function
 func InitializeHandlers(router *gin.RouterGroup, services *service.AppServices, k8sManager *k8s.ClusterManager) {
 	// --- 1. Register special routes for non-resource types ---
-	routes.RegisterAuthRoutes(router.Group("/auth"))
+	routes.RegisterAuthRoutes(router.Group("/auth"), services.AuthService, services.OAuthService)
+	routes.RegisterProfileRoutes(router, services.AuthService, services.RoleService)
+
+	// --- 2. Register admin routes ---
+	adminGroup := router.Group("/admin")
+	routes.RegisterUserManagementRoutes(adminGroup, services.AuthService, services.RoleService)
+	routes.RegisterRoleManagementRoutes(adminGroup, services.RoleService)
+	routes.RegisterSystemSettingsRoutes(router)
 	routes.RegisterClusterRoutes(router, handlers.NewClusterHandler(services.ClusterService))
 	routes.RegisterInstallerRoutes(router, handlers.NewInstallerHandler(services.InstallerService))
 	routes.KubernetesProxyRoutes(router, handlers.NewProxyHandler(k8sManager))
 
 	// --- Register summary routes ---
 	routes.RegisterSummaryRoutes(router, handlers.NewSummaryHandler(services.SummaryService, k8sManager))
+
+	// --- Register event routes ---
+	routes.RegisterEventRoutes(router, handlers.NewEventHandler(services.EventService))
+
+	// --- Register CRD routes ---
+	routes.SetupCRDRoutes(router, handlers.NewCRDHandler(services.CRDService, k8sManager))
 
 	// --- 2. Create Handler instances for all resources ---
 	nodesHandler := handlers.NewResourceHandler(services.NodeService, k8sManager, "nodes")
@@ -88,6 +107,8 @@ func InitializeHandlers(router *gin.RouterGroup, services *service.AppServices, 
 	{
 		nodesRoutes.GET("", nodesHandler.List)
 		nodesRoutes.POST("", nodesHandler.Create)
+		// Add metrics route for all nodes
+		nodesRoutes.GET("/metrics", nodeMetricsHandler.GetAllNodesMetrics)
 		// Operations for individual nodes
 		nodeMemberRoutes := nodesRoutes.Group("/:name")
 		{
@@ -95,7 +116,7 @@ func InitializeHandlers(router *gin.RouterGroup, services *service.AppServices, 
 			nodeMemberRoutes.PUT("", nodesHandler.Update)
 			nodeMemberRoutes.DELETE("", nodesHandler.Delete)
 			nodeMemberRoutes.GET("/watch", nodesHandler.Watch)
-			// Register metrics sub-routes
+			// Register metrics sub-routes for individual node
 			nodeMemberRoutes.GET("/metrics", nodeMetricsHandler.GetNodeMetrics)
 		}
 	}
@@ -162,6 +183,7 @@ func registerResourceInNamespace[T runtime.Object](nsRouter *gin.RouterGroup, re
 		{
 			memberRoutes.GET("", handler.Get)
 			memberRoutes.PUT("", handler.Update)
+			memberRoutes.PATCH("", handler.Patch)
 			memberRoutes.DELETE("", handler.Delete)
 			memberRoutes.GET("/watch", handler.Watch)
 		}
@@ -187,6 +209,9 @@ func SetupRouter(cfg *configs.Config, services *service.AppServices, k8sManager 
 
 		c.Next()
 	})
+
+	// Serve static files for uploaded avatars
+	router.Static("/uploads", "./uploads")
 
 	apiV1 := router.Group("/api/v1")
 	{

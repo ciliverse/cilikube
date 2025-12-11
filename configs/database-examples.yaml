@@ -1,0 +1,60 @@
+# Database Configuration Examples
+# Supports MySQL, PostgreSQL and SQLite database types
+
+# ==================== SQLite Configuration ====================
+# Lightweight file database, suitable for development and small-scale deployment
+# Pros: No need to install database server, zero configuration
+# Cons: Does not support concurrent writes, not suitable for high concurrency scenarios
+
+database_sqlite:
+    enabled: true
+    type: "sqlite"
+    database: "./data/cilikube.db"  # SQLite database file path
+    host: ""                        # SQLite does not need
+    port: 0                         # SQLite does not need
+    username: ""                    # SQLite does not need
+    password: ""                    # SQLite does not need
+    charset: ""                     # SQLite does not need
+
+# ==================== MySQL Configuration ====================
+# Most popular relational database, suitable for most scenarios
+# Pros: Mature and stable, rich ecosystem, excellent performance
+# Cons: Requires separate installation and maintenance
+
+database_mysql:
+    enabled: true
+    type: "mysql"
+    host: "localhost"               # MySQL server address
+    port: 3306                      # MySQL default port
+    username: "root"                # MySQL username
+    password: "your-password"       # MySQL password
+    database: "cilikube"            # Database name
+    charset: "utf8mb4"              # Character set
+
+# ==================== PostgreSQL Configuration ====================
+# Powerful open-source relational database
+# Pros: Feature-rich, good standard compatibility, strong extensibility
+# Cons: Relatively complex, higher learning curve
+
+database_postgresql:
+    enabled: true
+    type: "postgresql"              # Or use "postgres"
+    host: "localhost"               # PostgreSQL server address
+    port: 5432                      # PostgreSQL default port
+    username: "postgres"            # PostgreSQL username
+    password: "your-password"       # PostgreSQL password
+    database: "cilikube"            # Database name
+    charset: ""                     # PostgreSQL does not need charset
+
+# ==================== Usage Instructions ====================
+# 1. Choose one of the configurations and copy to the database section of config.yaml
+# 2. Modify connection parameters according to actual situation
+# 3. Ensure the corresponding database service is installed and running (except SQLite)
+# 4. Restart the application to make the configuration effective
+
+# ==================== Database Selection Recommendations ====================
+# Development environment: Recommend SQLite, simple and fast
+# Testing environment: Recommend SQLite or MySQL
+# Production environment: Recommend MySQL or PostgreSQL
+# High concurrency scenarios: Recommend MySQL or PostgreSQL
+# Complex query scenarios: Recommend PostgreSQL

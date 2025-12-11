@@ -12,12 +12,13 @@ installer:
     minikubeDriver: docker
     downloadDir: /tmp/cilikube_downloads
 database:
-    enabled: false
-    host: localhost
-    port: 3306
+    enabled: true
+    type: "sqlite"
+    database: "./data/cilikube.db"
+    host: ""
+    port: 0
     username: ""
     password: ""
-    database: ""
     charset: ""
 jwt:
     secret_key: cilikube-secret-key-change-in-production
@@ -25,16 +26,9 @@ jwt:
     issuer: cilikube
 clusters:
     - id: 907cab34-53f0-4c31-8b32-e238e5bf5769
-      name: 测试集群
+      name: Test
       config_path: default
-      description: 本地测试环境集群
+      description: test cluster
       provider: minikube
-      environment: development
+      environment: test
       is_active: true
-    - id: 791e1df4-f99b-4dbe-bbae-dc0d4564a2f1
-      name: 开发集群
-      config_path: /root/dev/config
-      description: 开发环境集群
-      provider: on-premise
-      environment: development
-      is_active: false

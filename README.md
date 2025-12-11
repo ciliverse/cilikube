@@ -302,7 +302,7 @@ Please follow the Conventional Commits specification:
 
 - Email: cilliantech@gmail.com
 - Website: https://www.cillian.website
-- WeChat: 希里安
+- WeChat: Cillian
 
 <img src="docs/wechat400x400.png" width="100" height="100" />
 
