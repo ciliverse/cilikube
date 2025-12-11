@@ -4,6 +4,10 @@ import (
 	"encoding/base64"
 	"fmt"
 
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/clientcmd"
+
 	"github.com/ciliverse/cilikube/internal/models"
 	"github.com/ciliverse/cilikube/internal/store"
 	"github.com/ciliverse/cilikube/pkg/k8s"
@@ -75,6 +79,18 @@ func (s *ClusterService) GetClusterByID(id string) (*models.ClusterResponse, err
 
 // CreateCluster handles the logic for creating a new cluster.
 func (s *ClusterService) CreateCluster(req models.CreateClusterRequest) error {
+	// 1. Validate kubeconfig
+	config, err := s.validateKubeconfig(req.KubeconfigData)
+	if err != nil {
+		return fmt.Errorf("invalid kubeconfig: %w", err)
+	}
+
+	// 2. Test connection
+	if err := s.testConnection(config); err != nil {
+		return fmt.Errorf("failed to connect to cluster: %w", err)
+	}
+
+	// 3. Decode and create cluster
 	kubeconfigBytes, err := base64.StdEncoding.DecodeString(req.KubeconfigData)
 	if err != nil {
 		return fmt.Errorf("kubeconfig data is not valid Base64 encoding: %w", err)
@@ -108,4 +124,53 @@ func (s *ClusterService) SetActiveCluster(id string) error {
 // GetActiveClusterID gets the current active cluster ID
 func (s *ClusterService) GetActiveClusterID() string {
 	return s.k8sManager.GetActiveClusterID()
+}
+
+// validateKubeconfig validates the kubeconfig data
+func (s *ClusterService) validateKubeconfig(kubeconfigData string) (*rest.Config, error) {
+	// Decode base64
+	decoded, err := base64.StdEncoding.DecodeString(kubeconfigData)
+	if err != nil {
+		return nil, fmt.Errorf("failed to decode kubeconfig: %w", err)
+	}
+
+	// Parse kubeconfig
+	config, err := clientcmd.RESTConfigFromKubeConfig(decoded)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse kubeconfig: %w", err)
+	}
+
+	return config, nil
+}
+
+// testConnection tests the connection to the Kubernetes cluster
+func (s *ClusterService) testConnection(config *rest.Config) error {
+	// Create a new configuration to avoid modifying the original configuration
+	testConfig := &rest.Config{
+		Host:    config.Host,
+		APIPath: config.APIPath,
+		// Skip TLS verification
+		TLSClientConfig: rest.TLSClientConfig{
+			Insecure: true,
+		},
+		// Preserve authentication information (if any)
+		Username:    config.Username,
+		Password:    config.Password,
+		BearerToken: config.BearerToken,
+		Timeout:     config.Timeout,
+	}
+
+	// Create a clientset
+	clientset, err := kubernetes.NewForConfig(testConfig)
+	if err != nil {
+		return fmt.Errorf("failed to create clientset: %w", err)
+	}
+
+	// Test connection by getting server version
+	_, err = clientset.Discovery().ServerVersion()
+	if err != nil {
+		return fmt.Errorf("failed to connect to cluster: %w", err)
+	}
+
+	return nil
 }

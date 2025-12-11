@@ -3,6 +3,7 @@ package app
 import (
 	"context"
 	"errors"
+	"flag"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -17,6 +18,7 @@ import (
 	"github.com/ciliverse/cilikube/configs"
 	"github.com/ciliverse/cilikube/internal/initialization"
 	"github.com/ciliverse/cilikube/internal/logger"
+	"github.com/ciliverse/cilikube/internal/service"
 	"github.com/ciliverse/cilikube/internal/store"
 	"github.com/ciliverse/cilikube/pkg/auth"
 	"github.com/ciliverse/cilikube/pkg/database"
@@ -52,7 +54,9 @@ func New(configPath string) (*Application, error) {
 	slog.Info("configuration loaded successfully", "path", configPath)
 
 	// --- 4. Database and Store initialization ---
-	var clusterStore store.ClusterStore
+	slog.Info("initializing storage system...")
+
+	// Initialize database if enabled
 	if cfg.Database.Enabled {
 		slog.Info("database enabled, initializing...")
 		if err := database.InitDatabase(); err != nil {
@@ -61,32 +65,38 @@ func New(configPath string) (*Application, error) {
 		if err := database.AutoMigrate(); err != nil {
 			return nil, fmt.Errorf("failed to auto-migrate database: %w", err)
 		}
-		if err := database.CreateDefaultAdmin(); err != nil {
-			return nil, fmt.Errorf("failed to create default admin: %w", err)
-		}
-
-		if cfg.Server.EncryptionKey == "" {
-			return nil, errors.New("database is enabled but EncryptionKey is not set in configuration")
-		}
-		encryptionKey := []byte(cfg.Server.EncryptionKey)
-		clusterStore, err = store.NewGormClusterStore(database.DB, encryptionKey)
-		if err != nil {
-			return nil, fmt.Errorf("failed to initialize Cluster Store: %w", err)
-		}
-		slog.Info("database and Cluster Store initialized successfully")
-	} else {
-		slog.Warn("database not enabled, skipping related initialization. ClusterStore will be nil")
+		// Default admin user will be created by store.Initialize() using RBAC system
+		slog.Info("database initialized successfully")
 	}
 
+	// Create unified store
+	mainStore, err := store.NewStore(cfg)
+	if err != nil {
+		return nil, fmt.Errorf("failed to initialize store: %w", err)
+	}
+
+	// Initialize store (create default data)
+	if err := mainStore.Initialize(); err != nil {
+		return nil, fmt.Errorf("failed to initialize store data: %w", err)
+	}
+
+	slog.Info("storage system initialized successfully", "type", cfg.GetStorageType())
+
 	// --- 5. Initialize ClusterManager ---
-	k8sManager, err := k8s.NewClusterManager(clusterStore, cfg)
+	k8sManager, err := k8s.NewClusterManager(mainStore, cfg)
 	if err != nil {
 		return nil, fmt.Errorf("failed to initialize Kubernetes cluster manager: %w", err)
 	}
 	slog.Info("Kubernetes cluster manager initialized successfully")
 
 	// --- 6. Initialize application services ---
-	services := initialization.InitializeServices(k8sManager, cfg)
+	services := initialization.InitializeServices(k8sManager, mainStore, cfg)
+
+	// Initialize default roles
+	if err := services.RoleService.InitializeDefaultRoles(); err != nil {
+		return nil, fmt.Errorf("failed to initialize default roles: %w", err)
+	}
+	slog.Info("default roles initialized successfully")
 
 	// --- 7. Casbin initialization ---
 	var e *casbin.Enforcer
@@ -98,6 +108,18 @@ func New(configPath string) (*Application, error) {
 		}
 		slog.Info("Casbin initialized successfully")
 	}
+
+	// Initialize permission service
+	services.PermissionService = service.NewPermissionService(mainStore, e)
+
+	// Set permission service reference in role service for synchronization
+	services.RoleService.SetPermissionService(services.PermissionService)
+
+	// Initialize default policies
+	if err := services.PermissionService.InitializeDefaultPolicies(); err != nil {
+		return nil, fmt.Errorf("failed to initialize default policies: %w", err)
+	}
+	slog.Info("default policies initialized successfully")
 
 	// --- 8. Gin router setup ---
 	router := initialization.SetupRouter(cfg, services, k8sManager, e)
@@ -141,4 +163,21 @@ func (app *Application) Run() {
 		os.Exit(1)
 	}
 	app.Logger.Info("server shutdown gracefully")
+}
+
+// GetConfigPath returns the configuration file path based on command line flags,
+// environment variables, or default value
+func GetConfigPath() string {
+	config := flag.String("config", "", "config file path")
+	flag.Parse()
+
+	if *config != "" {
+		return *config
+	}
+
+	if env := os.Getenv("CILIKUBE_CONFIG_PATH"); env != "" {
+		return env
+	}
+
+	return "configs/config.yaml"
 }

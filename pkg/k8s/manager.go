@@ -201,14 +201,15 @@ func (cm *ClusterManager) AddDBCluster(cluster *store.Cluster) error {
 	cm.lock.Lock()
 	defer cm.lock.Unlock()
 	if cm.store == nil {
-		return fmt.Errorf("database not initialized, cannot add cluster")
+		return fmt.Errorf("cluster store not initialized, cannot add cluster")
 	}
 	if _, nameExists := cm.nameToID[cluster.Name]; nameExists {
 		return fmt.Errorf("cluster name '%s' already exists", cluster.Name)
 	}
 	if err := cm.store.CreateCluster(cluster); err != nil {
-		return fmt.Errorf("failed to save cluster to database: %w", err)
+		return fmt.Errorf("failed to save cluster: %w", err)
 	}
+	// Use "database" as source even for memory store to distinguish from file-based clusters
 	cm.addClient(cluster.ID, cluster.Name, cluster.KubeconfigData, "database", cluster.Environment, "")
 	cm.clientInfo[cluster.ID] = *cluster
 	cm.nameToID[cluster.Name] = cluster.ID
@@ -227,10 +228,10 @@ func (cm *ClusterManager) RemoveDBClusterByID(id string) error {
 		return fmt.Errorf("cluster '%s' (ID: %s) is a file-based cluster, cannot be deleted via API", clientInfo.Name, id)
 	}
 	if cm.store == nil {
-		return fmt.Errorf("database not initialized, cannot delete cluster '%s' (ID: %s)", clientInfo.Name, id)
+		return fmt.Errorf("cluster store not initialized, cannot delete cluster '%s' (ID: %s)", clientInfo.Name, id)
 	}
 	if err := cm.store.DeleteClusterByID(id); err != nil {
-		return fmt.Errorf("failed to delete cluster '%s' (ID: %s) from database: %w", clientInfo.Name, id, err)
+		return fmt.Errorf("failed to delete cluster '%s' (ID: %s): %w", clientInfo.Name, id, err)
 	}
 	delete(cm.clients, id)
 	delete(cm.statusCache, id)
@@ -287,7 +288,7 @@ func (cm *ClusterManager) GetClientByID(id string) (*Client, error) {
 
 func (cm *ClusterManager) GetClusterDetailFromDB(id string) (*store.Cluster, error) {
 	if cm.store == nil {
-		return nil, fmt.Errorf("database not initialized")
+		return nil, fmt.Errorf("cluster store not initialized")
 	}
 	return cm.store.GetClusterByID(id)
 }
@@ -296,7 +297,7 @@ func (cm *ClusterManager) UpdateDBCluster(id string, req models.UpdateClusterReq
 	cm.lock.Lock()
 	defer cm.lock.Unlock()
 	if cm.store == nil {
-		return fmt.Errorf("database not initialized, cannot update cluster")
+		return fmt.Errorf("cluster store not initialized, cannot update cluster")
 	}
 	cluster, err := cm.store.GetClusterByID(id)
 	if err != nil {
@@ -317,7 +318,7 @@ func (cm *ClusterManager) UpdateDBCluster(id string, req models.UpdateClusterReq
 		kubeconfigUpdated = true
 	}
 	if err := cm.store.UpdateCluster(cluster); err != nil {
-		return fmt.Errorf("failed to update database: %w", err)
+		return fmt.Errorf("failed to update cluster: %w", err)
 	}
 	cm.clientInfo[id] = *cluster
 	if oldName != cluster.Name {
