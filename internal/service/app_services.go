@@ -18,6 +18,18 @@ type AppServices struct {
 	// [Added] Summary service
 	SummaryService *SummaryService
 
+	// [Added] Event service
+	EventService *EventService
+
+	// [Added] CRD service
+	CRDService CRDService
+
+	// Authentication and authorization services
+	AuthService       *AuthService
+	OAuthService      *OAuthService
+	RoleService       *RoleService
+	PermissionService *PermissionService
+
 	// Kubernetes resource services
 	NodeService        ResourceService[*corev1.Node]
 	NamespaceService   ResourceService[*corev1.Namespace]
