@@ -1,7 +1,7 @@
 version: '3.8'
 
 services:
-  # 后端服务
+  # Backend service
   backend:
     image: cilliantech/cilikube:latest
     container_name: cilikube-backend
@@ -28,7 +28,7 @@ services:
         max-size: "10m"
         max-file: "3"
 
-  # 前端服务
+  # Frontend service
   frontend:
     image: cilliantech/cilikube-web:latest
     container_name: cilikube-frontend
@@ -52,7 +52,7 @@ services:
         max-size: "10m"
         max-file: "3"
 
-  # Redis 缓存 (可选)
+  # Redis cache (optional)
   redis:
     image: redis:7-alpine
     container_name: cilikube-redis
@@ -74,7 +74,7 @@ services:
         max-size: "5m"
         max-file: "3"
 
-  # MySQL 数据库 (可选)
+  # MySQL database (optional)
   mysql:
     image: mysql:8.0
     container_name: cilikube-mysql
@@ -103,7 +103,7 @@ services:
         max-size: "10m"
         max-file: "3"
 
-  # Prometheus 监控 (可选)
+  # Prometheus monitoring (optional)
   prometheus:
     image: prom/prometheus:latest
     container_name: cilikube-prometheus
@@ -125,7 +125,7 @@ services:
     profiles:
       - monitoring
 
-  # Grafana 仪表板 (可选)
+  # Grafana dashboard (optional)
   grafana:
     image: grafana/grafana:latest
     container_name: cilikube-grafana

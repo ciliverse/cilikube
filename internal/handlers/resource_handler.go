@@ -91,12 +91,75 @@ func (h *ResourceHandler[T]) Create(c *gin.Context) {
 
 // Update handles resource update requests
 func (h *ResourceHandler[T]) Update(c *gin.Context) {
-	utils.ApiError(c, http.StatusNotImplemented, "Update not yet implemented", "")
+	k8sClient, ok := k8s.GetClientFromQuery(c, h.clusterManager)
+	if !ok {
+		return
+	}
+	namespace := c.Param("namespace")
+	name := c.Param("name")
+
+	var obj T
+	if err := c.ShouldBindJSON(&obj); err != nil {
+		utils.ApiError(c, http.StatusBadRequest, "invalid request body format", err.Error())
+		return
+	}
+
+	updated, err := h.service.Update(k8sClient.Clientset, namespace, name, obj)
+	if err != nil {
+		utils.ApiError(c, http.StatusInternalServerError, "failed to update resource", err.Error())
+		return
+	}
+	utils.ApiSuccess(c, updated, "resource updated successfully")
+}
+
+// Patch handles resource patch requests (for partial updates like scaling)
+func (h *ResourceHandler[T]) Patch(c *gin.Context) {
+	k8sClient, ok := k8s.GetClientFromQuery(c, h.clusterManager)
+	if !ok {
+		return
+	}
+	namespace := c.Param("namespace")
+	name := c.Param("name")
+
+	// For PATCH requests, we expect a partial update object
+	var patchData map[string]interface{}
+	if err := c.ShouldBindJSON(&patchData); err != nil {
+		utils.ApiError(c, http.StatusBadRequest, "invalid patch data format", err.Error())
+		return
+	}
+
+	// Get the current resource first
+	current, err := h.service.Get(k8sClient.Clientset, namespace, name)
+	if err != nil {
+		utils.ApiError(c, http.StatusInternalServerError, "failed to get current resource", err.Error())
+		return
+	}
+
+	// Apply patch to the current resource
+	// This is a simplified patch implementation - in production you might want to use strategic merge patch
+	updated, err := h.service.Patch(k8sClient.Clientset, namespace, name, current, patchData)
+	if err != nil {
+		utils.ApiError(c, http.StatusInternalServerError, "failed to patch resource", err.Error())
+		return
+	}
+	utils.ApiSuccess(c, updated, "resource patched successfully")
 }
 
 // Delete handles resource deletion requests
 func (h *ResourceHandler[T]) Delete(c *gin.Context) {
-	utils.ApiError(c, http.StatusNotImplemented, "Delete not yet implemented", "")
+	k8sClient, ok := k8s.GetClientFromQuery(c, h.clusterManager)
+	if !ok {
+		return
+	}
+	namespace := c.Param("namespace")
+	name := c.Param("name")
+
+	err := h.service.Delete(k8sClient.Clientset, namespace, name)
+	if err != nil {
+		utils.ApiError(c, http.StatusInternalServerError, "failed to delete resource", err.Error())
+		return
+	}
+	utils.ApiSuccess(c, nil, "resource deleted successfully")
 }
 
 // Watch handles resource watch requests

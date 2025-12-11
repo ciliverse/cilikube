@@ -2,7 +2,6 @@ package service
 
 import (
 	"context"
-	"fmt"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -12,11 +11,6 @@ import (
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/kubernetes"
 )
-
-// notImplemented is a helper for methods that are not yet implemented.
-func notImplemented() error {
-	return fmt.Errorf("method not implemented")
-}
 
 // --- NodeClient (Cluster-scoped) ---
 type NodeClient struct{}
@@ -28,16 +22,16 @@ func (c *NodeClient) List(ctx context.Context, clientset kubernetes.Interface, _
 	return clientset.CoreV1().Nodes().List(ctx, opts)
 }
 func (c *NodeClient) Create(ctx context.Context, clientset kubernetes.Interface, _ string, obj *corev1.Node, opts metav1.CreateOptions) (*corev1.Node, error) {
-	return nil, notImplemented()
+	return clientset.CoreV1().Nodes().Create(ctx, obj, opts)
 }
 func (c *NodeClient) Update(ctx context.Context, clientset kubernetes.Interface, _ string, obj *corev1.Node, opts metav1.UpdateOptions) (*corev1.Node, error) {
-	return nil, notImplemented()
+	return clientset.CoreV1().Nodes().Update(ctx, obj, opts)
 }
 func (c *NodeClient) Delete(ctx context.Context, clientset kubernetes.Interface, _ string, name string, opts metav1.DeleteOptions) error {
-	return notImplemented()
+	return clientset.CoreV1().Nodes().Delete(ctx, name, opts)
 }
 func (c *NodeClient) Watch(ctx context.Context, clientset kubernetes.Interface, _ string, opts metav1.ListOptions) (watch.Interface, error) {
-	return nil, notImplemented()
+	return clientset.CoreV1().Nodes().Watch(ctx, opts)
 }
 
 // --- PodClient (Namespaced) ---
@@ -72,16 +66,16 @@ func (c *DeploymentClient) List(ctx context.Context, clientset kubernetes.Interf
 	return clientset.AppsV1().Deployments(namespace).List(ctx, opts)
 }
 func (c *DeploymentClient) Create(ctx context.Context, clientset kubernetes.Interface, namespace string, obj *appsv1.Deployment, opts metav1.CreateOptions) (*appsv1.Deployment, error) {
-	return nil, notImplemented()
+	return clientset.AppsV1().Deployments(namespace).Create(ctx, obj, opts)
 }
 func (c *DeploymentClient) Update(ctx context.Context, clientset kubernetes.Interface, namespace string, obj *appsv1.Deployment, opts metav1.UpdateOptions) (*appsv1.Deployment, error) {
-	return nil, notImplemented()
+	return clientset.AppsV1().Deployments(namespace).Update(ctx, obj, opts)
 }
 func (c *DeploymentClient) Delete(ctx context.Context, clientset kubernetes.Interface, namespace, name string, opts metav1.DeleteOptions) error {
-	return notImplemented()
+	return clientset.AppsV1().Deployments(namespace).Delete(ctx, name, opts)
 }
 func (c *DeploymentClient) Watch(ctx context.Context, clientset kubernetes.Interface, namespace string, opts metav1.ListOptions) (watch.Interface, error) {
-	return nil, notImplemented()
+	return clientset.AppsV1().Deployments(namespace).Watch(ctx, opts)
 }
 
 // --- ServiceClient (Namespaced) ---
@@ -94,16 +88,16 @@ func (c *ServiceClient) List(ctx context.Context, clientset kubernetes.Interface
 	return clientset.CoreV1().Services(namespace).List(ctx, opts)
 }
 func (c *ServiceClient) Create(ctx context.Context, clientset kubernetes.Interface, namespace string, obj *corev1.Service, opts metav1.CreateOptions) (*corev1.Service, error) {
-	return nil, notImplemented()
+	return clientset.CoreV1().Services(namespace).Create(ctx, obj, opts)
 }
 func (c *ServiceClient) Update(ctx context.Context, clientset kubernetes.Interface, namespace string, obj *corev1.Service, opts metav1.UpdateOptions) (*corev1.Service, error) {
-	return nil, notImplemented()
+	return clientset.CoreV1().Services(namespace).Update(ctx, obj, opts)
 }
 func (c *ServiceClient) Delete(ctx context.Context, clientset kubernetes.Interface, namespace, name string, opts metav1.DeleteOptions) error {
-	return notImplemented()
+	return clientset.CoreV1().Services(namespace).Delete(ctx, name, opts)
 }
 func (c *ServiceClient) Watch(ctx context.Context, clientset kubernetes.Interface, namespace string, opts metav1.ListOptions) (watch.Interface, error) {
-	return nil, notImplemented()
+	return clientset.CoreV1().Services(namespace).Watch(ctx, opts)
 }
 
 // --- DaemonSetClient (Namespaced) ---
@@ -116,16 +110,16 @@ func (c *DaemonSetClient) List(ctx context.Context, clientset kubernetes.Interfa
 	return clientset.AppsV1().DaemonSets(namespace).List(ctx, opts)
 }
 func (c *DaemonSetClient) Create(ctx context.Context, clientset kubernetes.Interface, namespace string, obj *appsv1.DaemonSet, opts metav1.CreateOptions) (*appsv1.DaemonSet, error) {
-	return nil, notImplemented()
+	return clientset.AppsV1().DaemonSets(namespace).Create(ctx, obj, opts)
 }
 func (c *DaemonSetClient) Update(ctx context.Context, clientset kubernetes.Interface, namespace string, obj *appsv1.DaemonSet, opts metav1.UpdateOptions) (*appsv1.DaemonSet, error) {
-	return nil, notImplemented()
+	return clientset.AppsV1().DaemonSets(namespace).Update(ctx, obj, opts)
 }
 func (c *DaemonSetClient) Delete(ctx context.Context, clientset kubernetes.Interface, namespace, name string, opts metav1.DeleteOptions) error {
-	return notImplemented()
+	return clientset.AppsV1().DaemonSets(namespace).Delete(ctx, name, opts)
 }
 func (c *DaemonSetClient) Watch(ctx context.Context, clientset kubernetes.Interface, namespace string, opts metav1.ListOptions) (watch.Interface, error) {
-	return nil, notImplemented()
+	return clientset.AppsV1().DaemonSets(namespace).Watch(ctx, opts)
 }
 
 // --- IngressClient (Namespaced) ---
@@ -138,16 +132,16 @@ func (c *IngressClient) List(ctx context.Context, clientset kubernetes.Interface
 	return clientset.NetworkingV1().Ingresses(namespace).List(ctx, opts)
 }
 func (c *IngressClient) Create(ctx context.Context, clientset kubernetes.Interface, namespace string, obj *networkingv1.Ingress, opts metav1.CreateOptions) (*networkingv1.Ingress, error) {
-	return nil, notImplemented()
+	return clientset.NetworkingV1().Ingresses(namespace).Create(ctx, obj, opts)
 }
 func (c *IngressClient) Update(ctx context.Context, clientset kubernetes.Interface, namespace string, obj *networkingv1.Ingress, opts metav1.UpdateOptions) (*networkingv1.Ingress, error) {
-	return nil, notImplemented()
+	return clientset.NetworkingV1().Ingresses(namespace).Update(ctx, obj, opts)
 }
 func (c *IngressClient) Delete(ctx context.Context, clientset kubernetes.Interface, namespace, name string, opts metav1.DeleteOptions) error {
-	return notImplemented()
+	return clientset.NetworkingV1().Ingresses(namespace).Delete(ctx, name, opts)
 }
 func (c *IngressClient) Watch(ctx context.Context, clientset kubernetes.Interface, namespace string, opts metav1.ListOptions) (watch.Interface, error) {
-	return nil, notImplemented()
+	return clientset.NetworkingV1().Ingresses(namespace).Watch(ctx, opts)
 }
 
 // --- ConfigMapClient (Namespaced) ---
@@ -160,16 +154,16 @@ func (c *ConfigMapClient) List(ctx context.Context, clientset kubernetes.Interfa
 	return clientset.CoreV1().ConfigMaps(namespace).List(ctx, opts)
 }
 func (c *ConfigMapClient) Create(ctx context.Context, clientset kubernetes.Interface, namespace string, obj *corev1.ConfigMap, opts metav1.CreateOptions) (*corev1.ConfigMap, error) {
-	return nil, notImplemented()
+	return clientset.CoreV1().ConfigMaps(namespace).Create(ctx, obj, opts)
 }
 func (c *ConfigMapClient) Update(ctx context.Context, clientset kubernetes.Interface, namespace string, obj *corev1.ConfigMap, opts metav1.UpdateOptions) (*corev1.ConfigMap, error) {
-	return nil, notImplemented()
+	return clientset.CoreV1().ConfigMaps(namespace).Update(ctx, obj, opts)
 }
 func (c *ConfigMapClient) Delete(ctx context.Context, clientset kubernetes.Interface, namespace, name string, opts metav1.DeleteOptions) error {
-	return notImplemented()
+	return clientset.CoreV1().ConfigMaps(namespace).Delete(ctx, name, opts)
 }
 func (c *ConfigMapClient) Watch(ctx context.Context, clientset kubernetes.Interface, namespace string, opts metav1.ListOptions) (watch.Interface, error) {
-	return nil, notImplemented()
+	return clientset.CoreV1().ConfigMaps(namespace).Watch(ctx, opts)
 }
 
 // --- SecretClient (Namespaced) ---
@@ -182,16 +176,16 @@ func (c *SecretClient) List(ctx context.Context, clientset kubernetes.Interface,
 	return clientset.CoreV1().Secrets(namespace).List(ctx, opts)
 }
 func (c *SecretClient) Create(ctx context.Context, clientset kubernetes.Interface, namespace string, obj *corev1.Secret, opts metav1.CreateOptions) (*corev1.Secret, error) {
-	return nil, notImplemented()
+	return clientset.CoreV1().Secrets(namespace).Create(ctx, obj, opts)
 }
 func (c *SecretClient) Update(ctx context.Context, clientset kubernetes.Interface, namespace string, obj *corev1.Secret, opts metav1.UpdateOptions) (*corev1.Secret, error) {
-	return nil, notImplemented()
+	return clientset.CoreV1().Secrets(namespace).Update(ctx, obj, opts)
 }
 func (c *SecretClient) Delete(ctx context.Context, clientset kubernetes.Interface, namespace, name string, opts metav1.DeleteOptions) error {
-	return notImplemented()
+	return clientset.CoreV1().Secrets(namespace).Delete(ctx, name, opts)
 }
 func (c *SecretClient) Watch(ctx context.Context, clientset kubernetes.Interface, namespace string, opts metav1.ListOptions) (watch.Interface, error) {
-	return nil, notImplemented()
+	return clientset.CoreV1().Secrets(namespace).Watch(ctx, opts)
 }
 
 // --- PVCClient (Namespaced) ---
@@ -226,16 +220,16 @@ func (c *PVClient) List(ctx context.Context, clientset kubernetes.Interface, _ s
 	return clientset.CoreV1().PersistentVolumes().List(ctx, opts)
 }
 func (c *PVClient) Create(ctx context.Context, clientset kubernetes.Interface, _ string, obj *corev1.PersistentVolume, opts metav1.CreateOptions) (*corev1.PersistentVolume, error) {
-	return nil, notImplemented()
+	return clientset.CoreV1().PersistentVolumes().Create(ctx, obj, opts)
 }
 func (c *PVClient) Update(ctx context.Context, clientset kubernetes.Interface, _ string, obj *corev1.PersistentVolume, opts metav1.UpdateOptions) (*corev1.PersistentVolume, error) {
-	return nil, notImplemented()
+	return clientset.CoreV1().PersistentVolumes().Update(ctx, obj, opts)
 }
 func (c *PVClient) Delete(ctx context.Context, clientset kubernetes.Interface, _ string, name string, opts metav1.DeleteOptions) error {
-	return notImplemented()
+	return clientset.CoreV1().PersistentVolumes().Delete(ctx, name, opts)
 }
 func (c *PVClient) Watch(ctx context.Context, clientset kubernetes.Interface, _ string, opts metav1.ListOptions) (watch.Interface, error) {
-	return nil, notImplemented()
+	return clientset.CoreV1().PersistentVolumes().Watch(ctx, opts)
 }
 
 // --- StatefulSetClient (Namespaced) ---
@@ -248,16 +242,16 @@ func (c *StatefulSetClient) List(ctx context.Context, clientset kubernetes.Inter
 	return clientset.AppsV1().StatefulSets(namespace).List(ctx, opts)
 }
 func (c *StatefulSetClient) Create(ctx context.Context, clientset kubernetes.Interface, namespace string, obj *appsv1.StatefulSet, opts metav1.CreateOptions) (*appsv1.StatefulSet, error) {
-	return nil, notImplemented()
+	return clientset.AppsV1().StatefulSets(namespace).Create(ctx, obj, opts)
 }
 func (c *StatefulSetClient) Update(ctx context.Context, clientset kubernetes.Interface, namespace string, obj *appsv1.StatefulSet, opts metav1.UpdateOptions) (*appsv1.StatefulSet, error) {
-	return nil, notImplemented()
+	return clientset.AppsV1().StatefulSets(namespace).Update(ctx, obj, opts)
 }
 func (c *StatefulSetClient) Delete(ctx context.Context, clientset kubernetes.Interface, namespace, name string, opts metav1.DeleteOptions) error {
-	return notImplemented()
+	return clientset.AppsV1().StatefulSets(namespace).Delete(ctx, name, opts)
 }
 func (c *StatefulSetClient) Watch(ctx context.Context, clientset kubernetes.Interface, namespace string, opts metav1.ListOptions) (watch.Interface, error) {
-	return nil, notImplemented()
+	return clientset.AppsV1().StatefulSets(namespace).Watch(ctx, opts)
 }
 
 // --- NamespaceClient (Cluster-scoped) ---
@@ -270,14 +264,14 @@ func (c *NamespaceClient) List(ctx context.Context, clientset kubernetes.Interfa
 	return clientset.CoreV1().Namespaces().List(ctx, opts)
 }
 func (c *NamespaceClient) Create(ctx context.Context, clientset kubernetes.Interface, _ string, obj *corev1.Namespace, opts metav1.CreateOptions) (*corev1.Namespace, error) {
-	return nil, notImplemented()
+	return clientset.CoreV1().Namespaces().Create(ctx, obj, opts)
 }
 func (c *NamespaceClient) Update(ctx context.Context, clientset kubernetes.Interface, _ string, obj *corev1.Namespace, opts metav1.UpdateOptions) (*corev1.Namespace, error) {
-	return nil, notImplemented()
+	return clientset.CoreV1().Namespaces().Update(ctx, obj, opts)
 }
 func (c *NamespaceClient) Delete(ctx context.Context, clientset kubernetes.Interface, _ string, name string, opts metav1.DeleteOptions) error {
-	return notImplemented()
+	return clientset.CoreV1().Namespaces().Delete(ctx, name, opts)
 }
 func (c *NamespaceClient) Watch(ctx context.Context, clientset kubernetes.Interface, _ string, opts metav1.ListOptions) (watch.Interface, error) {
-	return nil, notImplemented()
+	return clientset.CoreV1().Namespaces().Watch(ctx, opts)
 }

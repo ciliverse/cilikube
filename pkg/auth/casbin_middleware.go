@@ -41,26 +41,29 @@ func (r *CasbinBuilder) CasbinMiddleware(e *casbin.Enforcer) gin.HandlerFunc {
 			}
 		}
 
-		// Get role from context (set by JWT middleware)
-		roleVal, exist := c.Get("role")
+		// Get user ID from context (set by JWT middleware)
+		userIDVal, exist := c.Get("userID")
 		if !exist {
-			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Unable to get user role information, please login first"})
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Unable to get user information, please login first"})
 			return
 		}
 
-		role, ok := roleVal.(string)
-		if !ok || role == "" {
-			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "User role information format is incorrect"})
+		userID, ok := userIDVal.(uint)
+		if !ok {
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "User information format is incorrect"})
 			return
 		}
 
 		obj := reqPath
 		act := c.Request.Method
 
-		log.Printf("Permission verification - Role: %v, Path: %v, Method: %v", role, obj, act)
+		log.Printf("Permission verification - UserID: %v, Path: %v, Method: %v", userID, obj, act)
+
+		// Use user-based permission checking instead of role-based
+		userSubject := fmt.Sprintf("user:%d", userID)
 
 		// Use Casbin Enforcer to verify permissions
-		allowed, err := e.Enforce(role, obj, act)
+		allowed, err := e.Enforce(userSubject, obj, act)
 		if err != nil {
 			log.Printf("Casbin Enforce error: %v", err)
 			c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "Internal error occurred during permission check"})
@@ -68,10 +71,10 @@ func (r *CasbinBuilder) CasbinMiddleware(e *casbin.Enforcer) gin.HandlerFunc {
 		}
 
 		if allowed {
-			log.Printf("Permission verification passed - Role: %s, Path: %s, Method: %s", role, obj, act)
+			log.Printf("Permission verification passed - UserID: %d, Path: %s, Method: %s", userID, obj, act)
 			c.Next()
 		} else {
-			log.Printf("Permission verification failed - Role: %s has no access to %s %s", role, act, obj)
+			log.Printf("Permission verification failed - UserID: %d has no access to %s %s", userID, act, obj)
 			c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "You do not have permission to perform this operation"}) // Use 403 Forbidden
 		}
 	}

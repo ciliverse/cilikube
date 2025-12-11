@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"fmt"
 	"net/http"
 	"strings"
 	"time"
@@ -114,11 +115,69 @@ func JWTAuthMiddleware() gin.HandlerFunc {
 	}
 }
 
+// JWTAuthWithSessionMiddleware JWT authentication middleware with session validation
+func JWTAuthWithSessionMiddleware(securityService interface{}) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		// Get token from header
+		authHeader := c.GetHeader("Authorization")
+		if authHeader == "" {
+			c.JSON(http.StatusUnauthorized, gin.H{
+				"code":    401,
+				"message": "Authorization header is required",
+			})
+			c.Abort()
+			return
+		}
+
+		// Check Bearer prefix
+		tokenString := ""
+		if strings.HasPrefix(authHeader, "Bearer ") {
+			tokenString = authHeader[7:] // Remove "Bearer " prefix
+		} else {
+			c.JSON(http.StatusUnauthorized, gin.H{
+				"code":    401,
+				"message": "Invalid authorization header format",
+			})
+			c.Abort()
+			return
+		}
+
+		// Parse token
+		claims, err := ParseToken(tokenString)
+		if err != nil {
+			c.JSON(http.StatusUnauthorized, gin.H{
+				"code":    401,
+				"message": "Invalid token: " + err.Error(),
+			})
+			c.Abort()
+			return
+		}
+
+		// Check if token is expired
+		if claims.ExpiresAt.Time.Before(time.Now()) {
+			c.JSON(http.StatusUnauthorized, gin.H{
+				"code":    401,
+				"message": "Token has expired",
+			})
+			c.Abort()
+			return
+		}
+
+		// Store user information in context
+		c.Set("user_id", claims.UserID)
+		c.Set("username", claims.Username)
+		c.Set("user_role", claims.Role)
+
+		c.Next()
+	}
+}
+
 // AdminRequiredMiddleware admin privilege middleware
 func AdminRequiredMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		role, exists := c.Get("user_role")
 		if !exists {
+			fmt.Printf("DEBUG: User role not found in context\n")
 			c.JSON(http.StatusUnauthorized, gin.H{
 				"code":    401,
 				"message": "User information not found",
@@ -127,7 +186,10 @@ func AdminRequiredMiddleware() gin.HandlerFunc {
 			return
 		}
 
+		fmt.Printf("DEBUG: User role from JWT: %v (type: %T)\n", role, role)
+
 		if role != "admin" {
+			fmt.Printf("DEBUG: Access denied - role '%v' is not admin\n", role)
 			c.JSON(http.StatusForbidden, gin.H{
 				"code":    403,
 				"message": "Admin privileges required",
@@ -136,6 +198,7 @@ func AdminRequiredMiddleware() gin.HandlerFunc {
 			return
 		}
 
+		fmt.Printf("DEBUG: Admin access granted for role: %v\n", role)
 		c.Next()
 	}
 }

@@ -140,6 +140,97 @@ components:
           additionalProperties:
             type: string
 
+    NodeMetrics:
+      type: object
+      properties:
+        nodeName:
+          type: string
+          example: "worker-node-1"
+          description: "Node name"
+        cpuCores:
+          type: string
+          example: "574m"
+          description: "CPU usage (e.g.: 574m)"
+        cpuPercent:
+          type: string
+          example: "7%"
+          description: "CPU usage percentage (e.g.: 7%)"
+        memoryBytes:
+          type: string
+          example: "8820Mi"
+          description: "Memory usage (e.g.: 8820Mi)"
+        memoryPercent:
+          type: string
+          example: "60%"
+          description: "Memory usage percentage (e.g.: 60%)"
+        cpuCapacity:
+          type: string
+          example: "8"
+          description: "Total CPU capacity"
+        memoryCapacity:
+          type: string
+          example: "16Gi"
+          description: "Total memory capacity"
+        cpuRequests:
+          type: string
+          example: "2.5"
+          description: "Total CPU requests"
+        cpuRequestsPercent:
+          type: string
+          example: "31%"
+          description: "CPU requests percentage"
+        memoryRequests:
+          type: string
+          example: "4Gi"
+          description: "Total memory requests"
+        memoryRequestsPercent:
+          type: string
+          example: "25%"
+          description: "Memory requests percentage"
+        cpuLimits:
+          type: string
+          example: "4"
+          description: "Total CPU limits"
+        cpuLimitsPercent:
+          type: string
+          example: "50%"
+          description: "CPU limits percentage"
+        memoryLimits:
+          type: string
+          example: "8Gi"
+          description: "Total memory limits"
+        memoryLimitsPercent:
+          type: string
+          example: "50%"
+          description: "Memory limits percentage"
+        timestamp:
+          type: string
+          example: "2024-12-02T10:30:00Z"
+          description: "Monitoring data timestamp"
+      required:
+        - nodeName
+        - cpuCores
+        - cpuPercent
+        - memoryBytes
+        - memoryPercent
+        - timestamp
+
+    NodesMetricsResponse:
+      type: object
+      properties:
+        nodes:
+          type: array
+          items:
+            $ref: '#/components/schemas/NodeMetrics'
+          description: "Monitoring data for all nodes"
+        total:
+          type: integer
+          example: 3
+          description: "Total number of nodes"
+      required:
+        - nodes
+        - total
+
 paths:
   /auth/login:
     post:
@@ -465,6 +556,116 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
 
+  /nodes/metrics:
+    get:
+      tags:
+        - Node Metrics
+      summary: Get all nodes metrics
+      description: Get real-time metrics for all nodes in the cluster
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: clusterId
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Target cluster ID
+      responses:
+        '200':
+          description: All nodes metrics retrieved successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Success'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/NodesMetricsResponse'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Metrics server not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /nodes/{name}/metrics:
+    get:
+      tags:
+        - Node Metrics
+      summary: Get single node metrics
+      description: Get real-time metrics for a specific node
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: name
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Node name
+        - name: clusterId
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Target cluster ID
+      responses:
+        '200':
+          description: Node metrics retrieved successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Success'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/NodeMetrics'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Node or metrics server not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
 tags:
   - name: Authentication
     description: User authentication and authorization
@@ -472,3 +673,5 @@ tags:
     description: Cluster management operations
   - name: Kubernetes Proxy
     description: Kubernetes API proxy operations
+  - name: Node Metrics
+    description: Node monitoring and metrics operations
