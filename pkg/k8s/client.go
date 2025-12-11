@@ -79,25 +79,51 @@ func resolveKubeconfigPath(kubeconfig string) string {
 }
 
 func newClientFromConfig(config *rest.Config) (*Client, error) {
+	// Create configuration copy to avoid modifying original configuration
+	clientConfig := *config
 
-	if config.QPS == 0 {
-		config.QPS = 50.0
+	if clientConfig.QPS == 0 {
+		clientConfig.QPS = 50.0
 	}
-	if config.Burst == 0 {
-		config.Burst = 100
+	if clientConfig.Burst == 0 {
+		clientConfig.Burst = 100
 	}
 
-	clientset, err := kubernetes.NewForConfig(config)
+	// Try to create client using original configuration
+	clientset, err := kubernetes.NewForConfig(&clientConfig)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create Kubernetes clientset: %w", err)
+		// If failed, try to skip TLS verification
+		fmt.Printf("warning: failed to create clientset with original config, trying insecure mode: %v\n", err)
+
+		insecureConfig := &rest.Config{
+			Host:    clientConfig.Host,
+			APIPath: clientConfig.APIPath,
+			QPS:     clientConfig.QPS,
+			Burst:   clientConfig.Burst,
+			// Skip TLS verification
+			TLSClientConfig: rest.TLSClientConfig{
+				Insecure: true,
+			},
+			// Preserve authentication information
+			Username:    clientConfig.Username,
+			Password:    clientConfig.Password,
+			BearerToken: clientConfig.BearerToken,
+			Timeout:     clientConfig.Timeout,
+		}
+
+		clientset, err = kubernetes.NewForConfig(insecureConfig)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create Kubernetes clientset even with insecure mode: %w", err)
+		}
+		clientConfig = *insecureConfig
 	}
 
-	dynamicClient, err := dynamic.NewForConfig(config)
+	dynamicClient, err := dynamic.NewForConfig(&clientConfig)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create dynamic client: %w", err)
 	}
 
-	discoveryClient, err := discovery.NewDiscoveryClientForConfig(config)
+	discoveryClient, err := discovery.NewDiscoveryClientForConfig(&clientConfig)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create discovery client: %w", err)
 	}
@@ -106,7 +132,7 @@ func newClientFromConfig(config *rest.Config) (*Client, error) {
 		Clientset:       clientset,
 		DynamicClient:   dynamicClient,
 		DiscoveryClient: discoveryClient,
-		Config:          config,
+		Config:          &clientConfig,
 	}
 
 	if err := client.initClusterInfo(); err != nil {

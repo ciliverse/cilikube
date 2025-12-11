@@ -53,3 +53,27 @@ func (h *NodeMetricsHandler) GetNodeMetrics(c *gin.Context) {
 	// 4. Successfully return data
 	utils.ApiSuccess(c, metrics, "successfully retrieved node metrics")
 }
+
+// GetAllNodesMetrics is the HTTP handler function for getting real-time metrics of all nodes
+func (h *NodeMetricsHandler) GetAllNodesMetrics(c *gin.Context) {
+	// 1. Get clusterId from query parameters and get the corresponding cluster's k8s client
+	k8sClient, ok := k8s.GetClientFromQuery(c, h.clusterManager)
+	if !ok {
+		return // Error already handled in GetClientFromQuery
+	}
+
+	// 2. Call service layer to get all nodes metrics
+	metrics, err := h.service.GetAllNodesMetrics(k8sClient.Config)
+	if err != nil {
+		// Judge the error here, if it's caused by metrics-server not being installed, give a friendly prompt
+		if clientErr, ok := err.(interface{ IsNotFound() bool }); ok && clientErr.IsNotFound() {
+			utils.ApiError(c, http.StatusNotFound, "failed to get metrics", "Please confirm that Metrics-Server is properly installed and running in the target cluster.")
+			return
+		}
+		utils.ApiError(c, http.StatusInternalServerError, "failed to get nodes metrics", err.Error())
+		return
+	}
+
+	// 3. Successfully return data
+	utils.ApiSuccess(c, metrics, "successfully retrieved all nodes metrics")
+}
