@@ -14,9 +14,9 @@ type AuthHandler struct {
 	authService *service.AuthService
 }
 
-func NewAuthHandler() *AuthHandler {
+func NewAuthHandler(authService *service.AuthService) *AuthHandler {
 	return &AuthHandler{
-		authService: &service.AuthService{},
+		authService: authService,
 	}
 }
 
@@ -41,7 +41,11 @@ func (h *AuthHandler) Login(c *gin.Context) {
 		return
 	}
 
-	response, err := h.authService.Login(&req)
+	// Get client IP and user agent
+	ipAddress := c.ClientIP()
+	userAgent := c.GetHeader("User-Agent")
+
+	response, err := h.authService.Login(&req, ipAddress, userAgent)
 	if err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{
 			"code":    401,
@@ -93,7 +97,7 @@ func (h *AuthHandler) Register(c *gin.Context) {
 	})
 }
 
-// GetProfile gets current user profile
+// GetProfile gets current user profile (legacy format for backward compatibility)
 // @Summary Get user profile
 // @Description Get profile information of currently logged in user
 // @Tags Auth
@@ -104,6 +108,42 @@ func (h *AuthHandler) Register(c *gin.Context) {
 // @Failure 401 {object} map[string]interface{}
 // @Router /api/v1/auth/profile [get]
 func (h *AuthHandler) GetProfile(c *gin.Context) {
+	userID, _, _, ok := auth.GetCurrentUser(c)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"code":    401,
+			"message": "user information does not exist",
+		})
+		return
+	}
+
+	response, err := h.authService.GetProfileLegacy(userID)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"code":    400,
+			"message": err.Error(),
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"code":    200,
+		"message": "retrieved successfully",
+		"data":    response,
+	})
+}
+
+// GetDetailedProfile gets detailed current user profile
+// @Summary Get detailed user profile
+// @Description Get detailed profile information of currently logged in user including OAuth providers
+// @Tags Auth
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Success 200 {object} models.UserProfileResponse
+// @Failure 401 {object} map[string]interface{}
+// @Router /api/v1/auth/profile/detailed [get]
+func (h *AuthHandler) GetDetailedProfile(c *gin.Context) {
 	userID, _, _, ok := auth.GetCurrentUser(c)
 	if !ok {
 		c.JSON(http.StatusUnauthorized, gin.H{
@@ -125,6 +165,56 @@ func (h *AuthHandler) GetProfile(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"code":    200,
 		"message": "retrieved successfully",
+		"data":    response,
+	})
+}
+
+// RefreshToken refreshes JWT token
+// @Summary Refresh JWT token
+// @Description Refresh an existing JWT token that is close to expiry
+// @Tags Auth
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Success 200 {object} models.TokenResponse
+// @Failure 400 {object} map[string]interface{}
+// @Failure 401 {object} map[string]interface{}
+// @Router /api/v1/auth/refresh [post]
+func (h *AuthHandler) RefreshToken(c *gin.Context) {
+	// Get token from Authorization header
+	authHeader := c.GetHeader("Authorization")
+	if authHeader == "" {
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"code":    401,
+			"message": "Authorization header is required",
+		})
+		return
+	}
+
+	// Extract token from "Bearer <token>"
+	tokenString := ""
+	if len(authHeader) > 7 && authHeader[:7] == "Bearer " {
+		tokenString = authHeader[7:]
+	} else {
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"code":    401,
+			"message": "Invalid authorization header format",
+		})
+		return
+	}
+
+	response, err := h.authService.RefreshToken(tokenString)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"code":    401,
+			"message": err.Error(),
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"code":    200,
+		"message": "token refreshed successfully",
 		"data":    response,
 	})
 }
@@ -224,7 +314,7 @@ func (h *AuthHandler) ChangePassword(c *gin.Context) {
 
 // Logout user logout
 // @Summary User logout
-// @Description User logs out of the system (frontend clears token)
+// @Description User logs out of the system and invalidates session
 // @Tags Auth
 // @Accept json
 // @Produce json
@@ -232,9 +322,175 @@ func (h *AuthHandler) ChangePassword(c *gin.Context) {
 // @Success 200 {object} map[string]interface{}
 // @Router /api/v1/auth/logout [post]
 func (h *AuthHandler) Logout(c *gin.Context) {
+	userID, _, _, ok := auth.GetCurrentUser(c)
+	if ok {
+		// Invalidate user sessions
+		if err := h.authService.Logout(userID); err != nil {
+			// Log error but don't fail logout
+			// Frontend will clear token regardless
+		}
+	}
+
 	c.JSON(http.StatusOK, gin.H{
 		"code":    200,
 		"message": "logout successful",
+	})
+}
+
+// GetUserSessions gets current user's active sessions
+// @Summary Get user sessions
+// @Description Get list of active sessions for current user
+// @Tags Auth
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Success 200 {object} map[string]interface{}
+// @Failure 401 {object} map[string]interface{}
+// @Router /api/v1/auth/sessions [get]
+func (h *AuthHandler) GetUserSessions(c *gin.Context) {
+	userID, _, _, ok := auth.GetCurrentUser(c)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"code":    401,
+			"message": "user information does not exist",
+		})
+		return
+	}
+
+	sessions, err := h.authService.GetUserSessions(userID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"code":    500,
+			"message": "failed to get user sessions: " + err.Error(),
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"code":    200,
+		"message": "retrieved successfully",
+		"data":    sessions,
+	})
+}
+
+// InvalidateSession invalidates a specific session
+// @Summary Invalidate session
+// @Description Invalidate a specific user session
+// @Tags Auth
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param sessionId path string true "Session ID"
+// @Success 200 {object} map[string]interface{}
+// @Failure 400 {object} map[string]interface{}
+// @Failure 401 {object} map[string]interface{}
+// @Router /api/v1/auth/sessions/{sessionId} [delete]
+func (h *AuthHandler) InvalidateSession(c *gin.Context) {
+	userID, _, _, ok := auth.GetCurrentUser(c)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"code":    401,
+			"message": "user information does not exist",
+		})
+		return
+	}
+
+	sessionID := c.Param("sessionId")
+	if sessionID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"code":    400,
+			"message": "session ID is required",
+		})
+		return
+	}
+
+	err := h.authService.InvalidateUserSession(userID, sessionID)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"code":    400,
+			"message": err.Error(),
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"code":    200,
+		"message": "session invalidated successfully",
+	})
+}
+
+// GetSecurityEvents gets security events for current user
+// @Summary Get security events
+// @Description Get security events and suspicious activity for current user
+// @Tags Auth
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Success 200 {object} map[string]interface{}
+// @Failure 401 {object} map[string]interface{}
+// @Router /api/v1/auth/security/events [get]
+func (h *AuthHandler) GetSecurityEvents(c *gin.Context) {
+	userID, _, _, ok := auth.GetCurrentUser(c)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"code":    401,
+			"message": "user information does not exist",
+		})
+		return
+	}
+
+	events, warnings, err := h.authService.GetUserSecurityInfo(userID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"code":    500,
+			"message": "failed to get security events: " + err.Error(),
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"code":    200,
+		"message": "retrieved successfully",
+		"data": gin.H{
+			"events":   events,
+			"warnings": warnings,
+		},
+	})
+}
+
+// ValidatePassword validates password against security policy
+// @Summary Validate password
+// @Description Validate password against current security policy
+// @Tags Auth
+// @Accept json
+// @Produce json
+// @Param password body models.ValidatePasswordRequest true "Password to validate"
+// @Success 200 {object} models.ValidatePasswordResponse
+// @Failure 400 {object} map[string]interface{}
+// @Router /api/v1/auth/validate-password [post]
+func (h *AuthHandler) ValidatePassword(c *gin.Context) {
+	var req models.ValidatePasswordRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"code":    400,
+			"message": "parameter error: " + err.Error(),
+		})
+		return
+	}
+
+	response, err := h.authService.ValidatePassword(req.Password)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"code":    500,
+			"message": "failed to validate password: " + err.Error(),
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"code":    200,
+		"message": "validation completed",
+		"data":    response,
 	})
 }
 
