@@ -9,6 +9,7 @@ import (
 
 	"github.com/ciliverse/cilikube/configs"
 	"github.com/ciliverse/cilikube/internal/store"
+	"github.com/google/uuid"
 )
 
 // SecurityService provides security-related functionality
@@ -193,40 +194,49 @@ type SessionInfo struct {
 	ExpiresAt time.Time `json:"expires_at"`
 }
 
-// In-memory session store (in production, this should be Redis or database)
-var activeSessions = make(map[string]*SessionInfo)
-var userSessions = make(map[uint][]string) // userID -> sessionIDs
-
-// CreateSession creates a new user session
+// CreateSession creates a new user session persisted in the store
 func (s *SecurityService) CreateSession(userID uint, ipAddress, userAgent string) (string, error) {
 	sessionID := generateSessionID()
 	now := time.Now()
+	absoluteTimeout := s.config.Security.Session.AbsoluteTimeout
+	if absoluteTimeout <= 0 {
+		absoluteTimeout = 8 * time.Hour
+	}
 
-	session := &SessionInfo{
+	// Enforce concurrent session limit
+	if s.config.Security.Session.MaxConcurrentSessions > 0 {
+		existing, err := s.store.GetUserSessions(userID)
+		if err == nil && len(existing) >= s.config.Security.Session.MaxConcurrentSessions {
+			overflow := len(existing) - s.config.Security.Session.MaxConcurrentSessions + 1
+			// Evict oldest sessions first
+			for overflow > 0 && len(existing) > 0 {
+				oldestIdx := 0
+				for i := 1; i < len(existing); i++ {
+					if existing[i].CreatedAt.Before(existing[oldestIdx].CreatedAt) {
+						oldestIdx = i
+					}
+				}
+				_ = s.InvalidateSession(existing[oldestIdx].SessionID)
+				existing = append(existing[:oldestIdx], existing[oldestIdx+1:]...)
+				overflow--
+			}
+		}
+	}
+
+	userSession := &store.UserSession{
 		UserID:    userID,
 		SessionID: sessionID,
 		IPAddress: ipAddress,
 		UserAgent: userAgent,
 		CreatedAt: now,
 		LastSeen:  now,
-		ExpiresAt: now.Add(s.config.Security.Session.AbsoluteTimeout),
+		ExpiresAt: now.Add(absoluteTimeout),
+		IsActive:  true,
+	}
+	if err := s.store.CreateUserSession(userSession); err != nil {
+		return "", fmt.Errorf("failed to persist session: %w", err)
 	}
 
-	// Check concurrent session limit
-	if s.config.Security.Session.MaxConcurrentSessions > 0 {
-		userSessionIDs := userSessions[userID]
-		if len(userSessionIDs) >= s.config.Security.Session.MaxConcurrentSessions {
-			// Remove oldest session
-			oldestSessionID := userSessionIDs[0]
-			s.InvalidateSession(oldestSessionID)
-		}
-	}
-
-	// Store session
-	activeSessions[sessionID] = session
-	userSessions[userID] = append(userSessions[userID], sessionID)
-
-	// Record session creation
 	auditLog := &store.AuditLog{
 		UserID:     &userID,
 		Action:     "session_created",
@@ -236,133 +246,124 @@ func (s *SecurityService) CreateSession(userID uint, ipAddress, userAgent string
 		UserAgent:  userAgent,
 		Details:    "New session created",
 	}
-	s.store.CreateAuditLog(auditLog)
+	_ = s.store.CreateAuditLog(auditLog)
 
 	return sessionID, nil
 }
 
 // ValidateSession validates and updates session activity
 func (s *SecurityService) ValidateSession(sessionID string) (*SessionInfo, error) {
-	session, exists := activeSessions[sessionID]
-	if !exists {
+	userSession, err := s.store.GetUserSession(sessionID)
+	if err != nil || userSession == nil {
+		return nil, errors.New("session not found")
+	}
+	if !userSession.IsActive {
 		return nil, errors.New("session not found")
 	}
 
 	now := time.Now()
-
-	// Check if session has expired (absolute timeout)
-	if now.After(session.ExpiresAt) {
-		s.InvalidateSession(sessionID)
+	if now.After(userSession.ExpiresAt) {
+		_ = s.InvalidateSession(sessionID)
 		return nil, errors.New("session has expired")
 	}
 
-	// Check idle timeout
 	if s.config.Security.Session.IdleTimeout > 0 {
-		idleExpiry := session.LastSeen.Add(s.config.Security.Session.IdleTimeout)
+		idleExpiry := userSession.LastSeen.Add(s.config.Security.Session.IdleTimeout)
 		if now.After(idleExpiry) {
-			s.InvalidateSession(sessionID)
+			_ = s.InvalidateSession(sessionID)
 			return nil, errors.New("session has been idle too long")
 		}
 	}
 
-	// Update last seen time
-	session.LastSeen = now
+	userSession.LastSeen = now
+	if err := s.store.UpdateUserSession(userSession); err != nil {
+		return nil, fmt.Errorf("failed to update session activity: %w", err)
+	}
 
-	return session, nil
+	return toSessionInfo(userSession), nil
+}
+
+// ValidateSessionID implements auth.SessionValidator
+func (s *SecurityService) ValidateSessionID(sessionID string) error {
+	_, err := s.ValidateSession(sessionID)
+	return err
 }
 
 // InvalidateSession removes a session
 func (s *SecurityService) InvalidateSession(sessionID string) error {
-	session, exists := activeSessions[sessionID]
-	if !exists {
-		return nil // Already invalid
+	userSession, err := s.store.GetUserSession(sessionID)
+	if err != nil || userSession == nil {
+		return nil
 	}
 
-	// Remove from active sessions
-	delete(activeSessions, sessionID)
-
-	// Remove from user sessions
-	userSessionIDs := userSessions[session.UserID]
-	for i, id := range userSessionIDs {
-		if id == sessionID {
-			userSessions[session.UserID] = append(userSessionIDs[:i], userSessionIDs[i+1:]...)
-			break
-		}
+	if err := s.store.DeleteUserSession(sessionID); err != nil {
+		return fmt.Errorf("failed to delete session: %w", err)
 	}
 
-	// Clean up empty user session list
-	if len(userSessions[session.UserID]) == 0 {
-		delete(userSessions, session.UserID)
-	}
-
-	// Record session invalidation
 	auditLog := &store.AuditLog{
-		UserID:     &session.UserID,
+		UserID:     &userSession.UserID,
 		Action:     "session_invalidated",
 		Resource:   "session",
 		ResourceID: sessionID,
-		IPAddress:  session.IPAddress,
-		UserAgent:  session.UserAgent,
+		IPAddress:  userSession.IPAddress,
+		UserAgent:  userSession.UserAgent,
 		Details:    "Session invalidated",
 	}
-	s.store.CreateAuditLog(auditLog)
+	_ = s.store.CreateAuditLog(auditLog)
 
 	return nil
 }
 
 // InvalidateAllUserSessions invalidates all sessions for a user
 func (s *SecurityService) InvalidateAllUserSessions(userID uint) error {
-	sessionIDs := userSessions[userID]
-	for _, sessionID := range sessionIDs {
-		s.InvalidateSession(sessionID)
+	sessions, err := s.store.GetUserSessions(userID)
+	if err != nil {
+		return err
 	}
-	return nil
+	for _, session := range sessions {
+		_ = s.InvalidateSession(session.SessionID)
+	}
+	// Fallback bulk delete in case any remained
+	return s.store.DeleteUserSessions(userID)
 }
 
 // GetUserSessions returns all active sessions for a user
 func (s *SecurityService) GetUserSessions(userID uint) []*SessionInfo {
-	sessionIDs := userSessions[userID]
-	sessions := make([]*SessionInfo, 0, len(sessionIDs))
-
-	for _, sessionID := range sessionIDs {
-		if session, exists := activeSessions[sessionID]; exists {
-			sessions = append(sessions, session)
-		}
+	sessions, err := s.store.GetUserSessions(userID)
+	if err != nil {
+		return []*SessionInfo{}
 	}
 
-	return sessions
+	result := make([]*SessionInfo, 0, len(sessions))
+	for _, session := range sessions {
+		result = append(result, toSessionInfo(session))
+	}
+	return result
 }
 
 // CleanupExpiredSessions removes expired sessions (should be called periodically)
 func (s *SecurityService) CleanupExpiredSessions() {
 	now := time.Now()
+	_ = s.store.CleanupExpiredSessions(now)
 
-	for sessionID, session := range activeSessions {
-		expired := false
+	// Also expire idle sessions that are still marked active
+	// Best-effort: scan active sessions per known users is expensive; rely on ValidateSession for idle checks.
+}
 
-		// Check absolute timeout
-		if now.After(session.ExpiresAt) {
-			expired = true
-		}
-
-		// Check idle timeout
-		if s.config.Security.Session.IdleTimeout > 0 {
-			idleExpiry := session.LastSeen.Add(s.config.Security.Session.IdleTimeout)
-			if now.After(idleExpiry) {
-				expired = true
-			}
-		}
-
-		if expired {
-			s.InvalidateSession(sessionID)
-		}
+func toSessionInfo(session *store.UserSession) *SessionInfo {
+	return &SessionInfo{
+		UserID:    session.UserID,
+		SessionID: session.SessionID,
+		IPAddress: session.IPAddress,
+		UserAgent: session.UserAgent,
+		CreatedAt: session.CreatedAt,
+		LastSeen:  session.LastSeen,
+		ExpiresAt: session.ExpiresAt,
 	}
 }
 
-// Helper function to generate session ID
 func generateSessionID() string {
-	// In production, use a cryptographically secure random generator
-	return fmt.Sprintf("sess_%d_%d", time.Now().UnixNano(), time.Now().Unix())
+	return "sess_" + uuid.NewString()
 }
 
 // RecordSecurityEvent records a security-related event

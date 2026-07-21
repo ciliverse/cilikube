@@ -9,6 +9,7 @@ import (
 	"github.com/ciliverse/cilikube/internal/routes"
 	"github.com/ciliverse/cilikube/internal/service"
 	"github.com/ciliverse/cilikube/internal/store"
+	"github.com/ciliverse/cilikube/pkg/auth"
 	"github.com/ciliverse/cilikube/pkg/k8s"
 	"github.com/gin-gonic/gin"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -18,6 +19,7 @@ func InitializeServices(k8sManager *k8s.ClusterManager, store store.Store, cfg *
 	log.Println("initializing service layer...")
 	resourceFactory := service.NewResourceServiceFactory()
 	resourceFactory.InitializeDefaultServices()
+	authService := service.NewAuthService(store, cfg)
 	appServices := &service.AppServices{
 		ClusterService:     service.NewClusterService(k8sManager),
 		InstallerService:   service.NewInstallerService(cfg),
@@ -26,9 +28,10 @@ func InitializeServices(k8sManager *k8s.ClusterManager, store store.Store, cfg *
 		SummaryService:     service.NewSummaryService(),
 		EventService:       service.NewEventService(k8sManager),
 		CRDService:         service.NewCRDService(),
-		AuthService:        service.NewAuthService(store, cfg),
-		OAuthService:       service.NewOAuthService(store, cfg),
+		AuthService:        authService,
+		OAuthService:       service.NewOAuthService(store, cfg, authService.GetSecurityService()),
 		RoleService:        service.NewRoleService(store),
+		AuditService:       service.NewAuditService(store, cfg),
 	}
 	// PodExecService requires rest.Config
 	if activeClient, err := k8sManager.GetActiveClient(); err == nil && activeClient != nil {
@@ -48,6 +51,12 @@ func InitializeServices(k8sManager *k8s.ClusterManager, store store.Store, cfg *
 	initializeResourceService(resourceFactory, "persistentvolumes", &appServices.PVService)
 	initializeResourceService(resourceFactory, "statefulsets", &appServices.StatefulSetService)
 	initializeResourceService(resourceFactory, "namespaces", &appServices.NamespaceService)
+	initializeResourceService(resourceFactory, "storageclasses", &appServices.StorageClassService)
+	initializeResourceService(resourceFactory, "serviceaccounts", &appServices.ServiceAccountService)
+	initializeResourceService(resourceFactory, "roles", &appServices.RoleResourceService)
+	initializeResourceService(resourceFactory, "rolebindings", &appServices.RoleBindingService)
+	initializeResourceService(resourceFactory, "clusterroles", &appServices.ClusterRoleService)
+	initializeResourceService(resourceFactory, "clusterrolebindings", &appServices.ClusterRoleBindingService)
 	return appServices
 }
 
@@ -96,6 +105,12 @@ func InitializeHandlers(router *gin.RouterGroup, services *service.AppServices, 
 	secretsHandler := handlers.NewResourceHandler(services.SecretService, k8sManager, "secrets")
 	pvcHandler := handlers.NewResourceHandler(services.PVCService, k8sManager, "persistentvolumeclaims")
 	statefulsetsHandler := handlers.NewResourceHandler(services.StatefulSetService, k8sManager, "statefulsets")
+	storageClassHandler := handlers.NewResourceHandler(services.StorageClassService, k8sManager, "storageclasses")
+	serviceAccountHandler := handlers.NewResourceHandler(services.ServiceAccountService, k8sManager, "serviceaccounts")
+	k8sRoleHandler := handlers.NewResourceHandler(services.RoleResourceService, k8sManager, "roles")
+	roleBindingHandler := handlers.NewResourceHandler(services.RoleBindingService, k8sManager, "rolebindings")
+	clusterRoleHandler := handlers.NewResourceHandler(services.ClusterRoleService, k8sManager, "clusterroles")
+	clusterRoleBindingHandler := handlers.NewResourceHandler(services.ClusterRoleBindingService, k8sManager, "clusterrolebindings")
 	nodeMetricsHandler := handlers.NewNodeMetricsHandler(services.NodeMetricsService, k8sManager)
 
 	// Pod logs and terminal Handler
@@ -131,6 +146,10 @@ func InitializeHandlers(router *gin.RouterGroup, services *service.AppServices, 
 		pvRoutes.GET("/:name/watch", pvHandler.Watch)
 	}
 
+	registerClusterScopedResource(router, "storageclasses", storageClassHandler)
+	registerClusterScopedResource(router, "clusterroles", clusterRoleHandler)
+	registerClusterScopedResource(router, "clusterrolebindings", clusterRoleBindingHandler)
+
 	podsTopLevelRoutes := router.Group("/pods")
 	{
 		podsTopLevelRoutes.GET("", podsHandler.List)
@@ -159,6 +178,9 @@ func InitializeHandlers(router *gin.RouterGroup, services *service.AppServices, 
 			registerResourceInNamespace(nsMemberRoutes, "secrets", secretsHandler)
 			registerResourceInNamespace(nsMemberRoutes, "persistentvolumeclaims", pvcHandler)
 			registerResourceInNamespace(nsMemberRoutes, "statefulsets", statefulsetsHandler)
+			registerResourceInNamespace(nsMemberRoutes, "serviceaccounts", serviceAccountHandler)
+			registerResourceInNamespace(nsMemberRoutes, "roles", k8sRoleHandler)
+			registerResourceInNamespace(nsMemberRoutes, "rolebindings", roleBindingHandler)
 
 			// New: Pod logs and terminal routes
 			podsMemberRoutes := nsMemberRoutes.Group("/pods/:name")
@@ -169,6 +191,22 @@ func InitializeHandlers(router *gin.RouterGroup, services *service.AppServices, 
 		}
 	}
 }
+
+func registerClusterScopedResource[T runtime.Object](router *gin.RouterGroup, resourceName string, handler *handlers.ResourceHandler[T]) {
+	if handler == nil {
+		return
+	}
+	routes := router.Group("/" + resourceName)
+	{
+		routes.GET("", handler.List)
+		routes.POST("", handler.Create)
+		routes.GET("/:name", handler.Get)
+		routes.PUT("/:name", handler.Update)
+		routes.DELETE("/:name", handler.Delete)
+		routes.GET("/:name/watch", handler.Watch)
+	}
+}
+
 func registerResourceInNamespace[T runtime.Object](nsRouter *gin.RouterGroup, resourceName string, handler *handlers.ResourceHandler[T]) {
 	if handler == nil {
 		return
@@ -195,6 +233,11 @@ func SetupRouter(cfg *configs.Config, services *service.AppServices, k8sManager 
 	router := gin.New()
 	router.Use(gin.Recovery(), gin.Logger())
 
+	// Enable session validation for JWT middleware so logout can revoke access
+	if services.AuthService != nil && services.AuthService.GetSecurityService() != nil {
+		auth.SetSessionValidator(services.AuthService.GetSecurityService())
+	}
+
 	// Configure custom CORS middleware, allow all required headers
 	router.Use(func(c *gin.Context) {
 		c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
@@ -209,6 +252,11 @@ func SetupRouter(cfg *configs.Config, services *service.AppServices, k8sManager 
 
 		c.Next()
 	})
+
+	// API audit logging (after CORS, before handlers; JWT runs later on protected routes)
+	if services.AuditService != nil {
+		router.Use(auth.AuditMiddleware(services.AuditService))
+	}
 
 	// Serve static files for uploaded avatars
 	router.Static("/uploads", "./uploads")

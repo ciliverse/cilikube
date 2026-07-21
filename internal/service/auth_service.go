@@ -31,6 +31,11 @@ func NewAuthService(store store.Store, config *configs.Config) *AuthService {
 	}
 }
 
+// GetSecurityService exposes the security service for middleware wiring
+func (s *AuthService) GetSecurityService() *SecurityService {
+	return s.securityService
+}
+
 // Login authenticates a user with username/password and returns JWT token
 func (s *AuthService) Login(req *models.LoginRequest, ipAddress, userAgent string) (*models.LoginResponse, error) {
 	// Get user by username
@@ -94,16 +99,16 @@ func (s *AuthService) Login(req *models.LoginRequest, ipAddress, userAgent strin
 		user.Role = "viewer" // Default role
 	}
 
-	// Generate JWT token
-	token, expiresAt, err := auth.GenerateToken(&user)
-	if err != nil {
-		return nil, fmt.Errorf("failed to generate token: %w", err)
-	}
-
-	// Create session if session management is enabled
+	// Create session first so JWT can embed session_id for revocation
 	sessionID, err := s.securityService.CreateSession(storeUser.ID, ipAddress, userAgent)
 	if err != nil {
-		fmt.Printf("Failed to create session: %v\n", err)
+		return nil, fmt.Errorf("failed to create session: %w", err)
+	}
+
+	token, expiresAt, err := auth.GenerateToken(&user, sessionID)
+	if err != nil {
+		_ = s.securityService.InvalidateSession(sessionID)
+		return nil, fmt.Errorf("failed to generate token: %w", err)
 	}
 
 	// Create audit log
@@ -154,8 +159,8 @@ func (s *AuthService) RefreshToken(tokenString string) (*models.TokenResponse, e
 		user.Role = "viewer"
 	}
 
-	// Generate new token
-	newToken, expiresAt, err := auth.GenerateToken(&user)
+	// Generate new token preserving the existing session
+	newToken, expiresAt, err := auth.GenerateToken(&user, claims.SessionID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate new token: %w", err)
 	}
