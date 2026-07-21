@@ -71,17 +71,25 @@ function getCurrentClusterId(): string | null {
 /** 判断是否为需要集群上下文的资源API */
 function isResourceApiUrl(url: string): boolean {
   const resourceApiPatterns = [
-    // Core API resources
+    // Core / CiliKube resource APIs
     /\/api\/v1\/nodes/,
     /\/api\/v1\/pods/,
     /\/api\/v1\/services/,
     /\/api\/v1\/namespaces/,
     /\/api\/v1\/persistentvolumes/,
     /\/api\/v1\/persistentvolumeclaims/,
+    /\/api\/v1\/storageclasses/,
     /\/api\/v1\/configmaps/,
     /\/api\/v1\/secrets/,
     /\/api\/v1\/endpoints/,
     /\/api\/v1\/replicationcontrollers/,
+    /\/api\/v1\/events/,
+    /\/api\/v1\/crds/,
+    /\/api\/v1\/clusterroles/,
+    /\/api\/v1\/clusterrolebindings/,
+    /\/api\/v1\/informers/,
+    /\/api\/v1\/monitoring/,
+    /\/api\/v1\/prometheus/,
     // Apps API resources
     /\/apis\/apps\/v1\/deployments/,
     /\/apis\/apps\/v1\/replicasets/,

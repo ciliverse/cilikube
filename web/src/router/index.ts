@@ -111,6 +111,15 @@ export const constantRoutes: RouteRecordRaw[] = [
         meta: {
           title: "运维导航"
         }
+      },
+      {
+        path: "monitoring",
+        component: () => import("@/views/monitoring/index.vue"),
+        name: "Monitoring",
+        meta: {
+          title: "集群监控",
+          roles: ["admin", "editor", "viewer"]
+        }
       }
     ]
   },
@@ -418,6 +427,63 @@ export const dynamicRoutes: RouteRecordRaw[] = [
         meta: {
           title: "PVC",
           roles: ["admin", "editor", "viewer"] // 所有角色都可以查看PVC
+        }
+      },
+      {
+        path: "storageclass",
+        component: () => import("@/views/storageclass/index.vue"),
+        name: "StorageClass",
+        meta: {
+          title: "StorageClass",
+          roles: ["admin", "editor", "viewer"]
+        }
+      }
+    ]
+  },
+  // Kubernetes RBAC 路由
+  {
+    path: "/rbac",
+    component: Layouts,
+    meta: {
+      title: "集群权限",
+      svgIcon: "lock",
+      roles: ["admin", "editor"]
+    },
+    children: [
+      {
+        path: "roles",
+        component: () => import("@/views/rbac/roles/index.vue"),
+        name: "K8sRoles",
+        meta: {
+          title: "Roles",
+          roles: ["admin", "editor"]
+        }
+      },
+      {
+        path: "rolebindings",
+        component: () => import("@/views/rbac/rolebindings/index.vue"),
+        name: "K8sRoleBindings",
+        meta: {
+          title: "RoleBindings",
+          roles: ["admin", "editor"]
+        }
+      },
+      {
+        path: "clusterroles",
+        component: () => import("@/views/rbac/clusterroles/index.vue"),
+        name: "K8sClusterRoles",
+        meta: {
+          title: "ClusterRoles",
+          roles: ["admin", "editor"]
+        }
+      },
+      {
+        path: "clusterrolebindings",
+        component: () => import("@/views/rbac/clusterrolebindings/index.vue"),
+        name: "K8sClusterRoleBindings",
+        meta: {
+          title: "ClusterRoleBindings",
+          roles: ["admin", "editor"]
         }
       }
     ]
