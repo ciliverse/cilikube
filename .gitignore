@@ -19,7 +19,7 @@ out/
 minikube-darwin-arm64
 # Ignore output directory
 output/
-# Ignore Cilikube binary and related files
-cilikube
-cilikube.exe
-cilikube-*
+# Ignore Cilikube binary and related files (root only; do not ignore deployments/helm/cilikube)
+/cilikube
+/cilikube.exe
+/cilikube-*

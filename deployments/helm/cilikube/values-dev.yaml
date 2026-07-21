@@ -1,0 +1,16 @@
+backend:
+  replicas: 1
+  image:
+    tag: latest
+
+frontend:
+  replicas: 1
+
+config:
+  serverMode: debug
+
+ingress:
+  enabled: false
+
+autoscaling:
+  enabled: false
