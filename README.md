@@ -173,8 +173,8 @@ CiliKube leverages industry-standard technologies and frameworks to ensure relia
 
 ### Running the Frontend
 ```bash
-# Navigate to the frontend directory
-cd cilikube-web
+# Navigate to the frontend directory (monorepo path: web/)
+cd web
 # Install dependencies
 pnpm install
 # Start the development server
@@ -185,8 +185,7 @@ Visit http://localhost:8888 to see the frontend interface.
 
 ### Running the Backend
 ```bash
-# Navigate to the backend directory
-cd cilikube
+# From the repository root
 # (Optional) Update Go dependencies
 go mod tidy
 # Run the backend service (listens on port 8080 by default)
@@ -196,13 +195,13 @@ go run cmd/server/main.go
 
 ### Building the Project
 ```bash
-# Build frontend production package (output to cilikube-web/dist)
-cd cilikube-web
+# Build frontend production package (output to web/dist)
+cd web
 pnpm build
 
 # Build backend executable
-cd ../cilikube
-go build -o cilikube cmd/server/main.go
+cd ..
+go build -o bin/cilikube cmd/server/main.go
 ```
 
 ## 🐳 Docker Deployment

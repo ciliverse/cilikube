@@ -1,4 +1,6 @@
 node_modules
+web/node_modules
+web/dist
 .idea/
 minikube-darwin-arm64
 output/
