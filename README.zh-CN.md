@@ -172,8 +172,8 @@ CiliKube 采用行业标准技术和框架，确保可靠性、可维护性和�
 
 ### 运行前端
 ```bash
-# 进入前端目录
-cd cilikube-web
+# 进入前端目录（本仓库 monorepo 下的 web/）
+cd web
 # 安装依赖
 pnpm install
 # 启动开发服务器
@@ -184,8 +184,7 @@ pnpm dev
 
 ### 运行后端
 ```bash
-# 进入后端目录
-cd cilikube
+# 在仓库根目录
 # (可选) 更新 Go 依赖
 go mod tidy
 # 运行后端服务 (默认监听 8080 端口)
@@ -195,13 +194,13 @@ go run cmd/server/main.go
 
 ### 构建项目
 ```bash
-# 构建前端生产环境包 (输出到 cilikube-web/dist)
-cd cilikube-web
+# 构建前端生产环境包 (输出到 web/dist)
+cd web
 pnpm build
 
 # 构建后端可执行文件
-cd ../cilikube
-go build -o cilikube cmd/server/main.go
+cd ..
+go build -o bin/cilikube cmd/server/main.go
 ```
 
 ## 🐳 Docker 部署

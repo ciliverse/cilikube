@@ -1,0 +1,32 @@
+<script lang="ts" setup>
+import { ref } from "vue"
+import { useI18n } from "vue-i18n"
+import SearchModal from "./SearchModal.vue"
+
+const { t } = useI18n()
+
+/** 控制 modal 显隐 */
+const modalVisible = ref<boolean>(false)
+/** 打开 modal */
+const handleOpen = () => {
+  modalVisible.value = true
+}
+</script>
+
+<template>
+  <div>
+    <el-tooltip effect="dark" :content="t('ui.searchMenu')" placement="bottom">
+      <SvgIcon name="search" @click="handleOpen" />
+    </el-tooltip>
+    <SearchModal v-model="modalVisible" />
+  </div>
+</template>
+
+<style lang="scss" scoped>
+.svg-icon {
+  font-size: 20px;
+  &:focus {
+    outline: none;
+  }
+}
+</style>
