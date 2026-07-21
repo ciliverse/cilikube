@@ -1,0 +1,2367 @@
+From 0268dc13a51c7ae839494f9930951f74451d00e0 Mon Sep 17 00:00:00 2001
+From: Cursor Agent <cursoragent@cursor.com>
+Date: Tue, 21 Jul 2026 15:07:35 +0000
+Subject: [PATCH] feat: add monitoring, StorageClass, and K8s RBAC pages
+
+Sync frontend pages that wire monitoring/Prometheus APIs, StorageClass
+management, and Kubernetes RBAC resource views from the cilikube monorepo.
+---
+ .env.development                             |   2 +-
+ src/api/monitoring.ts                        | 101 +++++
+ src/api/prometheus.ts                        |  41 ++
+ src/locales/lang/en.ts                       | 158 ++++++++
+ src/locales/lang/zh.ts                       | 158 ++++++++
+ src/router/index.ts                          |  66 ++++
+ src/utils/http-client.ts                     |  10 +-
+ src/views/monitoring/index.vue               | 396 +++++++++++++++++++
+ src/views/rbac/clusterrolebindings/index.vue | 209 ++++++++++
+ src/views/rbac/clusterroles/index.vue        | 227 +++++++++++
+ src/views/rbac/rolebindings/index.vue        | 267 +++++++++++++
+ src/views/rbac/roles/index.vue               | 276 +++++++++++++
+ src/views/storageclass/index.vue             | 288 ++++++++++++++
+ 13 files changed, 2197 insertions(+), 2 deletions(-)
+ create mode 100644 src/api/monitoring.ts
+ create mode 100644 src/api/prometheus.ts
+ create mode 100644 src/views/monitoring/index.vue
+ create mode 100644 src/views/rbac/clusterrolebindings/index.vue
+ create mode 100644 src/views/rbac/clusterroles/index.vue
+ create mode 100644 src/views/rbac/rolebindings/index.vue
+ create mode 100644 src/views/rbac/roles/index.vue
+ create mode 100644 src/views/storageclass/index.vue
+
+diff --git a/.env.development b/.env.development
+index 42f2616..14c4526 100644
+--- a/.env.development
++++ b/.env.development
+@@ -1,7 +1,7 @@
+ # 开发环境自定义的环境变量（命名必须以 VITE_ 开头）
+ 
+ ## 后端接口公共路径（如果解决跨域问题采用反向代理就只需写公共路径）
+-VITE_BASE_API = 'http://192.168.2.101:8080'
++VITE_BASE_API = 'http://localhost:8080'
+ 
+ ## 路由模式 hash 或 html5
+ VITE_ROUTER_HISTORY = 'hash'
+diff --git a/src/api/monitoring.ts b/src/api/monitoring.ts
+new file mode 100644
+index 0000000..89a0cc0
+--- /dev/null
++++ b/src/api/monitoring.ts
+@@ -0,0 +1,101 @@
++import { standardApiClient } from '@/utils/http-client'
++
++export interface RealTimeMetrics {
++  login_attempts_per_minute: number
++  failed_logins_per_minute: number
++  active_sessions: number
++  locked_accounts: number
++  security_violations_per_hour: number
++  suspicious_activities: number
++  active_threats: number
++  total_users: number
++  active_users: number
++  api_requests_per_minute: number
++  resource_access_per_minute: number
++  permission_denials_per_hour: number
++  last_updated: string
++  update_interval: number
++}
++
++export interface HealthIssue {
++  type: string
++  severity: string
++  description: string
++  value: number
++  threshold: number
++}
++
++export interface SystemHealth {
++  status: string
++  timestamp: string
++  metrics: RealTimeMetrics
++  issues: HealthIssue[]
++}
++
++export interface MonitoringDashboard {
++  metrics: RealTimeMetrics
++  health: SystemHealth
++  summary: {
++    status: string
++    total_users: number
++    active_users: number
++    active_sessions: number
++    active_threats: number
++    failed_logins_rate: number
++    security_violations: number
++    last_updated: string
++  }
++  alerts: {
++    critical: number
++    warning: number
++    info: number
++  }
++}
++
++export interface MonitoringAlert {
++  id: string
++  level: string
++  type: string
++  title: string
++  description: string
++  timestamp: string
++  resolved: boolean
++}
++
++export interface MetricsHistory {
++  period: string
++  interval: string
++  timestamps: string[]
++  series: {
++    login_attempts: number[]
++    failed_logins: number[]
++    api_requests: number[]
++  }
++}
++
++export function getMonitoringDashboard() {
++  return standardApiClient.get<{ code: number; data: MonitoringDashboard; message: string }>(
++    '/api/v1/monitoring/dashboard'
++  )
++}
++
++export function getSystemHealth() {
++  return standardApiClient.get<{ code: number; data: SystemHealth; message: string }>(
++    '/api/v1/monitoring/health'
++  )
++}
++
++export function getMonitoringAlerts(params?: { severity?: string; limit?: number }) {
++  return standardApiClient.get<{
++    code: number
++    data: { alerts: MonitoringAlert[]; count: number; filter: string }
++    message: string
++  }>('/api/v1/monitoring/alerts', { params })
++}
++
++export function getMetricsHistory(params?: { period?: string; interval?: string }) {
++  return standardApiClient.get<{ code: number; data: MetricsHistory; message: string }>(
++    '/api/v1/monitoring/metrics/history',
++    { params }
++  )
++}
+diff --git a/src/api/prometheus.ts b/src/api/prometheus.ts
+new file mode 100644
+index 0000000..d08b063
+--- /dev/null
++++ b/src/api/prometheus.ts
+@@ -0,0 +1,41 @@
++import { standardApiClient } from '@/utils/http-client'
++
++export interface PrometheusStatus {
++  enabled: boolean
++  url: string
++  healthy: boolean
++  error?: string
++  data?: unknown
++}
++
++export interface PromQueryResult {
++  status: string
++  data: unknown
++  error?: string
++  errorType?: string
++}
++
++export function getPrometheusStatus() {
++  return standardApiClient.get<{ code: number; data: PrometheusStatus; message: string }>(
++    '/api/v1/prometheus/status'
++  )
++}
++
++export function queryPrometheus(params: { query: string; time?: string }) {
++  return standardApiClient.get<{ code: number; data: PromQueryResult; message: string }>(
++    '/api/v1/prometheus/query',
++    { params }
++  )
++}
++
++export function queryPrometheusRange(params: {
++  query: string
++  start: string
++  end: string
++  step?: string
++}) {
++  return standardApiClient.get<{ code: number; data: PromQueryResult; message: string }>(
++    '/api/v1/prometheus/query_range',
++    { params }
++  )
++}
+diff --git a/src/locales/lang/en.ts b/src/locales/lang/en.ts
+index 58d3283..07aeb40 100644
+--- a/src/locales/lang/en.ts
++++ b/src/locales/lang/en.ts
+@@ -114,6 +114,14 @@ export default {
+     storage: 'Storage',
+     pv: 'PV',
+     pvc: 'PVC',
++    storageClass: 'StorageClass',
++
++    // 集群权限 (K8s RBAC)
++    rbac: 'Cluster RBAC',
++    k8sRoles: 'Roles',
++    k8sRoleBindings: 'RoleBindings',
++    k8sClusterRoles: 'ClusterRoles',
++    k8sClusterRoleBindings: 'ClusterRoleBindings',
+ 
+     // 网络
+     network: 'Network',
+@@ -871,6 +879,156 @@ export default {
+     }
+   },
+ 
++  // StorageClass management
++  storageClassManagement: {
++    title: 'StorageClasses',
++    searchPlaceholder: 'Search name / Provisioner',
++    columns: {
++      name: 'Name',
++      provisioner: 'Provisioner',
++      reclaimPolicy: 'Reclaim Policy',
++      volumeBindingMode: 'Binding Mode',
++      allowVolumeExpansion: 'Allow Expansion',
++      createdAt: 'Created At',
++      actions: 'Actions'
++    },
++    messages: {
++      noData: 'No StorageClasses found',
++      fetchFailed: 'Failed to fetch StorageClasses',
++      deleteConfirm: 'Are you sure you want to delete StorageClass "{name}"?',
++      deleteSuccess: 'StorageClass deleted successfully',
++      deleteFailed: 'Failed to delete StorageClass'
++    }
++  },
++
++  // K8s Role management
++  roleResourceManagement: {
++    title: 'Roles',
++    filterNamespace: 'Select Namespace',
++    searchPlaceholder: 'Search Role name',
++    columns: {
++      name: 'Name',
++      namespace: 'Namespace',
++      rulesCount: 'Rules',
++      rulesSummary: 'Rules Summary',
++      createdAt: 'Created At',
++      actions: 'Actions'
++    },
++    messages: {
++      noData: 'No Roles found',
++      selectNamespace: 'Please select a namespace first',
++      fetchFailed: 'Failed to fetch Roles',
++      fetchNamespacesFailed: 'Failed to fetch namespaces',
++      deleteConfirm: 'Are you sure you want to delete Role "{name}" (namespace: {namespace})?',
++      deleteSuccess: 'Role deleted successfully',
++      deleteFailed: 'Failed to delete Role'
++    }
++  },
++
++  // K8s ClusterRole management
++  clusterRoleManagement: {
++    title: 'ClusterRoles',
++    searchPlaceholder: 'Search ClusterRole name',
++    columns: {
++      name: 'Name',
++      rulesCount: 'Rules',
++      rulesSummary: 'Rules Summary',
++      createdAt: 'Created At',
++      actions: 'Actions'
++    },
++    messages: {
++      noData: 'No ClusterRoles found',
++      fetchFailed: 'Failed to fetch ClusterRoles',
++      deleteConfirm: 'Are you sure you want to delete ClusterRole "{name}"?',
++      deleteSuccess: 'ClusterRole deleted successfully',
++      deleteFailed: 'Failed to delete ClusterRole'
++    }
++  },
++
++  // K8s RoleBinding management
++  roleBindingManagement: {
++    title: 'RoleBindings',
++    filterNamespace: 'Select Namespace',
++    searchPlaceholder: 'Search name / Role / Subject',
++    columns: {
++      name: 'Name',
++      namespace: 'Namespace',
++      roleRef: 'Role Ref',
++      subjects: 'Subjects',
++      createdAt: 'Created At',
++      actions: 'Actions'
++    },
++    messages: {
++      noData: 'No RoleBindings found',
++      selectNamespace: 'Please select a namespace first',
++      fetchFailed: 'Failed to fetch RoleBindings',
++      fetchNamespacesFailed: 'Failed to fetch namespaces',
++      deleteConfirm: 'Are you sure you want to delete RoleBinding "{name}"?',
++      deleteSuccess: 'RoleBinding deleted successfully',
++      deleteFailed: 'Failed to delete RoleBinding'
++    }
++  },
++
++  // K8s ClusterRoleBinding management
++  clusterRoleBindingManagement: {
++    title: 'ClusterRoleBindings',
++    searchPlaceholder: 'Search name / Role / Subject',
++    columns: {
++      name: 'Name',
++      roleRef: 'ClusterRole Ref',
++      subjects: 'Subjects',
++      createdAt: 'Created At',
++      actions: 'Actions'
++    },
++    messages: {
++      noData: 'No ClusterRoleBindings found',
++      fetchFailed: 'Failed to fetch ClusterRoleBindings',
++      deleteConfirm: 'Are you sure you want to delete ClusterRoleBinding "{name}"?',
++      deleteSuccess: 'ClusterRoleBinding deleted successfully',
++      deleteFailed: 'Failed to delete ClusterRoleBinding'
++    }
++  },
++
++  // Monitoring page
++  monitoringPage: {
++    title: 'Cluster Monitoring',
++    subtitle: 'Node resources, security overview, and Prometheus queries',
++    autoRefresh: 'Auto Refresh',
++    securityOverview: 'Security Overview',
++    prometheus: 'Prometheus',
++    prometheusUrl: 'URL',
++    promQuery: 'PromQL',
++    runQuery: 'Run Query',
++    nodeMetrics: 'Node Metrics',
++    alerts: 'Alerts',
++    noIssues: 'No health issues',
++    noAlerts: 'No alerts',
++    fetchFailed: 'Failed to fetch monitoring data',
++    queryFailed: 'Prometheus query failed',
++    promDisabled: 'Disabled',
++    promHealthy: 'Healthy',
++    promUnhealthy: 'Unhealthy',
++    cards: {
++      nodes: 'Nodes',
++      cpuCores: 'CPU Cores',
++      avgCpu: 'Avg CPU',
++      avgMemory: 'Avg Memory',
++      activeSessions: 'Active Sessions',
++      activeUsers: 'Active Users',
++      activeThreats: 'Active Threats',
++      failedLogins: 'Failed Login Rate',
++      violations: 'Violations',
++      alerts: 'Alerts'
++    },
++    columns: {
++      node: 'Node',
++      cpu: 'CPU',
++      memory: 'Memory',
++      cpuRequests: 'CPU Requests',
++      memoryRequests: 'Memory Requests'
++    }
++  },
++
+   // Service 管理
+   serviceManagement: {
+     title: 'Services',
+diff --git a/src/locales/lang/zh.ts b/src/locales/lang/zh.ts
+index 0a7e1be..dbe202f 100644
+--- a/src/locales/lang/zh.ts
++++ b/src/locales/lang/zh.ts
+@@ -114,6 +114,14 @@ export default {
+     storage: '存储',
+     pv: 'PV',
+     pvc: 'PVC',
++    storageClass: 'StorageClass',
++
++    // 集群权限 (K8s RBAC)
++    rbac: '集群权限',
++    k8sRoles: 'Roles',
++    k8sRoleBindings: 'RoleBindings',
++    k8sClusterRoles: 'ClusterRoles',
++    k8sClusterRoleBindings: 'ClusterRoleBindings',
+     
+     // 网络
+     network: '网络',
+@@ -880,6 +888,156 @@ export default {
+     }
+   },
+ 
++  // StorageClass 管理
++  storageClassManagement: {
++    title: 'StorageClasses',
++    searchPlaceholder: '搜索名称 / Provisioner',
++    columns: {
++      name: '名称',
++      provisioner: 'Provisioner',
++      reclaimPolicy: '回收策略',
++      volumeBindingMode: '绑定模式',
++      allowVolumeExpansion: '允许扩容',
++      createdAt: '创建时间',
++      actions: '操作'
++    },
++    messages: {
++      noData: '未找到 StorageClass',
++      fetchFailed: '获取 StorageClass 失败',
++      deleteConfirm: '确定要删除 StorageClass "{name}" 吗？',
++      deleteSuccess: 'StorageClass 删除成功',
++      deleteFailed: 'StorageClass 删除失败'
++    }
++  },
++
++  // K8s Role 管理
++  roleResourceManagement: {
++    title: 'Roles',
++    filterNamespace: '选择命名空间',
++    searchPlaceholder: '搜索 Role 名称',
++    columns: {
++      name: '名称',
++      namespace: '命名空间',
++      rulesCount: '规则数',
++      rulesSummary: '规则摘要',
++      createdAt: '创建时间',
++      actions: '操作'
++    },
++    messages: {
++      noData: '未找到 Role',
++      selectNamespace: '请先选择命名空间',
++      fetchFailed: '获取 Role 失败',
++      fetchNamespacesFailed: '获取命名空间失败',
++      deleteConfirm: '确定要删除 Role "{name}"（命名空间: {namespace}）吗？',
++      deleteSuccess: 'Role 删除成功',
++      deleteFailed: 'Role 删除失败'
++    }
++  },
++
++  // K8s ClusterRole 管理
++  clusterRoleManagement: {
++    title: 'ClusterRoles',
++    searchPlaceholder: '搜索 ClusterRole 名称',
++    columns: {
++      name: '名称',
++      rulesCount: '规则数',
++      rulesSummary: '规则摘要',
++      createdAt: '创建时间',
++      actions: '操作'
++    },
++    messages: {
++      noData: '未找到 ClusterRole',
++      fetchFailed: '获取 ClusterRole 失败',
++      deleteConfirm: '确定要删除 ClusterRole "{name}" 吗？',
++      deleteSuccess: 'ClusterRole 删除成功',
++      deleteFailed: 'ClusterRole 删除失败'
++    }
++  },
++
++  // K8s RoleBinding 管理
++  roleBindingManagement: {
++    title: 'RoleBindings',
++    filterNamespace: '选择命名空间',
++    searchPlaceholder: '搜索名称 / Role / Subject',
++    columns: {
++      name: '名称',
++      namespace: '命名空间',
++      roleRef: '关联 Role',
++      subjects: 'Subjects',
++      createdAt: '创建时间',
++      actions: '操作'
++    },
++    messages: {
++      noData: '未找到 RoleBinding',
++      selectNamespace: '请先选择命名空间',
++      fetchFailed: '获取 RoleBinding 失败',
++      fetchNamespacesFailed: '获取命名空间失败',
++      deleteConfirm: '确定要删除 RoleBinding "{name}" 吗？',
++      deleteSuccess: 'RoleBinding 删除成功',
++      deleteFailed: 'RoleBinding 删除失败'
++    }
++  },
++
++  // K8s ClusterRoleBinding 管理
++  clusterRoleBindingManagement: {
++    title: 'ClusterRoleBindings',
++    searchPlaceholder: '搜索名称 / Role / Subject',
++    columns: {
++      name: '名称',
++      roleRef: '关联 ClusterRole',
++      subjects: 'Subjects',
++      createdAt: '创建时间',
++      actions: '操作'
++    },
++    messages: {
++      noData: '未找到 ClusterRoleBinding',
++      fetchFailed: '获取 ClusterRoleBinding 失败',
++      deleteConfirm: '确定要删除 ClusterRoleBinding "{name}" 吗？',
++      deleteSuccess: 'ClusterRoleBinding 删除成功',
++      deleteFailed: 'ClusterRoleBinding 删除失败'
++    }
++  },
++
++  // 监控页
++  monitoringPage: {
++    title: '集群监控',
++    subtitle: '节点资源、安全概览与 Prometheus 查询',
++    autoRefresh: '自动刷新',
++    securityOverview: '安全概览',
++    prometheus: 'Prometheus',
++    prometheusUrl: '地址',
++    promQuery: 'PromQL',
++    runQuery: '执行查询',
++    nodeMetrics: '节点指标',
++    alerts: '告警',
++    noIssues: '当前无健康问题',
++    noAlerts: '暂无告警',
++    fetchFailed: '获取监控数据失败',
++    queryFailed: 'Prometheus 查询失败',
++    promDisabled: '未启用',
++    promHealthy: '健康',
++    promUnhealthy: '异常',
++    cards: {
++      nodes: '节点数',
++      cpuCores: 'CPU 核心',
++      avgCpu: '平均 CPU',
++      avgMemory: '平均内存',
++      activeSessions: '活跃会话',
++      activeUsers: '活跃用户',
++      activeThreats: '活跃威胁',
++      failedLogins: '失败登录率',
++      violations: '安全违规',
++      alerts: '告警数'
++    },
++    columns: {
++      node: '节点',
++      cpu: 'CPU',
++      memory: '内存',
++      cpuRequests: 'CPU 请求',
++      memoryRequests: '内存请求'
++    }
++  },
++
+   // Service 管理
+   serviceManagement: {
+     title: 'Services',
+diff --git a/src/router/index.ts b/src/router/index.ts
+index 866ed6d..c75923f 100644
+--- a/src/router/index.ts
++++ b/src/router/index.ts
+@@ -111,6 +111,15 @@ export const constantRoutes: RouteRecordRaw[] = [
+         meta: {
+           title: "运维导航"
+         }
++      },
++      {
++        path: "monitoring",
++        component: () => import("@/views/monitoring/index.vue"),
++        name: "Monitoring",
++        meta: {
++          title: "集群监控",
++          roles: ["admin", "editor", "viewer"]
++        }
+       }
+     ]
+   },
+@@ -419,6 +428,63 @@ export const dynamicRoutes: RouteRecordRaw[] = [
+           title: "PVC",
+           roles: ["admin", "editor", "viewer"] // 所有角色都可以查看PVC
+         }
++      },
++      {
++        path: "storageclass",
++        component: () => import("@/views/storageclass/index.vue"),
++        name: "StorageClass",
++        meta: {
++          title: "StorageClass",
++          roles: ["admin", "editor", "viewer"]
++        }
++      }
++    ]
++  },
++  // Kubernetes RBAC 路由
++  {
++    path: "/rbac",
++    component: Layouts,
++    meta: {
++      title: "集群权限",
++      svgIcon: "lock",
++      roles: ["admin", "editor"]
++    },
++    children: [
++      {
++        path: "roles",
++        component: () => import("@/views/rbac/roles/index.vue"),
++        name: "K8sRoles",
++        meta: {
++          title: "Roles",
++          roles: ["admin", "editor"]
++        }
++      },
++      {
++        path: "rolebindings",
++        component: () => import("@/views/rbac/rolebindings/index.vue"),
++        name: "K8sRoleBindings",
++        meta: {
++          title: "RoleBindings",
++          roles: ["admin", "editor"]
++        }
++      },
++      {
++        path: "clusterroles",
++        component: () => import("@/views/rbac/clusterroles/index.vue"),
++        name: "K8sClusterRoles",
++        meta: {
++          title: "ClusterRoles",
++          roles: ["admin", "editor"]
++        }
++      },
++      {
++        path: "clusterrolebindings",
++        component: () => import("@/views/rbac/clusterrolebindings/index.vue"),
++        name: "K8sClusterRoleBindings",
++        meta: {
++          title: "ClusterRoleBindings",
++          roles: ["admin", "editor"]
++        }
+       }
+     ]
+   },
+diff --git a/src/utils/http-client.ts b/src/utils/http-client.ts
+index fe2969e..ac81674 100644
+--- a/src/utils/http-client.ts
++++ b/src/utils/http-client.ts
+@@ -71,17 +71,25 @@ function getCurrentClusterId(): string | null {
+ /** 判断是否为需要集群上下文的资源API */
+ function isResourceApiUrl(url: string): boolean {
+   const resourceApiPatterns = [
+-    // Core API resources
++    // Core / CiliKube resource APIs
+     /\/api\/v1\/nodes/,
+     /\/api\/v1\/pods/,
+     /\/api\/v1\/services/,
+     /\/api\/v1\/namespaces/,
+     /\/api\/v1\/persistentvolumes/,
+     /\/api\/v1\/persistentvolumeclaims/,
++    /\/api\/v1\/storageclasses/,
+     /\/api\/v1\/configmaps/,
+     /\/api\/v1\/secrets/,
+     /\/api\/v1\/endpoints/,
+     /\/api\/v1\/replicationcontrollers/,
++    /\/api\/v1\/events/,
++    /\/api\/v1\/crds/,
++    /\/api\/v1\/clusterroles/,
++    /\/api\/v1\/clusterrolebindings/,
++    /\/api\/v1\/informers/,
++    /\/api\/v1\/monitoring/,
++    /\/api\/v1\/prometheus/,
+     // Apps API resources
+     /\/apis\/apps\/v1\/deployments/,
+     /\/apis\/apps\/v1\/replicasets/,
+diff --git a/src/views/monitoring/index.vue b/src/views/monitoring/index.vue
+new file mode 100644
+index 0000000..a488371
+--- /dev/null
++++ b/src/views/monitoring/index.vue
+@@ -0,0 +1,396 @@
++<template>
++  <div class="monitoring-page" v-loading="loading">
++    <div class="page-header">
++      <div>
++        <h1 class="page-title">{{ $t('monitoringPage.title') }}</h1>
++        <p class="page-subtitle">{{ $t('monitoringPage.subtitle') }}</p>
++      </div>
++      <div class="header-actions">
++        <el-switch
++          v-model="autoRefresh"
++          :active-text="$t('monitoringPage.autoRefresh')"
++          style="margin-right: 12px"
++        />
++        <el-button :icon="RefreshIcon" @click="refreshAll" :loading="loading">
++          {{ $t('actions.refresh') }}
++        </el-button>
++      </div>
++    </div>
++
++    <!-- Node metrics summary -->
++    <el-row :gutter="16" class="summary-row">
++      <el-col :xs="12" :sm="6" v-for="card in nodeCards" :key="card.label">
++        <el-card shadow="hover" class="metric-card">
++          <div class="metric-label">{{ card.label }}</div>
++          <div class="metric-value">{{ card.value }}</div>
++        </el-card>
++      </el-col>
++    </el-row>
++
++    <el-row :gutter="16" class="section-row">
++      <!-- Security / app monitoring -->
++      <el-col :xs="24" :lg="14">
++        <el-card shadow="never">
++          <template #header>
++            <div class="card-header">
++              <span>{{ $t('monitoringPage.securityOverview') }}</span>
++              <el-tag :type="healthTagType" size="small">{{ healthStatus }}</el-tag>
++            </div>
++          </template>
++          <el-row :gutter="12">
++            <el-col :span="8" v-for="item in securityCards" :key="item.label">
++              <div class="stat-block">
++                <div class="stat-label">{{ item.label }}</div>
++                <div class="stat-value">{{ item.value }}</div>
++              </div>
++            </el-col>
++          </el-row>
++          <el-divider />
++          <div v-if="healthIssues.length === 0" class="muted">
++            {{ $t('monitoringPage.noIssues') }}
++          </div>
++          <el-alert
++            v-for="(issue, idx) in healthIssues"
++            :key="idx"
++            :title="issue.description"
++            :type="issue.severity === 'critical' ? 'error' : issue.severity === 'warning' ? 'warning' : 'info'"
++            :closable="false"
++            show-icon
++            style="margin-bottom: 8px"
++          />
++        </el-card>
++      </el-col>
++
++      <!-- Prometheus status + query -->
++      <el-col :xs="24" :lg="10">
++        <el-card shadow="never">
++          <template #header>
++            <div class="card-header">
++              <span>{{ $t('monitoringPage.prometheus') }}</span>
++              <el-tag :type="promStatus?.healthy ? 'success' : promStatus?.enabled ? 'danger' : 'info'" size="small">
++                {{ prometheusLabel }}
++              </el-tag>
++            </div>
++          </template>
++          <p class="muted" v-if="promStatus">
++            {{ $t('monitoringPage.prometheusUrl') }}: {{ promStatus.url || '-' }}
++          </p>
++          <el-alert
++            v-if="promStatus?.error"
++            :title="promStatus.error"
++            type="warning"
++            :closable="false"
++            show-icon
++            style="margin-bottom: 12px"
++          />
++          <el-form @submit.prevent="runQuery">
++            <el-form-item :label="$t('monitoringPage.promQuery')">
++              <el-input
++                v-model="promQuery"
++                placeholder="up"
++                clearable
++                :disabled="!promStatus?.enabled"
++              />
++            </el-form-item>
++            <el-button
++              type="primary"
++              :disabled="!promStatus?.enabled || !promQuery.trim()"
++              :loading="queryLoading"
++              @click="runQuery"
++            >
++              {{ $t('monitoringPage.runQuery') }}
++            </el-button>
++          </el-form>
++          <pre v-if="queryResult" class="query-result">{{ queryResult }}</pre>
++        </el-card>
++      </el-col>
++    </el-row>
++
++    <!-- Node table + Alerts -->
++    <el-row :gutter="16" class="section-row">
++      <el-col :xs="24" :lg="14">
++        <el-card shadow="never">
++          <template #header>{{ $t('monitoringPage.nodeMetrics') }}</template>
++          <el-table :data="nodes" stripe border max-height="420" empty-text="-">
++            <el-table-column prop="nodeName" :label="$t('monitoringPage.columns.node')" min-width="160" show-overflow-tooltip />
++            <el-table-column prop="cpuPercent" :label="$t('monitoringPage.columns.cpu')" width="100" />
++            <el-table-column prop="memoryPercent" :label="$t('monitoringPage.columns.memory')" width="100" />
++            <el-table-column prop="cpuRequestsPercent" :label="$t('monitoringPage.columns.cpuRequests')" width="120" />
++            <el-table-column prop="memoryRequestsPercent" :label="$t('monitoringPage.columns.memoryRequests')" width="130" />
++          </el-table>
++        </el-card>
++      </el-col>
++      <el-col :xs="24" :lg="10">
++        <el-card shadow="never">
++          <template #header>
++            <div class="card-header">
++              <span>{{ $t('monitoringPage.alerts') }}</span>
++              <span class="muted">{{ alerts.length }}</span>
++            </div>
++          </template>
++          <div v-if="alerts.length === 0" class="muted">{{ $t('monitoringPage.noAlerts') }}</div>
++          <div v-else class="alerts-list">
++            <div v-for="alert in alerts" :key="alert.id" class="alert-item">
++              <el-tag
++                size="small"
++                :type="alert.level === 'critical' ? 'danger' : alert.level === 'warning' ? 'warning' : 'info'"
++              >
++                {{ alert.level }}
++              </el-tag>
++              <div class="alert-body">
++                <div class="alert-title">{{ alert.title }}</div>
++                <div class="alert-desc">{{ alert.description }}</div>
++                <div class="alert-time">{{ formatTime(alert.timestamp) }}</div>
++              </div>
++            </div>
++          </div>
++        </el-card>
++      </el-col>
++    </el-row>
++  </div>
++</template>
++
++<script setup lang="ts">
++import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
++import { useI18n } from 'vue-i18n'
++import { ElMessage } from 'element-plus'
++import dayjs from 'dayjs'
++import { Refresh as RefreshIcon } from '@element-plus/icons-vue'
++import {
++  getMonitoringDashboard,
++  getMonitoringAlerts,
++  type MonitoringDashboard,
++  type MonitoringAlert,
++  type HealthIssue
++} from '@/api/monitoring'
++import { getPrometheusStatus, queryPrometheus, type PrometheusStatus } from '@/api/prometheus'
++import { getNodeMetrics, parseNodeMetricsSummary } from '@/api/node-metrics'
++import type { NodeMetrics } from '@/types/node-metrics'
++
++const { t } = useI18n()
++const loading = ref(false)
++const queryLoading = ref(false)
++const autoRefresh = ref(true)
++const dashboard = ref<MonitoringDashboard | null>(null)
++const alerts = ref<MonitoringAlert[]>([])
++const healthIssues = ref<HealthIssue[]>([])
++const promStatus = ref<PrometheusStatus | null>(null)
++const promQuery = ref('up')
++const queryResult = ref('')
++const nodes = ref<NodeMetrics[]>([])
++const nodeSummary = ref(parseNodeMetricsSummary({ code: 200, data: { nodes: [], total: 0 }, message: '' }))
++
++let timer: ReturnType<typeof setInterval> | null = null
++
++const healthStatus = computed(() => dashboard.value?.health?.status || dashboard.value?.summary?.status || '-')
++const healthTagType = computed(() => {
++  const status = (healthStatus.value || '').toLowerCase()
++  if (status === 'healthy' || status === 'ok') return 'success'
++  if (status === 'warning' || status === 'degraded') return 'warning'
++  if (status === 'critical' || status === 'unhealthy') return 'danger'
++  return 'info'
++})
++
++const prometheusLabel = computed(() => {
++  if (!promStatus.value) return '-'
++  if (!promStatus.value.enabled) return t('monitoringPage.promDisabled')
++  return promStatus.value.healthy
++    ? t('monitoringPage.promHealthy')
++    : t('monitoringPage.promUnhealthy')
++})
++
++const nodeCards = computed(() => [
++  { label: t('monitoringPage.cards.nodes'), value: String(nodeSummary.value.totalNodes) },
++  { label: t('monitoringPage.cards.cpuCores'), value: String(nodeSummary.value.totalCpuCores) },
++  { label: t('monitoringPage.cards.avgCpu'), value: `${nodeSummary.value.avgCpuUsagePercent}%` },
++  { label: t('monitoringPage.cards.avgMemory'), value: `${nodeSummary.value.avgMemoryUsagePercent}%` }
++])
++
++const securityCards = computed(() => {
++  const s = dashboard.value?.summary
++  return [
++    { label: t('monitoringPage.cards.activeSessions'), value: s?.active_sessions ?? '-' },
++    { label: t('monitoringPage.cards.activeUsers'), value: s?.active_users ?? '-' },
++    { label: t('monitoringPage.cards.activeThreats'), value: s?.active_threats ?? '-' },
++    { label: t('monitoringPage.cards.failedLogins'), value: s?.failed_logins_rate ?? '-' },
++    { label: t('monitoringPage.cards.violations'), value: s?.security_violations ?? '-' },
++    {
++      label: t('monitoringPage.cards.alerts'),
++      value: dashboard.value
++        ? dashboard.value.alerts.critical + dashboard.value.alerts.warning + dashboard.value.alerts.info
++        : '-'
++    }
++  ]
++})
++
++const formatTime = (value?: string) => (value ? dayjs(value).format('YYYY-MM-DD HH:mm:ss') : '-')
++
++const refreshAll = async () => {
++  loading.value = true
++  try {
++    const [dashRes, alertRes, promRes, nodeRes] = await Promise.allSettled([
++      getMonitoringDashboard(),
++      getMonitoringAlerts({ limit: 20 }),
++      getPrometheusStatus(),
++      getNodeMetrics()
++    ])
++
++    if (dashRes.status === 'fulfilled' && dashRes.value.code === 200) {
++      dashboard.value = dashRes.value.data
++      healthIssues.value = dashRes.value.data.health?.issues || []
++    }
++    if (alertRes.status === 'fulfilled' && alertRes.value.code === 200) {
++      alerts.value = alertRes.value.data.alerts || []
++    }
++    if (promRes.status === 'fulfilled' && promRes.value.code === 200) {
++      promStatus.value = promRes.value.data
++    }
++    if (nodeRes.status === 'fulfilled' && nodeRes.value.code === 200) {
++      nodes.value = nodeRes.value.data.nodes || []
++      nodeSummary.value = parseNodeMetricsSummary(nodeRes.value)
++    }
++  } catch (error: any) {
++    ElMessage.error(error.message || t('monitoringPage.fetchFailed'))
++  } finally {
++    loading.value = false
++  }
++}
++
++const runQuery = async () => {
++  if (!promQuery.value.trim()) return
++  queryLoading.value = true
++  try {
++    const res = await queryPrometheus({ query: promQuery.value.trim() })
++    if (res.code === 200) {
++      queryResult.value = JSON.stringify(res.data, null, 2)
++    }
++  } catch (error: any) {
++    queryResult.value = error.message || t('monitoringPage.queryFailed')
++  } finally {
++    queryLoading.value = false
++  }
++}
++
++const startTimer = () => {
++  stopTimer()
++  if (!autoRefresh.value) return
++  timer = setInterval(refreshAll, 30000)
++}
++
++const stopTimer = () => {
++  if (timer) {
++    clearInterval(timer)
++    timer = null
++  }
++}
++
++watch(autoRefresh, startTimer)
++
++onMounted(async () => {
++  await refreshAll()
++  startTimer()
++})
++
++onUnmounted(stopTimer)
++</script>
++
++<style lang="scss" scoped>
++.monitoring-page {
++  padding: 24px;
++  background: var(--el-bg-color-page);
++  min-height: 100%;
++}
++.page-header {
++  display: flex;
++  justify-content: space-between;
++  align-items: flex-start;
++  gap: 16px;
++  margin-bottom: 20px;
++  flex-wrap: wrap;
++}
++.page-title {
++  margin: 0;
++  font-size: 28px;
++  font-weight: 600;
++}
++.page-subtitle {
++  margin: 6px 0 0;
++  color: var(--el-text-color-secondary);
++  font-size: 14px;
++}
++.header-actions {
++  display: flex;
++  align-items: center;
++}
++.summary-row,
++.section-row {
++  margin-bottom: 16px;
++}
++.metric-card {
++  margin-bottom: 12px;
++}
++.metric-label {
++  color: var(--el-text-color-secondary);
++  font-size: 13px;
++  margin-bottom: 8px;
++}
++.metric-value {
++  font-size: 28px;
++  font-weight: 600;
++  color: var(--el-text-color-primary);
++}
++.card-header {
++  display: flex;
++  justify-content: space-between;
++  align-items: center;
++}
++.stat-block {
++  padding: 12px;
++  margin-bottom: 8px;
++  background: var(--el-fill-color-lighter);
++  border-radius: 4px;
++}
++.stat-label {
++  font-size: 12px;
++  color: var(--el-text-color-secondary);
++  margin-bottom: 4px;
++}
++.stat-value {
++  font-size: 20px;
++  font-weight: 600;
++}
++.muted {
++  color: var(--el-text-color-secondary);
++  font-size: 13px;
++}
++.query-result {
++  margin-top: 12px;
++  max-height: 240px;
++  overflow: auto;
++  padding: 12px;
++  background: var(--el-fill-color-lighter);
++  border-radius: 4px;
++  font-size: 12px;
++  white-space: pre-wrap;
++  word-break: break-word;
++}
++.alerts-list {
++  max-height: 420px;
++  overflow: auto;
++}
++.alert-item {
++  display: flex;
++  gap: 10px;
++  padding: 10px 0;
++  border-bottom: 1px solid var(--el-border-color-lighter);
++}
++.alert-title {
++  font-weight: 600;
++  margin-bottom: 4px;
++}
++.alert-desc,
++.alert-time {
++  font-size: 12px;
++  color: var(--el-text-color-secondary);
++}
++</style>
+diff --git a/src/views/rbac/clusterrolebindings/index.vue b/src/views/rbac/clusterrolebindings/index.vue
+new file mode 100644
+index 0000000..9311eab
+--- /dev/null
++++ b/src/views/rbac/clusterrolebindings/index.vue
+@@ -0,0 +1,209 @@
++<template>
++  <div class="resource-page">
++    <div class="page-header">
++      <h1 class="page-title">{{ $t('clusterRoleBindingManagement.title') }}</h1>
++    </div>
++
++    <div class="filter-bar">
++      <el-input
++        v-model="searchQuery"
++        :placeholder="$t('clusterRoleBindingManagement.searchPlaceholder')"
++        :prefix-icon="SearchIcon"
++        clearable
++        class="search-input"
++      />
++      <el-tooltip :content="$t('actions.refresh')" placement="top">
++        <el-button :icon="RefreshIcon" circle @click="fetchData" :loading="loading" />
++      </el-tooltip>
++    </div>
++
++    <el-card shadow="hover" class="table-card">
++      <el-table :data="paginatedData" v-loading="loading" border stripe row-key="uid">
++        <el-table-column prop="name" :label="$t('clusterRoleBindingManagement.columns.name')" min-width="220" show-overflow-tooltip fixed />
++        <el-table-column prop="roleRef" :label="$t('clusterRoleBindingManagement.columns.roleRef')" min-width="220" show-overflow-tooltip />
++        <el-table-column prop="subjects" :label="$t('clusterRoleBindingManagement.columns.subjects')" min-width="280" show-overflow-tooltip />
++        <el-table-column prop="createdAt" :label="$t('clusterRoleBindingManagement.columns.createdAt')" min-width="180" />
++        <el-table-column :label="$t('clusterRoleBindingManagement.columns.actions')" width="100" align="center" fixed="right">
++          <template #default="{ row }">
++            <el-tooltip :content="$t('common.view')" placement="top">
++              <el-button link type="primary" :icon="ViewIcon" @click="openDetail(row)" />
++            </el-tooltip>
++            <el-tooltip :content="$t('common.delete')" placement="top">
++              <el-button link type="danger" :icon="DeleteIcon" @click="handleDelete(row)" />
++            </el-tooltip>
++          </template>
++        </el-table-column>
++        <template #empty>
++          <el-empty :description="$t('clusterRoleBindingManagement.messages.noData')" />
++        </template>
++      </el-table>
++      <div class="pagination-container" v-if="filteredData.length > 0">
++        <el-pagination
++          v-model:current-page="currentPage"
++          v-model:page-size="pageSize"
++          :page-sizes="[10, 20, 50]"
++          :total="filteredData.length"
++          layout="total, sizes, prev, pager, next"
++          background
++        />
++      </div>
++    </el-card>
++
++    <el-drawer v-model="detailVisible" :title="detailItem?.name" size="50%">
++      <pre v-if="detailItem" class="json-view">{{ JSON.stringify(detailItem.rawData, null, 2) }}</pre>
++    </el-drawer>
++  </div>
++</template>
++
++<script setup lang="ts">
++import { ref, computed, onMounted } from 'vue'
++import { useI18n } from 'vue-i18n'
++import { ElMessage, ElMessageBox } from 'element-plus'
++import dayjs from 'dayjs'
++import { kubernetesRequest } from '@/utils/api-config'
++import {
++  Search as SearchIcon,
++  Refresh as RefreshIcon,
++  Delete as DeleteIcon,
++  View as ViewIcon
++} from '@element-plus/icons-vue'
++
++interface DisplayItem {
++  uid: string
++  name: string
++  roleRef: string
++  subjects: string
++  createdAt: string
++  rawData: any
++}
++
++const { t } = useI18n()
++const loading = ref(false)
++const allItems = ref<DisplayItem[]>([])
++const searchQuery = ref('')
++const currentPage = ref(1)
++const pageSize = ref(10)
++const detailVisible = ref(false)
++const detailItem = ref<DisplayItem | null>(null)
++
++const filteredData = computed(() => {
++  const q = searchQuery.value.trim().toLowerCase()
++  if (!q) return allItems.value
++  return allItems.value.filter(
++    (item) =>
++      item.name.toLowerCase().includes(q) ||
++      item.roleRef.toLowerCase().includes(q) ||
++      item.subjects.toLowerCase().includes(q)
++  )
++})
++
++const paginatedData = computed(() => {
++  const start = (currentPage.value - 1) * pageSize.value
++  return filteredData.value.slice(start, start + pageSize.value)
++})
++
++const fetchData = async () => {
++  loading.value = true
++  try {
++    const response = await kubernetesRequest<{ code: number; data: any; message: string }>({
++      url: '/api/v1/clusterrolebindings',
++      method: 'GET'
++    })
++    if (response.code === 200 && response.data?.items) {
++      allItems.value = response.data.items.map((item: any) => ({
++        uid: item.metadata?.uid || item.metadata?.name,
++        name: item.metadata?.name || '',
++        roleRef: item.roleRef ? `${item.roleRef.kind}/${item.roleRef.name}` : '-',
++        subjects:
++          (item.subjects || []).map((s: any) => `${s.kind}:${s.name}`).join(', ') || '-',
++        createdAt: item.metadata?.creationTimestamp
++          ? dayjs(item.metadata.creationTimestamp).format('YYYY-MM-DD HH:mm:ss')
++          : '-',
++        rawData: item
++      }))
++    } else {
++      allItems.value = []
++    }
++  } catch (error: any) {
++    allItems.value = []
++    ElMessage.error(error.message || t('clusterRoleBindingManagement.messages.fetchFailed'))
++  } finally {
++    loading.value = false
++  }
++}
++
++const openDetail = (row: DisplayItem) => {
++  detailItem.value = row
++  detailVisible.value = true
++}
++
++const handleDelete = (row: DisplayItem) => {
++  ElMessageBox.confirm(
++    t('clusterRoleBindingManagement.messages.deleteConfirm', { name: row.name }),
++    t('common.confirm'),
++    { type: 'warning' }
++  )
++    .then(async () => {
++      try {
++        const response = await kubernetesRequest<{ code: number; message: string }>({
++          url: `/api/v1/clusterrolebindings/${row.name}`,
++          method: 'DELETE'
++        })
++        if (response.code === 200 || response.code === 204) {
++          ElMessage.success(t('clusterRoleBindingManagement.messages.deleteSuccess'))
++          await fetchData()
++        }
++      } catch (error: any) {
++        ElMessage.error(error.message || t('clusterRoleBindingManagement.messages.deleteFailed'))
++      }
++    })
++    .catch(() => undefined)
++}
++
++onMounted(fetchData)
++</script>
++
++<style lang="scss" scoped>
++.resource-page {
++  padding: 24px;
++  background-color: var(--el-bg-color-page);
++}
++.page-header {
++  margin-bottom: 24px;
++}
++.page-title {
++  margin: 0;
++  font-size: 28px;
++  font-weight: 600;
++}
++.filter-bar {
++  display: flex;
++  gap: 16px;
++  margin-bottom: 24px;
++  padding: 16px;
++  background: var(--el-bg-color);
++  border: 1px solid var(--el-border-color-lighter);
++  border-radius: 4px;
++}
++.search-input {
++  width: 320px;
++}
++.table-card :deep(.el-card__body) {
++  padding: 0;
++}
++.pagination-container {
++  display: flex;
++  justify-content: flex-end;
++  padding: 16px;
++}
++.json-view {
++  margin: 0;
++  padding: 16px;
++  background: var(--el-fill-color-lighter);
++  border-radius: 4px;
++  font-size: 13px;
++  overflow: auto;
++  white-space: pre-wrap;
++  word-break: break-word;
++}
++</style>
+diff --git a/src/views/rbac/clusterroles/index.vue b/src/views/rbac/clusterroles/index.vue
+new file mode 100644
+index 0000000..03e7355
+--- /dev/null
++++ b/src/views/rbac/clusterroles/index.vue
+@@ -0,0 +1,227 @@
++<template>
++  <div class="resource-page">
++    <div class="page-header">
++      <h1 class="page-title">{{ $t('clusterRoleManagement.title') }}</h1>
++    </div>
++
++    <div class="filter-bar">
++      <el-input
++        v-model="searchQuery"
++        :placeholder="$t('clusterRoleManagement.searchPlaceholder')"
++        :prefix-icon="SearchIcon"
++        clearable
++        class="search-input"
++      />
++      <el-tooltip :content="$t('actions.refresh')" placement="top">
++        <el-button :icon="RefreshIcon" circle @click="fetchData" :loading="loading" />
++      </el-tooltip>
++    </div>
++
++    <el-card shadow="hover" class="table-card">
++      <el-table :data="paginatedData" v-loading="loading" border stripe row-key="uid">
++        <el-table-column prop="name" :label="$t('clusterRoleManagement.columns.name')" min-width="220" show-overflow-tooltip fixed>
++          <template #default="{ row }">
++            <el-icon class="resource-icon"><Lock /></el-icon>
++            <span>{{ row.name }}</span>
++          </template>
++        </el-table-column>
++        <el-table-column prop="rulesCount" :label="$t('clusterRoleManagement.columns.rulesCount')" width="120" align="center" />
++        <el-table-column prop="rulesSummary" :label="$t('clusterRoleManagement.columns.rulesSummary')" min-width="320" show-overflow-tooltip />
++        <el-table-column prop="createdAt" :label="$t('clusterRoleManagement.columns.createdAt')" min-width="180" />
++        <el-table-column :label="$t('clusterRoleManagement.columns.actions')" width="100" align="center" fixed="right">
++          <template #default="{ row }">
++            <el-tooltip :content="$t('common.view')" placement="top">
++              <el-button link type="primary" :icon="ViewIcon" @click="openDetail(row)" />
++            </el-tooltip>
++            <el-tooltip :content="$t('common.delete')" placement="top">
++              <el-button link type="danger" :icon="DeleteIcon" @click="handleDelete(row)" />
++            </el-tooltip>
++          </template>
++        </el-table-column>
++        <template #empty>
++          <el-empty :description="$t('clusterRoleManagement.messages.noData')" />
++        </template>
++      </el-table>
++      <div class="pagination-container" v-if="filteredData.length > 0">
++        <el-pagination
++          v-model:current-page="currentPage"
++          v-model:page-size="pageSize"
++          :page-sizes="[10, 20, 50]"
++          :total="filteredData.length"
++          layout="total, sizes, prev, pager, next"
++          background
++        />
++      </div>
++    </el-card>
++
++    <el-drawer v-model="detailVisible" :title="detailItem?.name" size="50%">
++      <pre v-if="detailItem" class="json-view">{{ JSON.stringify(detailItem.rawData, null, 2) }}</pre>
++    </el-drawer>
++  </div>
++</template>
++
++<script setup lang="ts">
++import { ref, computed, onMounted } from 'vue'
++import { useI18n } from 'vue-i18n'
++import { ElMessage, ElMessageBox } from 'element-plus'
++import dayjs from 'dayjs'
++import { kubernetesRequest } from '@/utils/api-config'
++import {
++  Search as SearchIcon,
++  Refresh as RefreshIcon,
++  Delete as DeleteIcon,
++  View as ViewIcon,
++  Lock
++} from '@element-plus/icons-vue'
++
++interface DisplayItem {
++  uid: string
++  name: string
++  rulesCount: number
++  rulesSummary: string
++  createdAt: string
++  rawData: any
++}
++
++const { t } = useI18n()
++const loading = ref(false)
++const allItems = ref<DisplayItem[]>([])
++const searchQuery = ref('')
++const currentPage = ref(1)
++const pageSize = ref(10)
++const detailVisible = ref(false)
++const detailItem = ref<DisplayItem | null>(null)
++
++function summarizeRules(rules: any[] = []): string {
++  return rules
++    .slice(0, 3)
++    .map((rule) => {
++      const verbs = (rule.verbs || []).join(',')
++      const resources = (rule.resources || ['*']).join(',')
++      return `${verbs}→${resources}`
++    })
++    .join('; ')
++}
++
++const filteredData = computed(() => {
++  const q = searchQuery.value.trim().toLowerCase()
++  if (!q) return allItems.value
++  return allItems.value.filter(
++    (item) => item.name.toLowerCase().includes(q) || item.rulesSummary.toLowerCase().includes(q)
++  )
++})
++
++const paginatedData = computed(() => {
++  const start = (currentPage.value - 1) * pageSize.value
++  return filteredData.value.slice(start, start + pageSize.value)
++})
++
++const fetchData = async () => {
++  loading.value = true
++  try {
++    const response = await kubernetesRequest<{ code: number; data: any; message: string }>({
++      url: '/api/v1/clusterroles',
++      method: 'GET'
++    })
++    if (response.code === 200 && response.data?.items) {
++      allItems.value = response.data.items.map((item: any) => ({
++        uid: item.metadata?.uid || item.metadata?.name,
++        name: item.metadata?.name || '',
++        rulesCount: item.rules?.length || 0,
++        rulesSummary: summarizeRules(item.rules) || '-',
++        createdAt: item.metadata?.creationTimestamp
++          ? dayjs(item.metadata.creationTimestamp).format('YYYY-MM-DD HH:mm:ss')
++          : '-',
++        rawData: item
++      }))
++    } else {
++      allItems.value = []
++    }
++  } catch (error: any) {
++    allItems.value = []
++    ElMessage.error(error.message || t('clusterRoleManagement.messages.fetchFailed'))
++  } finally {
++    loading.value = false
++  }
++}
++
++const openDetail = (row: DisplayItem) => {
++  detailItem.value = row
++  detailVisible.value = true
++}
++
++const handleDelete = (row: DisplayItem) => {
++  ElMessageBox.confirm(
++    t('clusterRoleManagement.messages.deleteConfirm', { name: row.name }),
++    t('common.confirm'),
++    { type: 'warning' }
++  )
++    .then(async () => {
++      try {
++        const response = await kubernetesRequest<{ code: number; message: string }>({
++          url: `/api/v1/clusterroles/${row.name}`,
++          method: 'DELETE'
++        })
++        if (response.code === 200 || response.code === 204) {
++          ElMessage.success(t('clusterRoleManagement.messages.deleteSuccess'))
++          await fetchData()
++        }
++      } catch (error: any) {
++        ElMessage.error(error.message || t('clusterRoleManagement.messages.deleteFailed'))
++      }
++    })
++    .catch(() => undefined)
++}
++
++onMounted(fetchData)
++</script>
++
++<style lang="scss" scoped>
++.resource-page {
++  padding: 24px;
++  background-color: var(--el-bg-color-page);
++}
++.page-header {
++  margin-bottom: 24px;
++}
++.page-title {
++  margin: 0;
++  font-size: 28px;
++  font-weight: 600;
++}
++.filter-bar {
++  display: flex;
++  gap: 16px;
++  margin-bottom: 24px;
++  padding: 16px;
++  background: var(--el-bg-color);
++  border: 1px solid var(--el-border-color-lighter);
++  border-radius: 4px;
++}
++.search-input {
++  width: 320px;
++}
++.table-card :deep(.el-card__body) {
++  padding: 0;
++}
++.resource-icon {
++  margin-right: 8px;
++  color: #6366f1;
++  vertical-align: middle;
++}
++.pagination-container {
++  display: flex;
++  justify-content: flex-end;
++  padding: 16px;
++}
++.json-view {
++  margin: 0;
++  padding: 16px;
++  background: var(--el-fill-color-lighter);
++  border-radius: 4px;
++  font-size: 13px;
++  overflow: auto;
++  white-space: pre-wrap;
++  word-break: break-word;
++}
++</style>
+diff --git a/src/views/rbac/rolebindings/index.vue b/src/views/rbac/rolebindings/index.vue
+new file mode 100644
+index 0000000..de13248
+--- /dev/null
++++ b/src/views/rbac/rolebindings/index.vue
+@@ -0,0 +1,267 @@
++<template>
++  <div class="resource-page">
++    <div class="page-header">
++      <h1 class="page-title">{{ $t('roleBindingManagement.title') }}</h1>
++    </div>
++
++    <div class="filter-bar">
++      <el-select
++        v-model="selectedNamespace"
++        :placeholder="$t('roleBindingManagement.filterNamespace')"
++        filterable
++        :loading="loadingNamespaces"
++        class="namespace-select"
++        @change="handleNamespaceChange"
++      >
++        <el-option v-for="ns in namespaces" :key="ns" :label="ns" :value="ns" />
++      </el-select>
++      <el-input
++        v-model="searchQuery"
++        :placeholder="$t('roleBindingManagement.searchPlaceholder')"
++        :prefix-icon="SearchIcon"
++        clearable
++        class="search-input"
++        :disabled="!selectedNamespace"
++      />
++      <el-tooltip :content="$t('actions.refresh')" placement="top">
++        <el-button
++          :icon="RefreshIcon"
++          circle
++          @click="fetchData"
++          :loading="loading"
++          :disabled="!selectedNamespace"
++        />
++      </el-tooltip>
++    </div>
++
++    <el-card shadow="hover" class="table-card">
++      <el-table :data="paginatedData" v-loading="loading" border stripe row-key="uid">
++        <el-table-column prop="name" :label="$t('roleBindingManagement.columns.name')" min-width="200" show-overflow-tooltip fixed />
++        <el-table-column prop="namespace" :label="$t('roleBindingManagement.columns.namespace')" min-width="140" />
++        <el-table-column prop="roleRef" :label="$t('roleBindingManagement.columns.roleRef')" min-width="200" show-overflow-tooltip />
++        <el-table-column prop="subjects" :label="$t('roleBindingManagement.columns.subjects')" min-width="260" show-overflow-tooltip />
++        <el-table-column prop="createdAt" :label="$t('roleBindingManagement.columns.createdAt')" min-width="180" />
++        <el-table-column :label="$t('roleBindingManagement.columns.actions')" width="100" align="center" fixed="right">
++          <template #default="{ row }">
++            <el-tooltip :content="$t('common.view')" placement="top">
++              <el-button link type="primary" :icon="ViewIcon" @click="openDetail(row)" />
++            </el-tooltip>
++            <el-tooltip :content="$t('common.delete')" placement="top">
++              <el-button link type="danger" :icon="DeleteIcon" @click="handleDelete(row)" />
++            </el-tooltip>
++          </template>
++        </el-table-column>
++        <template #empty>
++          <el-empty
++            :description="
++              selectedNamespace
++                ? $t('roleBindingManagement.messages.noData')
++                : $t('roleBindingManagement.messages.selectNamespace')
++            "
++          />
++        </template>
++      </el-table>
++      <div class="pagination-container" v-if="filteredData.length > 0">
++        <el-pagination
++          v-model:current-page="currentPage"
++          v-model:page-size="pageSize"
++          :page-sizes="[10, 20, 50]"
++          :total="filteredData.length"
++          layout="total, sizes, prev, pager, next"
++          background
++        />
++      </div>
++    </el-card>
++
++    <el-drawer v-model="detailVisible" :title="detailItem?.name" size="50%">
++      <pre v-if="detailItem" class="json-view">{{ JSON.stringify(detailItem.rawData, null, 2) }}</pre>
++    </el-drawer>
++  </div>
++</template>
++
++<script setup lang="ts">
++import { ref, computed, onMounted } from 'vue'
++import { useI18n } from 'vue-i18n'
++import { ElMessage, ElMessageBox } from 'element-plus'
++import dayjs from 'dayjs'
++import { kubernetesRequest, fetchNamespaces } from '@/utils/api-config'
++import {
++  Search as SearchIcon,
++  Refresh as RefreshIcon,
++  Delete as DeleteIcon,
++  View as ViewIcon
++} from '@element-plus/icons-vue'
++
++interface DisplayItem {
++  uid: string
++  name: string
++  namespace: string
++  roleRef: string
++  subjects: string
++  createdAt: string
++  rawData: any
++}
++
++const { t } = useI18n()
++const loading = ref(false)
++const loadingNamespaces = ref(false)
++const namespaces = ref<string[]>([])
++const selectedNamespace = ref('')
++const allItems = ref<DisplayItem[]>([])
++const searchQuery = ref('')
++const currentPage = ref(1)
++const pageSize = ref(10)
++const detailVisible = ref(false)
++const detailItem = ref<DisplayItem | null>(null)
++
++const filteredData = computed(() => {
++  const q = searchQuery.value.trim().toLowerCase()
++  if (!q) return allItems.value
++  return allItems.value.filter(
++    (item) =>
++      item.name.toLowerCase().includes(q) ||
++      item.roleRef.toLowerCase().includes(q) ||
++      item.subjects.toLowerCase().includes(q)
++  )
++})
++
++const paginatedData = computed(() => {
++  const start = (currentPage.value - 1) * pageSize.value
++  return filteredData.value.slice(start, start + pageSize.value)
++})
++
++const loadNamespaces = async () => {
++  loadingNamespaces.value = true
++  try {
++    namespaces.value = await fetchNamespaces()
++    if (!selectedNamespace.value && namespaces.value.length > 0) {
++      selectedNamespace.value = namespaces.value.includes('default')
++        ? 'default'
++        : namespaces.value[0]
++      await fetchData()
++    }
++  } catch (error: any) {
++    ElMessage.error(error.message || t('roleBindingManagement.messages.fetchNamespacesFailed'))
++  } finally {
++    loadingNamespaces.value = false
++  }
++}
++
++const fetchData = async () => {
++  if (!selectedNamespace.value) return
++  loading.value = true
++  try {
++    const response = await kubernetesRequest<{ code: number; data: any; message: string }>({
++      url: `/api/v1/namespaces/${selectedNamespace.value}/rolebindings`,
++      method: 'GET'
++    })
++    if (response.code === 200 && response.data?.items) {
++      allItems.value = response.data.items.map((item: any) => ({
++        uid: item.metadata?.uid || item.metadata?.name,
++        name: item.metadata?.name || '',
++        namespace: item.metadata?.namespace || selectedNamespace.value,
++        roleRef: item.roleRef
++          ? `${item.roleRef.kind}/${item.roleRef.name}`
++          : '-',
++        subjects: (item.subjects || [])
++          .map((s: any) => `${s.kind}:${s.name}`)
++          .join(', ') || '-',
++        createdAt: item.metadata?.creationTimestamp
++          ? dayjs(item.metadata.creationTimestamp).format('YYYY-MM-DD HH:mm:ss')
++          : '-',
++        rawData: item
++      }))
++    } else {
++      allItems.value = []
++    }
++  } catch (error: any) {
++    allItems.value = []
++    ElMessage.error(error.message || t('roleBindingManagement.messages.fetchFailed'))
++  } finally {
++    loading.value = false
++  }
++}
++
++const handleNamespaceChange = () => {
++  currentPage.value = 1
++  fetchData()
++}
++
++const openDetail = (row: DisplayItem) => {
++  detailItem.value = row
++  detailVisible.value = true
++}
++
++const handleDelete = (row: DisplayItem) => {
++  ElMessageBox.confirm(
++    t('roleBindingManagement.messages.deleteConfirm', { name: row.name }),
++    t('common.confirm'),
++    { type: 'warning' }
++  )
++    .then(async () => {
++      try {
++        const response = await kubernetesRequest<{ code: number; message: string }>({
++          url: `/api/v1/namespaces/${row.namespace}/rolebindings/${row.name}`,
++          method: 'DELETE'
++        })
++        if (response.code === 200 || response.code === 204) {
++          ElMessage.success(t('roleBindingManagement.messages.deleteSuccess'))
++          await fetchData()
++        }
++      } catch (error: any) {
++        ElMessage.error(error.message || t('roleBindingManagement.messages.deleteFailed'))
++      }
++    })
++    .catch(() => undefined)
++}
++
++onMounted(loadNamespaces)
++</script>
++
++<style lang="scss" scoped>
++.resource-page {
++  padding: 24px;
++  background-color: var(--el-bg-color-page);
++}
++.page-header {
++  margin-bottom: 24px;
++}
++.page-title {
++  margin: 0;
++  font-size: 28px;
++  font-weight: 600;
++}
++.filter-bar {
++  display: flex;
++  gap: 16px;
++  margin-bottom: 24px;
++  padding: 16px;
++  background: var(--el-bg-color);
++  border: 1px solid var(--el-border-color-lighter);
++  border-radius: 4px;
++}
++.namespace-select {
++  width: 220px;
++}
++.search-input {
++  width: 280px;
++}
++.table-card :deep(.el-card__body) {
++  padding: 0;
++}
++.pagination-container {
++  display: flex;
++  justify-content: flex-end;
++  padding: 16px;
++}
++.json-view {
++  margin: 0;
++  padding: 16px;
++  background: var(--el-fill-color-lighter);
++  border-radius: 4px;
++  font-size: 13px;
++  overflow: auto;
++  white-space: pre-wrap;
++  word-break: break-word;
++}
++</style>
+diff --git a/src/views/rbac/roles/index.vue b/src/views/rbac/roles/index.vue
+new file mode 100644
+index 0000000..fcab79c
+--- /dev/null
++++ b/src/views/rbac/roles/index.vue
+@@ -0,0 +1,276 @@
++<template>
++  <div class="resource-page">
++    <div class="page-header">
++      <h1 class="page-title">{{ $t('roleResourceManagement.title') }}</h1>
++    </div>
++
++    <div class="filter-bar">
++      <el-select
++        v-model="selectedNamespace"
++        :placeholder="$t('roleResourceManagement.filterNamespace')"
++        filterable
++        :loading="loadingNamespaces"
++        class="namespace-select"
++        @change="handleNamespaceChange"
++      >
++        <el-option v-for="ns in namespaces" :key="ns" :label="ns" :value="ns" />
++      </el-select>
++      <el-input
++        v-model="searchQuery"
++        :placeholder="$t('roleResourceManagement.searchPlaceholder')"
++        :prefix-icon="SearchIcon"
++        clearable
++        class="search-input"
++        :disabled="!selectedNamespace"
++      />
++      <el-tooltip :content="$t('actions.refresh')" placement="top">
++        <el-button
++          :icon="RefreshIcon"
++          circle
++          @click="fetchData"
++          :loading="loading"
++          :disabled="!selectedNamespace"
++        />
++      </el-tooltip>
++    </div>
++
++    <el-card shadow="hover" class="table-card">
++      <el-table :data="paginatedData" v-loading="loading" border stripe row-key="uid">
++        <el-table-column prop="name" :label="$t('roleResourceManagement.columns.name')" min-width="200" show-overflow-tooltip fixed>
++          <template #default="{ row }">
++            <el-icon class="resource-icon"><Key /></el-icon>
++            <span>{{ row.name }}</span>
++          </template>
++        </el-table-column>
++        <el-table-column prop="namespace" :label="$t('roleResourceManagement.columns.namespace')" min-width="140" />
++        <el-table-column prop="rulesCount" :label="$t('roleResourceManagement.columns.rulesCount')" width="120" align="center" />
++        <el-table-column prop="rulesSummary" :label="$t('roleResourceManagement.columns.rulesSummary')" min-width="300" show-overflow-tooltip />
++        <el-table-column prop="createdAt" :label="$t('roleResourceManagement.columns.createdAt')" min-width="180" />
++        <el-table-column :label="$t('roleResourceManagement.columns.actions')" width="100" align="center" fixed="right">
++          <template #default="{ row }">
++            <el-tooltip :content="$t('common.view')" placement="top">
++              <el-button link type="primary" :icon="ViewIcon" @click="openDetail(row)" />
++            </el-tooltip>
++            <el-tooltip :content="$t('common.delete')" placement="top">
++              <el-button link type="danger" :icon="DeleteIcon" @click="handleDelete(row)" />
++            </el-tooltip>
++          </template>
++        </el-table-column>
++        <template #empty>
++          <el-empty
++            :description="
++              selectedNamespace
++                ? $t('roleResourceManagement.messages.noData')
++                : $t('roleResourceManagement.messages.selectNamespace')
++            "
++          />
++        </template>
++      </el-table>
++      <div class="pagination-container" v-if="filteredData.length > 0">
++        <el-pagination
++          v-model:current-page="currentPage"
++          v-model:page-size="pageSize"
++          :page-sizes="[10, 20, 50]"
++          :total="filteredData.length"
++          layout="total, sizes, prev, pager, next"
++          background
++        />
++      </div>
++    </el-card>
++
++    <el-drawer v-model="detailVisible" :title="detailItem?.name" size="50%">
++      <pre v-if="detailItem" class="json-view">{{ JSON.stringify(detailItem.rawData, null, 2) }}</pre>
++    </el-drawer>
++  </div>
++</template>
++
++<script setup lang="ts">
++import { ref, computed, onMounted } from 'vue'
++import { useI18n } from 'vue-i18n'
++import { ElMessage, ElMessageBox } from 'element-plus'
++import dayjs from 'dayjs'
++import { kubernetesRequest, fetchNamespaces } from '@/utils/api-config'
++import {
++  Search as SearchIcon,
++  Refresh as RefreshIcon,
++  Delete as DeleteIcon,
++  View as ViewIcon,
++  Key
++} from '@element-plus/icons-vue'
++
++interface DisplayItem {
++  uid: string
++  name: string
++  namespace: string
++  rulesCount: number
++  rulesSummary: string
++  createdAt: string
++  rawData: any
++}
++
++const { t } = useI18n()
++const loading = ref(false)
++const loadingNamespaces = ref(false)
++const namespaces = ref<string[]>([])
++const selectedNamespace = ref('')
++const allItems = ref<DisplayItem[]>([])
++const searchQuery = ref('')
++const currentPage = ref(1)
++const pageSize = ref(10)
++const detailVisible = ref(false)
++const detailItem = ref<DisplayItem | null>(null)
++
++function summarizeRules(rules: any[] = []): string {
++  return rules
++    .slice(0, 3)
++    .map((rule) => `${(rule.verbs || []).join(',')}→${(rule.resources || ['*']).join(',')}`)
++    .join('; ')
++}
++
++const filteredData = computed(() => {
++  const q = searchQuery.value.trim().toLowerCase()
++  if (!q) return allItems.value
++  return allItems.value.filter((item) => item.name.toLowerCase().includes(q))
++})
++
++const paginatedData = computed(() => {
++  const start = (currentPage.value - 1) * pageSize.value
++  return filteredData.value.slice(start, start + pageSize.value)
++})
++
++const loadNamespaces = async () => {
++  loadingNamespaces.value = true
++  try {
++    namespaces.value = await fetchNamespaces()
++    if (!selectedNamespace.value && namespaces.value.length > 0) {
++      selectedNamespace.value = namespaces.value.includes('default')
++        ? 'default'
++        : namespaces.value[0]
++      await fetchData()
++    }
++  } catch (error: any) {
++    ElMessage.error(error.message || t('roleResourceManagement.messages.fetchNamespacesFailed'))
++  } finally {
++    loadingNamespaces.value = false
++  }
++}
++
++const fetchData = async () => {
++  if (!selectedNamespace.value) return
++  loading.value = true
++  try {
++    const response = await kubernetesRequest<{ code: number; data: any; message: string }>({
++      url: `/api/v1/namespaces/${selectedNamespace.value}/roles`,
++      method: 'GET'
++    })
++    if (response.code === 200 && response.data?.items) {
++      allItems.value = response.data.items.map((item: any) => ({
++        uid: item.metadata?.uid || item.metadata?.name,
++        name: item.metadata?.name || '',
++        namespace: item.metadata?.namespace || selectedNamespace.value,
++        rulesCount: item.rules?.length || 0,
++        rulesSummary: summarizeRules(item.rules) || '-',
++        createdAt: item.metadata?.creationTimestamp
++          ? dayjs(item.metadata.creationTimestamp).format('YYYY-MM-DD HH:mm:ss')
++          : '-',
++        rawData: item
++      }))
++    } else {
++      allItems.value = []
++    }
++  } catch (error: any) {
++    allItems.value = []
++    ElMessage.error(error.message || t('roleResourceManagement.messages.fetchFailed'))
++  } finally {
++    loading.value = false
++  }
++}
++
++const handleNamespaceChange = () => {
++  currentPage.value = 1
++  fetchData()
++}
++
++const openDetail = (row: DisplayItem) => {
++  detailItem.value = row
++  detailVisible.value = true
++}
++
++const handleDelete = (row: DisplayItem) => {
++  ElMessageBox.confirm(
++    t('roleResourceManagement.messages.deleteConfirm', { name: row.name, namespace: row.namespace }),
++    t('common.confirm'),
++    { type: 'warning' }
++  )
++    .then(async () => {
++      try {
++        const response = await kubernetesRequest<{ code: number; message: string }>({
++          url: `/api/v1/namespaces/${row.namespace}/roles/${row.name}`,
++          method: 'DELETE'
++        })
++        if (response.code === 200 || response.code === 204) {
++          ElMessage.success(t('roleResourceManagement.messages.deleteSuccess'))
++          await fetchData()
++        }
++      } catch (error: any) {
++        ElMessage.error(error.message || t('roleResourceManagement.messages.deleteFailed'))
++      }
++    })
++    .catch(() => undefined)
++}
++
++onMounted(loadNamespaces)
++</script>
++
++<style lang="scss" scoped>
++.resource-page {
++  padding: 24px;
++  background-color: var(--el-bg-color-page);
++}
++.page-header {
++  margin-bottom: 24px;
++}
++.page-title {
++  margin: 0;
++  font-size: 28px;
++  font-weight: 600;
++}
++.filter-bar {
++  display: flex;
++  gap: 16px;
++  margin-bottom: 24px;
++  padding: 16px;
++  background: var(--el-bg-color);
++  border: 1px solid var(--el-border-color-lighter);
++  border-radius: 4px;
++}
++.namespace-select {
++  width: 220px;
++}
++.search-input {
++  width: 280px;
++}
++.table-card :deep(.el-card__body) {
++  padding: 0;
++}
++.resource-icon {
++  margin-right: 8px;
++  color: #8b5cf6;
++  vertical-align: middle;
++}
++.pagination-container {
++  display: flex;
++  justify-content: flex-end;
++  padding: 16px;
++}
++.json-view {
++  margin: 0;
++  padding: 16px;
++  background: var(--el-fill-color-lighter);
++  border-radius: 4px;
++  font-size: 13px;
++  overflow: auto;
++  white-space: pre-wrap;
++  word-break: break-word;
++}
++</style>
+diff --git a/src/views/storageclass/index.vue b/src/views/storageclass/index.vue
+new file mode 100644
+index 0000000..c92358a
+--- /dev/null
++++ b/src/views/storageclass/index.vue
+@@ -0,0 +1,288 @@
++<template>
++  <div class="resource-page">
++    <div class="page-header">
++      <h1 class="page-title">{{ $t('storageClassManagement.title') }}</h1>
++    </div>
++
++    <div class="filter-bar">
++      <el-input
++        v-model="searchQuery"
++        :placeholder="$t('storageClassManagement.searchPlaceholder')"
++        :prefix-icon="SearchIcon"
++        clearable
++        class="search-input"
++        :disabled="loading"
++      />
++      <el-tooltip :content="$t('actions.refresh')" placement="top">
++        <el-button :icon="RefreshIcon" circle @click="fetchData" :loading="loading" />
++      </el-tooltip>
++    </div>
++
++    <el-card shadow="hover" class="table-card">
++      <el-table
++        :data="paginatedData"
++        v-loading="loading"
++        border
++        stripe
++        row-key="uid"
++        :default-sort="{ prop: 'createdAt', order: 'descending' }"
++        @sort-change="handleSortChange"
++      >
++        <el-table-column prop="name" :label="$t('storageClassManagement.columns.name')" min-width="200" sortable="custom" fixed show-overflow-tooltip>
++          <template #default="{ row }">
++            <el-icon class="resource-icon"><Box /></el-icon>
++            <span>{{ row.name }}</span>
++            <el-tag v-if="row.isDefault" size="small" type="success" style="margin-left: 8px">default</el-tag>
++          </template>
++        </el-table-column>
++        <el-table-column prop="provisioner" :label="$t('storageClassManagement.columns.provisioner')" min-width="220" show-overflow-tooltip />
++        <el-table-column prop="reclaimPolicy" :label="$t('storageClassManagement.columns.reclaimPolicy')" min-width="120" align="center">
++          <template #default="{ row }">
++            <el-tag size="small" :type="row.reclaimPolicy === 'Retain' ? 'success' : row.reclaimPolicy === 'Delete' ? 'danger' : 'info'">
++              {{ row.reclaimPolicy || '-' }}
++            </el-tag>
++          </template>
++        </el-table-column>
++        <el-table-column prop="volumeBindingMode" :label="$t('storageClassManagement.columns.volumeBindingMode')" min-width="160" show-overflow-tooltip />
++        <el-table-column prop="allowVolumeExpansion" :label="$t('storageClassManagement.columns.allowVolumeExpansion')" min-width="120" align="center">
++          <template #default="{ row }">
++            <el-tag size="small" :type="row.allowVolumeExpansion ? 'success' : 'info'">
++              {{ row.allowVolumeExpansion ? $t('common.yes') : $t('common.no') }}
++            </el-tag>
++          </template>
++        </el-table-column>
++        <el-table-column prop="createdAt" :label="$t('storageClassManagement.columns.createdAt')" min-width="180" sortable="custom" />
++        <el-table-column :label="$t('storageClassManagement.columns.actions')" width="100" align="center" fixed="right">
++          <template #default="{ row }">
++            <el-tooltip :content="$t('common.view')" placement="top">
++              <el-button link type="primary" :icon="ViewIcon" @click="openDetail(row)" />
++            </el-tooltip>
++            <el-tooltip :content="$t('common.delete')" placement="top">
++              <el-button link type="danger" :icon="DeleteIcon" @click="handleDelete(row)" />
++            </el-tooltip>
++          </template>
++        </el-table-column>
++        <template #empty>
++          <el-empty :description="$t('storageClassManagement.messages.noData')" :image-size="100" />
++        </template>
++      </el-table>
++
++      <div class="pagination-container" v-if="!loading && filteredData.length > 0">
++        <el-pagination
++          v-model:current-page="currentPage"
++          v-model:page-size="pageSize"
++          :page-sizes="[10, 20, 50, 100]"
++          :total="filteredData.length"
++          layout="total, sizes, prev, pager, next"
++          background
++        />
++      </div>
++    </el-card>
++
++    <el-drawer v-model="detailVisible" :title="detailItem?.name" size="50%">
++      <pre v-if="detailItem" class="json-view">{{ JSON.stringify(detailItem.rawData, null, 2) }}</pre>
++    </el-drawer>
++  </div>
++</template>
++
++<script setup lang="ts">
++import { ref, computed, onMounted } from 'vue'
++import { useI18n } from 'vue-i18n'
++import { ElMessage, ElMessageBox } from 'element-plus'
++import dayjs from 'dayjs'
++import { kubernetesRequest } from '@/utils/api-config'
++import {
++  Search as SearchIcon,
++  Refresh as RefreshIcon,
++  Delete as DeleteIcon,
++  View as ViewIcon,
++  Box
++} from '@element-plus/icons-vue'
++
++interface DisplayItem {
++  uid: string
++  name: string
++  provisioner: string
++  reclaimPolicy: string
++  volumeBindingMode: string
++  allowVolumeExpansion: boolean
++  isDefault: boolean
++  createdAt: string
++  rawData: any
++}
++
++const { t } = useI18n()
++const loading = ref(false)
++const allItems = ref<DisplayItem[]>([])
++const searchQuery = ref('')
++const currentPage = ref(1)
++const pageSize = ref(10)
++const sortKey = ref('createdAt')
++const sortOrder = ref<'ascending' | 'descending' | null>('descending')
++const detailVisible = ref(false)
++const detailItem = ref<DisplayItem | null>(null)
++
++const filteredData = computed(() => {
++  let list = [...allItems.value]
++  const q = searchQuery.value.trim().toLowerCase()
++  if (q) {
++    list = list.filter(
++      (item) =>
++        item.name.toLowerCase().includes(q) ||
++        item.provisioner.toLowerCase().includes(q)
++    )
++  }
++  if (sortKey.value && sortOrder.value) {
++    const dir = sortOrder.value === 'ascending' ? 1 : -1
++    list.sort((a: any, b: any) => {
++      const av = a[sortKey.value] ?? ''
++      const bv = b[sortKey.value] ?? ''
++      if (av < bv) return -1 * dir
++      if (av > bv) return 1 * dir
++      return 0
++    })
++  }
++  return list
++})
++
++const paginatedData = computed(() => {
++  const start = (currentPage.value - 1) * pageSize.value
++  return filteredData.value.slice(start, start + pageSize.value)
++})
++
++const fetchData = async () => {
++  loading.value = true
++  try {
++    const response = await kubernetesRequest<{ code: number; data: any; message: string }>({
++      url: '/api/v1/storageclasses',
++      method: 'GET'
++    })
++    if (response.code === 200 && response.data?.items) {
++      allItems.value = response.data.items.map((item: any) => ({
++        uid: item.metadata?.uid || item.metadata?.name,
++        name: item.metadata?.name || '',
++        provisioner: item.provisioner || '',
++        reclaimPolicy: item.reclaimPolicy || 'Delete',
++        volumeBindingMode: item.volumeBindingMode || 'Immediate',
++        allowVolumeExpansion: !!item.allowVolumeExpansion,
++        isDefault:
++          item.metadata?.annotations?.['storageclass.kubernetes.io/is-default-class'] === 'true',
++        createdAt: item.metadata?.creationTimestamp
++          ? dayjs(item.metadata.creationTimestamp).format('YYYY-MM-DD HH:mm:ss')
++          : '-',
++        rawData: item
++      }))
++    } else {
++      allItems.value = []
++      ElMessage.error(response.message || t('storageClassManagement.messages.fetchFailed'))
++    }
++  } catch (error: any) {
++    allItems.value = []
++    ElMessage.error(error.message || t('storageClassManagement.messages.fetchFailed'))
++  } finally {
++    loading.value = false
++  }
++}
++
++const handleSortChange = ({
++  prop,
++  order
++}: {
++  prop: string | null
++  order: 'ascending' | 'descending' | null
++}) => {
++  sortKey.value = prop || 'createdAt'
++  sortOrder.value = order
++  currentPage.value = 1
++}
++
++const openDetail = (row: DisplayItem) => {
++  detailItem.value = row
++  detailVisible.value = true
++}
++
++const handleDelete = (row: DisplayItem) => {
++  ElMessageBox.confirm(
++    t('storageClassManagement.messages.deleteConfirm', { name: row.name }),
++    t('common.confirm'),
++    { type: 'warning' }
++  )
++    .then(async () => {
++      loading.value = true
++      try {
++        const response = await kubernetesRequest<{ code: number; message: string }>({
++          url: `/api/v1/storageclasses/${row.name}`,
++          method: 'DELETE'
++        })
++        if (response.code === 200 || response.code === 204) {
++          ElMessage.success(t('storageClassManagement.messages.deleteSuccess'))
++          await fetchData()
++        } else {
++          ElMessage.error(response.message || t('storageClassManagement.messages.deleteFailed'))
++          loading.value = false
++        }
++      } catch (error: any) {
++        ElMessage.error(error.message || t('storageClassManagement.messages.deleteFailed'))
++        loading.value = false
++      }
++    })
++    .catch(() => undefined)
++}
++
++onMounted(fetchData)
++</script>
++
++<style lang="scss" scoped>
++.resource-page {
++  padding: 24px;
++  background-color: var(--el-bg-color-page);
++}
++.page-header {
++  display: flex;
++  justify-content: space-between;
++  align-items: center;
++  margin-bottom: 24px;
++}
++.page-title {
++  margin: 0;
++  font-size: 28px;
++  font-weight: 600;
++  color: var(--el-text-color-primary);
++}
++.filter-bar {
++  display: flex;
++  gap: 16px;
++  margin-bottom: 24px;
++  padding: 16px;
++  background: var(--el-bg-color);
++  border: 1px solid var(--el-border-color-lighter);
++  border-radius: 4px;
++}
++.search-input {
++  width: 320px;
++}
++.table-card :deep(.el-card__body) {
++  padding: 0;
++}
++.resource-icon {
++  margin-right: 8px;
++  color: #0ea5e9;
++  vertical-align: middle;
++}
++.pagination-container {
++  display: flex;
++  justify-content: flex-end;
++  padding: 16px;
++}
++.json-view {
++  margin: 0;
++  padding: 16px;
++  background: var(--el-fill-color-lighter);
++  border-radius: 4px;
++  font-size: 13px;
++  line-height: 1.5;
++  overflow: auto;
++  white-space: pre-wrap;
++  word-break: break-word;
++}
++</style>
+-- 
+2.43.0
+
