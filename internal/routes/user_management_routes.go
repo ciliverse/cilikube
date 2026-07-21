@@ -13,8 +13,7 @@ func RegisterUserManagementRoutes(router *gin.RouterGroup, authService *service.
 
 	// Apply JWT middleware and admin permission check to all user management routes
 	userRoutes := router.Group("/users")
-	userRoutes.Use(auth.JWTAuthMiddleware())
-	// TODO: Add admin permission middleware here
+	userRoutes.Use(auth.JWTAuthMiddleware(), auth.AdminRequiredMiddleware())
 	{
 		// User CRUD operations
 		userRoutes.GET("", userHandler.ListUsers)

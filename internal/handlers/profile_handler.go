@@ -8,7 +8,6 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -385,7 +384,7 @@ func (h *ProfileHandler) GetUserPermissions(c *gin.Context) {
 	utils.ApiSuccess(c, response, "User permissions retrieved successfully")
 }
 
-// GetActivityLog gets user activity log (placeholder for future implementation)
+// GetActivityLog gets user activity log from audit records
 func (h *ProfileHandler) GetActivityLog(c *gin.Context) {
 	userID, exists := c.Get("user_id")
 	if !exists {
@@ -393,7 +392,7 @@ func (h *ProfileHandler) GetActivityLog(c *gin.Context) {
 		return
 	}
 
-	_, ok := userID.(uint)
+	uid, ok := userID.(uint)
 	if !ok {
 		utils.ApiError(c, http.StatusUnauthorized, "Invalid user ID")
 		return
@@ -410,23 +409,28 @@ func (h *ProfileHandler) GetActivityLog(c *gin.Context) {
 		limit = 20
 	}
 
-	// TODO: Implement actual activity log retrieval from audit service
-	// For now, return mock data
-	activities := []gin.H{
-		{
-			"id":        1,
-			"action":    "login",
-			"resource":  "auth",
-			"timestamp": time.Now().Add(-1 * time.Hour),
-			"details":   "User logged in successfully",
-		},
-		{
-			"id":        2,
-			"action":    "profile_update",
-			"resource":  "user",
-			"timestamp": time.Now().Add(-2 * time.Hour),
-			"details":   "User updated profile information",
-		},
+	offset := (page - 1) * limit
+	logs, total, err := h.authService.GetUserActivityLog(uid, offset, limit)
+	if err != nil {
+		utils.ApiError(c, http.StatusInternalServerError, "Failed to get activity log", err.Error())
+		return
+	}
+
+	activities := make([]gin.H, 0, len(logs))
+	for _, log := range logs {
+		activities = append(activities, gin.H{
+			"id":        log.ID,
+			"action":    log.Action,
+			"resource":  log.Resource,
+			"timestamp": log.CreatedAt,
+			"details":   log.Details,
+			"ip":        log.IPAddress,
+		})
+	}
+
+	totalPages := int(total) / limit
+	if int(total)%limit != 0 {
+		totalPages++
 	}
 
 	response := gin.H{
@@ -434,8 +438,8 @@ func (h *ProfileHandler) GetActivityLog(c *gin.Context) {
 		"pagination": gin.H{
 			"page":        page,
 			"limit":       limit,
-			"total":       len(activities),
-			"total_pages": 1,
+			"total":       total,
+			"total_pages": totalPages,
 		},
 	}
 
