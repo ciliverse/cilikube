@@ -1,0 +1,58 @@
+@import "tailwindcss";
+
+@theme {
+  --font-display: "Syne", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "DM Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+
+  --color-ink: #101828;
+  --color-ink-soft: #344054;
+  --color-mist: #f4f7fb;
+  --color-panel: #ffffff;
+  --color-line: #d7e0ea;
+  --color-accent: #0f766e;
+  --color-accent-bright: #14b8a6;
+  --color-accent-soft: #ccfbf1;
+  --color-signal: #ea580c;
+  --color-ok: #059669;
+  --color-warn: #d97706;
+  --color-danger: #dc2626;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  background:
+    radial-gradient(1200px 600px at 10% -10%, rgba(20, 184, 166, 0.18), transparent 55%),
+    radial-gradient(900px 500px at 90% 0%, rgba(234, 88, 12, 0.1), transparent 50%),
+    linear-gradient(180deg, #eef3f8 0%, #f7fafc 40%, #f4f7fb 100%);
+  background-attachment: fixed;
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.35;
+  background-image:
+    linear-gradient(rgba(16, 24, 40, 0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(16, 24, 40, 0.04) 1px, transparent 1px);
+  background-size: 48px 48px;
+  mask-image: radial-gradient(ellipse at center, black 30%, transparent 75%);
+}
+
+::selection {
+  background: rgba(20, 184, 166, 0.25);
+}

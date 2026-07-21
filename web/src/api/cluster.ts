@@ -1,86 +1,61 @@
-// [重要] 导入我们的请求方法 request (Go backend returns {code, data, message} format)
-import { request } from "@/utils/service"
+import { apiGet } from '@/lib/api'
 
-// ... 接口定义部分保持不变 ...
-export interface ClusterInfo {
+export type ClusterItem = {
   id: string
   name: string
-  server: string
-  version: string
-  status: string
-  source: string
-  environment: string
+  status?: string
+  version?: string
+  is_active?: boolean
+  [key: string]: unknown
 }
 
-export interface CreateClusterRequest {
-  name: string
-  kubeconfigData: string
-  provider?: string
-  description?: string
-  environment?: string
-  region?: string
+export async function listClusters() {
+  const data = await apiGet<ClusterItem[] | { items: ClusterItem[]; clusters?: ClusterItem[] }>(
+    '/api/v1/clusters',
+  )
+  if (Array.isArray(data)) return data
+  return data.items || data.clusters || []
 }
 
-
-/** 获取集群列表 */
-export function getClusterList() {
-  // Go 后端返回 {code: 200, data: [...], message: "..."} 格式
-  return request<{ data: ClusterInfo[] }>({
-    url: "/api/v1/clusters",
-    method: "get",
-    timeout: 10000 // 增加超时时间到10秒
-  })
+export async function listNamespaces() {
+  const data = await apiGet<{ items: Array<{ metadata: { name: string } }> }>(
+    '/api/v1/namespaces',
+  )
+  return (data.items || []).map((item) => item.metadata.name)
 }
 
-/** 获取当前活动集群名称 */
-export function getActiveCluster() {
-  // Go 后端返回 {code: 200, data: "cluster-id", message: "..."} 格式
-  return request<{ data: string }>({
-    url: "/api/v1/clusters/active",
-    method: "get",
-    timeout: 10000 // 增加超时时间到10秒
-  })
+export async function listNodes() {
+  const data = await apiGet<{ items: any[] }>('/api/v1/nodes')
+  return data.items || []
 }
 
-/** 设置活动集群 */
-export function setActiveCluster(idOrName: string) {
-  // 优先使用 ID，向后兼容 name
-  const isId = idOrName.length > 10 && idOrName.includes('-') // 简单的ID检测
-  return request({
-    url: "/api/v1/clusters/active",
-    method: "post",
-    data: isId ? { id: idOrName } : { name: idOrName },
-    timeout: 10000 // 增加超时时间到10秒
-  })
+export async function listPods(namespace: string) {
+  const data = await apiGet<{ items: any[] }>(`/api/v1/namespaces/${namespace}/pods`)
+  return data.items || []
 }
 
-/** 创建新集群 */
-export function createCluster(data: CreateClusterRequest) {
-  // 使用更安全的 Base64 编码方式，支持 UTF-8 字符
-  const kubeconfigBase64 = btoa(unescape(encodeURIComponent(data.kubeconfigData)))
+export async function listEvents(params?: { namespace?: string; limit?: number }) {
+  return apiGet<{ events: any[]; total: number }>('/api/v1/events', params)
+}
 
-  const payload = {
-    ...data,
-    kubeconfigData: kubeconfigBase64
+export async function getNodeMetrics() {
+  return apiGet<{ nodes: any[]; total: number }>('/api/v1/nodes/metrics')
+}
+
+export async function getMonitoringDashboard() {
+  return apiGet<any>('/api/v1/monitoring/dashboard')
+}
+
+export async function getPrometheusStatus() {
+  return apiGet<{ enabled: boolean; url: string; healthy: boolean; error?: string }>(
+    '/api/v1/prometheus/status',
+  )
+}
+
+export async function getSummary() {
+  try {
+    return await apiGet<any>('/api/v1/summary')
+  } catch {
+    return null
   }
-
-  console.log('发送的 kubeconfig 数据长度:', data.kubeconfigData.length)
-  console.log('Base64 编码后长度:', kubeconfigBase64.length)
-
-  return request({
-    url: "/api/v1/clusters",
-    method: "post",
-    data: payload,
-    timeout: 15000 // 创建集群可能需要更长时间
-  })
-}
-
-/** 删除集群 */
-export function deleteCluster(clusterId: string) {
-  // 现在使用 ID 而不是 name
-  return request({
-    url: `/api/v1/clusters/${clusterId}`,
-    method: "delete",
-    timeout: 10000 // 增加超时时间到10秒
-  })
 }

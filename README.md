@@ -5,10 +5,10 @@
 </div>
 
 <div align="center">
-  <img src="https://img.shields.io/badge/Frontend-Vue3-blue?style=flat-square&logo=vue.js" alt="Vue3">
+  <img src="https://img.shields.io/badge/Frontend-React-61DAFB?style=flat-square&logo=react" alt="React">
   <img src="https://img.shields.io/badge/Frontend-TypeScript-blue?style=flat-square&logo=typescript" alt="TypeScript">
   <img src="https://img.shields.io/badge/Frontend-Vite-blue?style=flat-square&logo=vite" alt="Vite">
-  <img src="https://img.shields.io/badge/Frontend-Element%20Plus-blue?style=flat-square&logo=element-plus" alt="Element Plus">
+  <img src="https://img.shields.io/badge/Frontend-Tailwind-38BDF8?style=flat-square&logo=tailwindcss" alt="Tailwind">
   <img src="https://img.shields.io/badge/Backend-Go-blue?style=flat-square&logo=go" alt="Go">
   <img src="https://img.shields.io/badge/Backend-Gin-blue?style=flat-square&logo=gin" alt="Gin">
   <img src="https://img.shields.io/badge/1.34.0-Kubernetes-blue?style=flat-square&logo=kubernetes" alt="Kubernetes">
@@ -41,7 +41,7 @@ This project's CDN acceleration and security protection services are generously 
 
 ## 📖 Overview
 
-CiliKube is an enterprise-grade, open-source Kubernetes multi-cluster management platform built with modern web technologies including Vue3, TypeScript, Go, and Gin. The platform provides an intuitive, streamlined interface for comprehensive Kubernetes resource management while maintaining extensibility for custom requirements. CiliKube serves as an ideal foundation for organizations seeking efficient cluster operations and developers learning cloud-native technologies.
+CiliKube is an enterprise-grade, open-source Kubernetes multi-cluster management platform built with modern web technologies including React, TypeScript, Go, and Gin. The platform provides an intuitive, streamlined interface for comprehensive Kubernetes resource management while maintaining extensibility for custom requirements. CiliKube serves as an ideal foundation for organizations seeking efficient cluster operations and developers learning cloud-native technologies.
 
 <div align="center">
   <img src="docs/cluster-overview2.png" alt="Cluster Overview" width="100%">
@@ -64,12 +64,12 @@ CiliKube is an enterprise-grade, open-source Kubernetes multi-cluster management
 CiliKube distinguishes itself from complex enterprise solutions by prioritizing simplicity and usability without sacrificing functionality:
 
 1. **Streamlined Interface**: Provides an intuitive, clean interface for essential Kubernetes resource management operations.
-2. **Developer-Centric Design**: Built with modern development practices and clean architecture, making it an excellent reference for **Vue3/Go web development** and **Kubernetes API integration**.
+2. **Developer-Centric Design**: Built with modern development practices and clean architecture, making it an excellent reference for **React/Go web development** and **Kubernetes API integration**.
 3. **Extensible Architecture**: Designed with modularity in mind, enabling seamless integration of custom features and workflows.
 
 ## 🎯 Target Audience
 
-- **Frontend Developers**: Seeking hands-on experience with **Vue3 + TypeScript + Element Plus** ecosystem
+- **Frontend Developers**: Seeking hands-on experience with **React + TypeScript + Tailwind** ecosystem
 - **Backend Developers**: Learning **Go + Gin** web development and microservices architecture
 - **Cloud-Native Engineers**: Exploring **Kubernetes API** integration and **client-go** library implementation
 - **DevOps Teams**: Requiring a lightweight, customizable Kubernetes management interface
@@ -100,12 +100,11 @@ CiliKube leverages industry-standard technologies and frameworks to ensure relia
 - PNPM >= 8.x (Package management)
 
 **Frontend Architecture**: 
-- **Core**: `Vue3` `TypeScript` `Vite` `Element Plus`
-- **State Management**: `Pinia` `Vue Router`
+- **Core**: `React 19` `TypeScript` `Vite` `Tailwind CSS`
+- **Data / Routing**: `TanStack Query` `React Router`
+- **Motion / Charts**: `Framer Motion` `Recharts`
 - **HTTP Client**: `Axios`
-- **Styling**: `UnoCSS` `Scss`
-- **Code Quality**: `ESLint` `Prettier`
-- Built upon the robust [v3-admin-vite](https://github.com/un-pany/v3-admin-vite) template by un-pany.
+- The previous Vue UI remains available in the separate [cilikube-web](https://github.com/cillianxtech/cilikube-web) repository.
 
 **Backend Architecture**: 
 - **Framework**: `Go` `Gin`
