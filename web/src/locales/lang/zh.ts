@@ -114,6 +114,14 @@ export default {
     storage: '存储',
     pv: 'PV',
     pvc: 'PVC',
+    storageClass: 'StorageClass',
+
+    // 集群权限 (K8s RBAC)
+    rbac: '集群权限',
+    k8sRoles: 'Roles',
+    k8sRoleBindings: 'RoleBindings',
+    k8sClusterRoles: 'ClusterRoles',
+    k8sClusterRoleBindings: 'ClusterRoleBindings',
     
     // 网络
     network: '网络',
@@ -877,6 +885,156 @@ export default {
       noSecretsInNamespace: '在命名空间',
       aboutPVCTitle: '关于 PersistentVolumeClaims',
       aboutPVCDescription: 'PersistentVolumeClaim (PVC) 是用户对存储的请求。它与 Pod 相似，Pod 会耗用节点资源，而 PVC 耗用 PV 资源。Pod 可以请求特定数量的资源（CPU 和内存）；同样 PVC 可以请求特定的大小和访问模式（例如，可以要求 PV 挂载为 ReadWriteOnce、ReadOnlyMany、ReadWriteMany 或 ReadWriteOncePod）。'
+    }
+  },
+
+  // StorageClass 管理
+  storageClassManagement: {
+    title: 'StorageClasses',
+    searchPlaceholder: '搜索名称 / Provisioner',
+    columns: {
+      name: '名称',
+      provisioner: 'Provisioner',
+      reclaimPolicy: '回收策略',
+      volumeBindingMode: '绑定模式',
+      allowVolumeExpansion: '允许扩容',
+      createdAt: '创建时间',
+      actions: '操作'
+    },
+    messages: {
+      noData: '未找到 StorageClass',
+      fetchFailed: '获取 StorageClass 失败',
+      deleteConfirm: '确定要删除 StorageClass "{name}" 吗？',
+      deleteSuccess: 'StorageClass 删除成功',
+      deleteFailed: 'StorageClass 删除失败'
+    }
+  },
+
+  // K8s Role 管理
+  roleResourceManagement: {
+    title: 'Roles',
+    filterNamespace: '选择命名空间',
+    searchPlaceholder: '搜索 Role 名称',
+    columns: {
+      name: '名称',
+      namespace: '命名空间',
+      rulesCount: '规则数',
+      rulesSummary: '规则摘要',
+      createdAt: '创建时间',
+      actions: '操作'
+    },
+    messages: {
+      noData: '未找到 Role',
+      selectNamespace: '请先选择命名空间',
+      fetchFailed: '获取 Role 失败',
+      fetchNamespacesFailed: '获取命名空间失败',
+      deleteConfirm: '确定要删除 Role "{name}"（命名空间: {namespace}）吗？',
+      deleteSuccess: 'Role 删除成功',
+      deleteFailed: 'Role 删除失败'
+    }
+  },
+
+  // K8s ClusterRole 管理
+  clusterRoleManagement: {
+    title: 'ClusterRoles',
+    searchPlaceholder: '搜索 ClusterRole 名称',
+    columns: {
+      name: '名称',
+      rulesCount: '规则数',
+      rulesSummary: '规则摘要',
+      createdAt: '创建时间',
+      actions: '操作'
+    },
+    messages: {
+      noData: '未找到 ClusterRole',
+      fetchFailed: '获取 ClusterRole 失败',
+      deleteConfirm: '确定要删除 ClusterRole "{name}" 吗？',
+      deleteSuccess: 'ClusterRole 删除成功',
+      deleteFailed: 'ClusterRole 删除失败'
+    }
+  },
+
+  // K8s RoleBinding 管理
+  roleBindingManagement: {
+    title: 'RoleBindings',
+    filterNamespace: '选择命名空间',
+    searchPlaceholder: '搜索名称 / Role / Subject',
+    columns: {
+      name: '名称',
+      namespace: '命名空间',
+      roleRef: '关联 Role',
+      subjects: 'Subjects',
+      createdAt: '创建时间',
+      actions: '操作'
+    },
+    messages: {
+      noData: '未找到 RoleBinding',
+      selectNamespace: '请先选择命名空间',
+      fetchFailed: '获取 RoleBinding 失败',
+      fetchNamespacesFailed: '获取命名空间失败',
+      deleteConfirm: '确定要删除 RoleBinding "{name}" 吗？',
+      deleteSuccess: 'RoleBinding 删除成功',
+      deleteFailed: 'RoleBinding 删除失败'
+    }
+  },
+
+  // K8s ClusterRoleBinding 管理
+  clusterRoleBindingManagement: {
+    title: 'ClusterRoleBindings',
+    searchPlaceholder: '搜索名称 / Role / Subject',
+    columns: {
+      name: '名称',
+      roleRef: '关联 ClusterRole',
+      subjects: 'Subjects',
+      createdAt: '创建时间',
+      actions: '操作'
+    },
+    messages: {
+      noData: '未找到 ClusterRoleBinding',
+      fetchFailed: '获取 ClusterRoleBinding 失败',
+      deleteConfirm: '确定要删除 ClusterRoleBinding "{name}" 吗？',
+      deleteSuccess: 'ClusterRoleBinding 删除成功',
+      deleteFailed: 'ClusterRoleBinding 删除失败'
+    }
+  },
+
+  // 监控页
+  monitoringPage: {
+    title: '集群监控',
+    subtitle: '节点资源、安全概览与 Prometheus 查询',
+    autoRefresh: '自动刷新',
+    securityOverview: '安全概览',
+    prometheus: 'Prometheus',
+    prometheusUrl: '地址',
+    promQuery: 'PromQL',
+    runQuery: '执行查询',
+    nodeMetrics: '节点指标',
+    alerts: '告警',
+    noIssues: '当前无健康问题',
+    noAlerts: '暂无告警',
+    fetchFailed: '获取监控数据失败',
+    queryFailed: 'Prometheus 查询失败',
+    promDisabled: '未启用',
+    promHealthy: '健康',
+    promUnhealthy: '异常',
+    cards: {
+      nodes: '节点数',
+      cpuCores: 'CPU 核心',
+      avgCpu: '平均 CPU',
+      avgMemory: '平均内存',
+      activeSessions: '活跃会话',
+      activeUsers: '活跃用户',
+      activeThreats: '活跃威胁',
+      failedLogins: '失败登录率',
+      violations: '安全违规',
+      alerts: '告警数'
+    },
+    columns: {
+      node: '节点',
+      cpu: 'CPU',
+      memory: '内存',
+      cpuRequests: 'CPU 请求',
+      memoryRequests: '内存请求'
     }
   },
 

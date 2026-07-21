@@ -114,6 +114,14 @@ export default {
     storage: 'Storage',
     pv: 'PV',
     pvc: 'PVC',
+    storageClass: 'StorageClass',
+
+    // 集群权限 (K8s RBAC)
+    rbac: 'Cluster RBAC',
+    k8sRoles: 'Roles',
+    k8sRoleBindings: 'RoleBindings',
+    k8sClusterRoles: 'ClusterRoles',
+    k8sClusterRoleBindings: 'ClusterRoleBindings',
 
     // 网络
     network: 'Network',
@@ -868,6 +876,156 @@ export default {
       noSecretsInNamespace: 'No Secrets found in namespace',
       aboutPVCTitle: 'About PersistentVolumeClaims',
       aboutPVCDescription: 'A PersistentVolumeClaim (PVC) is a request for storage by a user. It is similar to a Pod. Pods consume node resources and PVCs consume PV resources. A Pod can request a specific amount of resources (CPU and memory); similarly, a PVC can request a specific size and access mode (for example, it can be mounted as ReadWriteOnce, ReadOnlyMany, ReadWriteMany or ReadWriteOncePod).'
+    }
+  },
+
+  // StorageClass management
+  storageClassManagement: {
+    title: 'StorageClasses',
+    searchPlaceholder: 'Search name / Provisioner',
+    columns: {
+      name: 'Name',
+      provisioner: 'Provisioner',
+      reclaimPolicy: 'Reclaim Policy',
+      volumeBindingMode: 'Binding Mode',
+      allowVolumeExpansion: 'Allow Expansion',
+      createdAt: 'Created At',
+      actions: 'Actions'
+    },
+    messages: {
+      noData: 'No StorageClasses found',
+      fetchFailed: 'Failed to fetch StorageClasses',
+      deleteConfirm: 'Are you sure you want to delete StorageClass "{name}"?',
+      deleteSuccess: 'StorageClass deleted successfully',
+      deleteFailed: 'Failed to delete StorageClass'
+    }
+  },
+
+  // K8s Role management
+  roleResourceManagement: {
+    title: 'Roles',
+    filterNamespace: 'Select Namespace',
+    searchPlaceholder: 'Search Role name',
+    columns: {
+      name: 'Name',
+      namespace: 'Namespace',
+      rulesCount: 'Rules',
+      rulesSummary: 'Rules Summary',
+      createdAt: 'Created At',
+      actions: 'Actions'
+    },
+    messages: {
+      noData: 'No Roles found',
+      selectNamespace: 'Please select a namespace first',
+      fetchFailed: 'Failed to fetch Roles',
+      fetchNamespacesFailed: 'Failed to fetch namespaces',
+      deleteConfirm: 'Are you sure you want to delete Role "{name}" (namespace: {namespace})?',
+      deleteSuccess: 'Role deleted successfully',
+      deleteFailed: 'Failed to delete Role'
+    }
+  },
+
+  // K8s ClusterRole management
+  clusterRoleManagement: {
+    title: 'ClusterRoles',
+    searchPlaceholder: 'Search ClusterRole name',
+    columns: {
+      name: 'Name',
+      rulesCount: 'Rules',
+      rulesSummary: 'Rules Summary',
+      createdAt: 'Created At',
+      actions: 'Actions'
+    },
+    messages: {
+      noData: 'No ClusterRoles found',
+      fetchFailed: 'Failed to fetch ClusterRoles',
+      deleteConfirm: 'Are you sure you want to delete ClusterRole "{name}"?',
+      deleteSuccess: 'ClusterRole deleted successfully',
+      deleteFailed: 'Failed to delete ClusterRole'
+    }
+  },
+
+  // K8s RoleBinding management
+  roleBindingManagement: {
+    title: 'RoleBindings',
+    filterNamespace: 'Select Namespace',
+    searchPlaceholder: 'Search name / Role / Subject',
+    columns: {
+      name: 'Name',
+      namespace: 'Namespace',
+      roleRef: 'Role Ref',
+      subjects: 'Subjects',
+      createdAt: 'Created At',
+      actions: 'Actions'
+    },
+    messages: {
+      noData: 'No RoleBindings found',
+      selectNamespace: 'Please select a namespace first',
+      fetchFailed: 'Failed to fetch RoleBindings',
+      fetchNamespacesFailed: 'Failed to fetch namespaces',
+      deleteConfirm: 'Are you sure you want to delete RoleBinding "{name}"?',
+      deleteSuccess: 'RoleBinding deleted successfully',
+      deleteFailed: 'Failed to delete RoleBinding'
+    }
+  },
+
+  // K8s ClusterRoleBinding management
+  clusterRoleBindingManagement: {
+    title: 'ClusterRoleBindings',
+    searchPlaceholder: 'Search name / Role / Subject',
+    columns: {
+      name: 'Name',
+      roleRef: 'ClusterRole Ref',
+      subjects: 'Subjects',
+      createdAt: 'Created At',
+      actions: 'Actions'
+    },
+    messages: {
+      noData: 'No ClusterRoleBindings found',
+      fetchFailed: 'Failed to fetch ClusterRoleBindings',
+      deleteConfirm: 'Are you sure you want to delete ClusterRoleBinding "{name}"?',
+      deleteSuccess: 'ClusterRoleBinding deleted successfully',
+      deleteFailed: 'Failed to delete ClusterRoleBinding'
+    }
+  },
+
+  // Monitoring page
+  monitoringPage: {
+    title: 'Cluster Monitoring',
+    subtitle: 'Node resources, security overview, and Prometheus queries',
+    autoRefresh: 'Auto Refresh',
+    securityOverview: 'Security Overview',
+    prometheus: 'Prometheus',
+    prometheusUrl: 'URL',
+    promQuery: 'PromQL',
+    runQuery: 'Run Query',
+    nodeMetrics: 'Node Metrics',
+    alerts: 'Alerts',
+    noIssues: 'No health issues',
+    noAlerts: 'No alerts',
+    fetchFailed: 'Failed to fetch monitoring data',
+    queryFailed: 'Prometheus query failed',
+    promDisabled: 'Disabled',
+    promHealthy: 'Healthy',
+    promUnhealthy: 'Unhealthy',
+    cards: {
+      nodes: 'Nodes',
+      cpuCores: 'CPU Cores',
+      avgCpu: 'Avg CPU',
+      avgMemory: 'Avg Memory',
+      activeSessions: 'Active Sessions',
+      activeUsers: 'Active Users',
+      activeThreats: 'Active Threats',
+      failedLogins: 'Failed Login Rate',
+      violations: 'Violations',
+      alerts: 'Alerts'
+    },
+    columns: {
+      node: 'Node',
+      cpu: 'CPU',
+      memory: 'Memory',
+      cpuRequests: 'CPU Requests',
+      memoryRequests: 'Memory Requests'
     }
   },
 
