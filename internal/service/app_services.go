@@ -32,6 +32,8 @@ type AppServices struct {
 	RoleService       *RoleService
 	PermissionService *PermissionService
 	AuditService      *AuditService
+	MonitoringService *MonitoringService
+	PrometheusService *PrometheusService
 
 	// Kubernetes resource services
 	NodeService               ResourceService[*corev1.Node]

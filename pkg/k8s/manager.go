@@ -31,6 +31,7 @@ type ClusterManager struct {
 	lock           sync.RWMutex
 	activeClientID string
 	activeClient   *Client
+	informers      *informerState
 }
 
 func NewClusterManager(clusterStore store.ClusterStore, config *configs.Config) (*ClusterManager, error) {
@@ -40,6 +41,7 @@ func NewClusterManager(clusterStore store.ClusterStore, config *configs.Config) 
 		nameToID:    make(map[string]string),
 		store:       clusterStore,
 		statusCache: make(map[string]ClusterInfoResponse),
+		informers:   newInformerState(),
 	}
 	log.Println("initializing cluster manager...")
 
@@ -237,11 +239,15 @@ func (cm *ClusterManager) RemoveDBClusterByID(id string) error {
 	delete(cm.statusCache, id)
 	delete(cm.clientInfo, id)
 	delete(cm.nameToID, clientInfo.Name)
+	cm.stopInformersForCluster(id)
 	if cm.activeClientID == id {
 		cm.activeClient = nil
 		cm.activeClientID = ""
-		for newActiveID := range cm.clients {
-			_ = cm.SetActiveClusterByID(newActiveID)
+		for newActiveID, newClient := range cm.clients {
+			cm.activeClient = newClient
+			cm.activeClientID = newActiveID
+			log.Printf("Active cluster set to ID: %s (name: %s)", newActiveID, cm.clientInfo[newActiveID].Name)
+			go cm.startInformersForCluster(newActiveID, newClient)
 			break
 		}
 	}
@@ -250,14 +256,32 @@ func (cm *ClusterManager) RemoveDBClusterByID(id string) error {
 
 func (cm *ClusterManager) SetActiveClusterByID(id string) error {
 	cm.lock.Lock()
-	defer cm.lock.Unlock()
 	client, exists := cm.clients[id]
 	if !exists {
+		cm.lock.Unlock()
 		return fmt.Errorf("cluster ID '%s' not found or not initialized", id)
 	}
+	prevID := cm.activeClientID
 	cm.activeClient = client
 	cm.activeClientID = id
-	log.Printf("Active cluster set to ID: %s (name: %s)", id, cm.clientInfo[id].Name)
+	name := cm.clientInfo[id].Name
+	cm.lock.Unlock()
+
+	log.Printf("Active cluster set to ID: %s (name: %s)", id, name)
+	if prevID != id {
+		if prevID != "" {
+			cm.stopInformersForCluster(prevID)
+		}
+		cm.startInformersForCluster(id, client)
+	} else {
+		// Ensure informers are running even if active cluster unchanged (e.g. startup)
+		cm.informers.mu.RLock()
+		_, running := cm.informers.byCluster[id]
+		cm.informers.mu.RUnlock()
+		if !running {
+			cm.startInformersForCluster(id, client)
+		}
+	}
 	return nil
 }
 

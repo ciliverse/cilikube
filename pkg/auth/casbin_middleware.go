@@ -5,7 +5,8 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"path/filepath" // Import path/filepath
+	"path/filepath"
+	"strings"
 
 	"github.com/casbin/casbin/v2"
 	gormadapter "github.com/casbin/gorm-adapter/v3"
@@ -33,16 +34,14 @@ func (r *CasbinBuilder) CasbinMiddleware(e *casbin.Enforcer) gin.HandlerFunc {
 		reqPath := c.Request.URL.Path
 		// Skip ignored routes
 		for _, path := range r.IgnorePaths {
-			// Use filepath.Match to support simple * matching (if needed)
-			// Or directly compare c.Request.URL.Path == path
-			if matched, _ := filepath.Match(path, reqPath); matched || reqPath == path {
+			if pathIgnored(path, reqPath) {
 				c.Next()
 				return
 			}
 		}
 
 		// Get user ID from context (set by JWT middleware)
-		userIDVal, exist := c.Get("userID")
+		userIDVal, exist := c.Get("user_id")
 		if !exist {
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Unable to get user information, please login first"})
 			return
@@ -78,6 +77,24 @@ func (r *CasbinBuilder) CasbinMiddleware(e *casbin.Enforcer) gin.HandlerFunc {
 			c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "You do not have permission to perform this operation"}) // Use 403 Forbidden
 		}
 	}
+}
+
+func pathIgnored(pattern, reqPath string) bool {
+	if reqPath == pattern {
+		return true
+	}
+	if strings.HasSuffix(pattern, "/*") {
+		prefix := strings.TrimSuffix(pattern, "/*")
+		return reqPath == prefix || strings.HasPrefix(reqPath, prefix+"/")
+	}
+	if strings.HasSuffix(pattern, "/") {
+		return strings.HasPrefix(reqPath, pattern)
+	}
+	if strings.HasSuffix(pattern, "*") {
+		return strings.HasPrefix(reqPath, strings.TrimSuffix(pattern, "*"))
+	}
+	matched, _ := filepath.Match(pattern, reqPath)
+	return matched
 }
 
 // addPolicyIfNotExists helper function, checks if policy exists, adds if not

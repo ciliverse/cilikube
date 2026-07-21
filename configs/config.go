@@ -21,7 +21,15 @@ type Config struct {
 	OAuth       OAuthConfig       `yaml:"oauth" json:"oauth"`
 	Security    SecurityConfig    `yaml:"security" json:"security"`
 	Preferences PreferencesConfig `yaml:"preferences" json:"preferences"`
+	Prometheus  PrometheusConfig  `yaml:"prometheus" json:"prometheus"`
 	Clusters    []ClusterInfo     `yaml:"clusters" json:"clusters"`
+}
+
+// PrometheusConfig configures the external Prometheus query integration.
+type PrometheusConfig struct {
+	Enabled bool          `yaml:"enabled" json:"enabled"`
+	URL     string        `yaml:"url" json:"url"`
+	Timeout time.Duration `yaml:"timeout" json:"timeout"`
 }
 
 type ServerConfig struct {
@@ -695,5 +703,12 @@ func setSecurityDefaults() {
 			"security_events",
 			"resource_warnings",
 		}
+	}
+
+	if GlobalConfig.Prometheus.Timeout == 0 {
+		GlobalConfig.Prometheus.Timeout = 15 * time.Second
+	}
+	if GlobalConfig.Prometheus.URL == "" {
+		GlobalConfig.Prometheus.URL = "http://prometheus:9090"
 	}
 }

@@ -11,6 +11,7 @@ import (
 	"github.com/ciliverse/cilikube/internal/store"
 	"github.com/ciliverse/cilikube/pkg/auth"
 	"github.com/ciliverse/cilikube/pkg/k8s"
+	"github.com/ciliverse/cilikube/pkg/metrics"
 	"github.com/gin-gonic/gin"
 	"k8s.io/apimachinery/pkg/runtime"
 )
@@ -20,6 +21,7 @@ func InitializeServices(k8sManager *k8s.ClusterManager, store store.Store, cfg *
 	resourceFactory := service.NewResourceServiceFactory()
 	resourceFactory.InitializeDefaultServices()
 	authService := service.NewAuthService(store, cfg)
+	auditService := service.NewAuditService(store, cfg)
 	appServices := &service.AppServices{
 		ClusterService:     service.NewClusterService(k8sManager),
 		InstallerService:   service.NewInstallerService(cfg),
@@ -31,7 +33,9 @@ func InitializeServices(k8sManager *k8s.ClusterManager, store store.Store, cfg *
 		AuthService:        authService,
 		OAuthService:       service.NewOAuthService(store, cfg, authService.GetSecurityService()),
 		RoleService:        service.NewRoleService(store),
-		AuditService:       service.NewAuditService(store, cfg),
+		AuditService:       auditService,
+		MonitoringService:  service.NewMonitoringService(store, cfg, auditService),
+		PrometheusService:  service.NewPrometheusService(cfg),
 	}
 	// PodExecService requires rest.Config
 	if activeClient, err := k8sManager.GetActiveClient(); err == nil && activeClient != nil {
@@ -91,6 +95,9 @@ func InitializeHandlers(router *gin.RouterGroup, services *service.AppServices, 
 
 	// --- Register CRD routes ---
 	routes.SetupCRDRoutes(router, handlers.NewCRDHandler(services.CRDService, k8sManager))
+
+	// --- Register monitoring / prometheus / informer routes ---
+	routes.RegisterMonitoringRoutes(router, services.MonitoringService, services.PrometheusService, k8sManager)
 
 	// --- 2. Create Handler instances for all resources ---
 	nodesHandler := handlers.NewResourceHandler(services.NodeService, k8sManager, "nodes")
@@ -232,6 +239,7 @@ func registerResourceInNamespace[T runtime.Object](nsRouter *gin.RouterGroup, re
 func SetupRouter(cfg *configs.Config, services *service.AppServices, k8sManager *k8s.ClusterManager, e *casbin.Enforcer) *gin.Engine {
 	router := gin.New()
 	router.Use(gin.Recovery(), gin.Logger())
+	router.Use(metrics.PromMiddleware())
 
 	// Enable session validation for JWT middleware so logout can revoke access
 	if services.AuthService != nil && services.AuthService.GetSecurityService() != nil {
@@ -258,10 +266,33 @@ func SetupRouter(cfg *configs.Config, services *service.AppServices, k8sManager 
 		router.Use(auth.AuditMiddleware(services.AuditService))
 	}
 
+	// Public operational endpoints
+	router.GET("/health", handlers.HealthCheck)
+	router.GET("/ready", handlers.ReadinessCheck)
+	router.GET("/live", handlers.LivenessCheck)
+	router.GET("/metrics", metrics.PromHandler())
+	router.GET("/version", handlers.GetVersion)
+
 	// Serve static files for uploaded avatars
 	router.Static("/uploads", "./uploads")
 
 	apiV1 := router.Group("/api/v1")
+	// Require JWT for all API routes except public auth endpoints
+	apiV1.Use(auth.JWTAuthUnless(
+		"/api/v1/auth/login",
+		"/api/v1/auth/register",
+		"/api/v1/auth/oauth/",
+		"/api/v1/system/healthz",
+	))
+	// Enforce Casbin policies when available
+	if e != nil {
+		apiV1.Use(auth.NewCasbinBuilder().
+			IgnorePath("/api/v1/auth/login").
+			IgnorePath("/api/v1/auth/register").
+			IgnorePath("/api/v1/auth/oauth/*").
+			IgnorePath("/api/v1/system/healthz").
+			CasbinMiddleware(e))
+	}
 	{
 		InitializeHandlers(apiV1, services, k8sManager, cfg)
 	}

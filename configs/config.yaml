@@ -24,6 +24,10 @@ jwt:
     secret_key: cilikube-secret-key-change-in-production
     expire_duration: 24h0m0s
     issuer: cilikube
+prometheus:
+    enabled: false
+    url: http://prometheus:9090
+    timeout: 15s
 clusters:
     - id: 907cab34-53f0-4c31-8b32-e238e5bf5769
       name: Test

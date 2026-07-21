@@ -3,6 +3,7 @@ package auth
 import (
 	"fmt"
 	"net/http"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -70,6 +71,25 @@ func ParseToken(tokenString string) (*JWTClaims, error) {
 	}
 
 	return nil, jwt.ErrInvalidKey
+}
+
+// JWTAuthUnless runs JWT auth for all paths except the provided prefixes/patterns.
+func JWTAuthUnless(skipPaths ...string) gin.HandlerFunc {
+	jwtAuth := JWTAuthMiddleware()
+	return func(c *gin.Context) {
+		path := c.Request.URL.Path
+		for _, skip := range skipPaths {
+			if path == skip || strings.HasPrefix(path, skip) {
+				c.Next()
+				return
+			}
+			if matched, _ := filepath.Match(skip, path); matched {
+				c.Next()
+				return
+			}
+		}
+		jwtAuth(c)
+	}
 }
 
 // JWTAuthMiddleware JWT authentication middleware
