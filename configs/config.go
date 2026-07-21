@@ -12,15 +12,16 @@ import (
 )
 
 type Config struct {
-	Server     ServerConfig     `yaml:"server" json:"server"`
-	Kubernetes KubernetesConfig `yaml:"kubernetes" json:"kubernetes"`
-	Installer  InstallerConfig  `yaml:"installer" json:"installer"`
-	Database   DatabaseConfig   `yaml:"database" json:"database"`
-	Storage    StorageConfig    `yaml:"storage" json:"storage"`
-	JWT        JWTConfig        `yaml:"jwt" json:"jwt"`
-	OAuth      OAuthConfig      `yaml:"oauth" json:"oauth"`
-	Security   SecurityConfig   `yaml:"security" json:"security"`
-	Clusters   []ClusterInfo    `yaml:"clusters" json:"clusters"`
+	Server      ServerConfig      `yaml:"server" json:"server"`
+	Kubernetes  KubernetesConfig  `yaml:"kubernetes" json:"kubernetes"`
+	Installer   InstallerConfig   `yaml:"installer" json:"installer"`
+	Database    DatabaseConfig    `yaml:"database" json:"database"`
+	Storage     StorageConfig     `yaml:"storage" json:"storage"`
+	JWT         JWTConfig         `yaml:"jwt" json:"jwt"`
+	OAuth       OAuthConfig       `yaml:"oauth" json:"oauth"`
+	Security    SecurityConfig    `yaml:"security" json:"security"`
+	Preferences PreferencesConfig `yaml:"preferences" json:"preferences"`
+	Clusters    []ClusterInfo     `yaml:"clusters" json:"clusters"`
 }
 
 type ServerConfig struct {
@@ -59,13 +60,16 @@ type StorageConfig struct {
 }
 
 type OAuthConfig struct {
-	GitHub GitHubOAuthConfig `yaml:"github" json:"github"`
+	GitHub            GitHubOAuthConfig `yaml:"github" json:"github"`
+	AllowRegistration bool              `yaml:"allow_registration" json:"allow_registration"`
+	AutoLinkAccounts  bool              `yaml:"auto_link_accounts" json:"auto_link_accounts"`
 }
 
 type GitHubOAuthConfig struct {
 	ClientID     string `yaml:"client_id" json:"client_id"`
 	ClientSecret string `yaml:"client_secret" json:"client_secret"`
 	RedirectURL  string `yaml:"redirect_url" json:"redirect_url"`
+	Enabled      bool   `yaml:"enabled" json:"enabled"`
 }
 
 type JWTConfig struct {
@@ -75,10 +79,11 @@ type JWTConfig struct {
 }
 
 type SecurityConfig struct {
-	Password    PasswordConfig    `yaml:"password" json:"password"`
-	AccountLock AccountLockConfig `yaml:"account_lock" json:"account_lock"`
-	Session     SessionConfig     `yaml:"session" json:"session"`
-	RateLimit   RateLimitConfig   `yaml:"rate_limit" json:"rate_limit"`
+	Password    PasswordConfig      `yaml:"password" json:"password"`
+	AccountLock AccountLockConfig   `yaml:"account_lock" json:"account_lock"`
+	Session     SessionConfig       `yaml:"session" json:"session"`
+	RateLimit   RateLimitConfig     `yaml:"rate_limit" json:"rate_limit"`
+	Audit       AuditSettingsConfig `yaml:"audit" json:"audit"`
 }
 
 type PasswordConfig struct {
@@ -87,7 +92,41 @@ type PasswordConfig struct {
 	RequireLowercase bool `yaml:"require_lowercase" json:"require_lowercase"`
 	RequireNumbers   bool `yaml:"require_numbers" json:"require_numbers"`
 	RequireSymbols   bool `yaml:"require_symbols" json:"require_symbols"`
+	PasswordHistory  int  `yaml:"password_history" json:"password_history"`
 	MaxAge           int  `yaml:"max_age" json:"max_age"` // days, 0 means no expiration
+}
+
+type AuditSettingsConfig struct {
+	LogLoginAttempts bool `yaml:"log_login_attempts" json:"log_login_attempts"`
+	LogAPICalls      bool `yaml:"log_api_calls" json:"log_api_calls"`
+	LogAdminActions  bool `yaml:"log_admin_actions" json:"log_admin_actions"`
+	RetentionDays    int  `yaml:"retention_days" json:"retention_days"`
+}
+
+type PreferencesConfig struct {
+	UI            UIPreferencesConfig           `yaml:"ui" json:"ui"`
+	Notifications NotificationPreferencesConfig `yaml:"notifications" json:"notifications"`
+	FeatureFlags  FeatureFlagsConfig            `yaml:"feature_flags" json:"feature_flags"`
+}
+
+type UIPreferencesConfig struct {
+	DefaultTheme    string `yaml:"default_theme" json:"default_theme"`
+	DefaultLanguage string `yaml:"default_language" json:"default_language"`
+	ItemsPerPage    int    `yaml:"items_per_page" json:"items_per_page"`
+	AutoRefresh     bool   `yaml:"auto_refresh" json:"auto_refresh"`
+	RefreshInterval int    `yaml:"refresh_interval" json:"refresh_interval"` // seconds
+}
+
+type NotificationPreferencesConfig struct {
+	EmailNotifications   bool     `yaml:"email_notifications" json:"email_notifications"`
+	BrowserNotifications bool     `yaml:"browser_notifications" json:"browser_notifications"`
+	NotificationTypes    []string `yaml:"notification_types" json:"notification_types"`
+}
+
+type FeatureFlagsConfig struct {
+	BetaFeatures    bool `yaml:"beta_features" json:"beta_features"`
+	ExperimentalUI  bool `yaml:"experimental_ui" json:"experimental_ui"`
+	AdvancedMetrics bool `yaml:"advanced_metrics" json:"advanced_metrics"`
 }
 
 type AccountLockConfig struct {
@@ -102,6 +141,7 @@ type SessionConfig struct {
 	IdleTimeout           time.Duration `yaml:"idle_timeout" json:"idle_timeout"`
 	AbsoluteTimeout       time.Duration `yaml:"absolute_timeout" json:"absolute_timeout"`
 	RequireReauth         bool          `yaml:"require_reauth" json:"require_reauth"` // Require re-authentication for sensitive operations
+	Require2FA            bool          `yaml:"require_2fa" json:"require_2fa"`
 }
 
 type RateLimitConfig struct {
@@ -620,5 +660,40 @@ func setSecurityDefaults() {
 	}
 	if GlobalConfig.Security.RateLimit.BurstSize == 0 {
 		GlobalConfig.Security.RateLimit.BurstSize = 50
+	}
+
+	if GlobalConfig.Security.Password.PasswordHistory == 0 {
+		GlobalConfig.Security.Password.PasswordHistory = 5
+	}
+	if GlobalConfig.Security.Audit.RetentionDays == 0 {
+		GlobalConfig.Security.Audit.RetentionDays = 90
+		GlobalConfig.Security.Audit.LogLoginAttempts = true
+		GlobalConfig.Security.Audit.LogAPICalls = true
+		GlobalConfig.Security.Audit.LogAdminActions = true
+	}
+
+	// Preferences defaults
+	if GlobalConfig.Preferences.UI.DefaultTheme == "" {
+		GlobalConfig.Preferences.UI.DefaultTheme = "light"
+		GlobalConfig.Preferences.FeatureFlags.AdvancedMetrics = true
+	}
+	if GlobalConfig.Preferences.UI.DefaultLanguage == "" {
+		GlobalConfig.Preferences.UI.DefaultLanguage = "en"
+	}
+	if GlobalConfig.Preferences.UI.ItemsPerPage == 0 {
+		GlobalConfig.Preferences.UI.ItemsPerPage = 20
+	}
+	if GlobalConfig.Preferences.UI.RefreshInterval == 0 {
+		GlobalConfig.Preferences.UI.RefreshInterval = 30
+		GlobalConfig.Preferences.UI.AutoRefresh = true
+	}
+	if GlobalConfig.Preferences.Notifications.NotificationTypes == nil {
+		GlobalConfig.Preferences.Notifications.EmailNotifications = true
+		GlobalConfig.Preferences.Notifications.BrowserNotifications = true
+		GlobalConfig.Preferences.Notifications.NotificationTypes = []string{
+			"system_alerts",
+			"security_events",
+			"resource_warnings",
+		}
 	}
 }

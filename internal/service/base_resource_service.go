@@ -2,7 +2,6 @@ package service
 
 import (
 	"context"
-	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -29,7 +28,7 @@ type ResourceService[T runtime.Object] interface {
 	Update(clientset kubernetes.Interface, namespace, name string, obj T) (T, error)
 	Patch(clientset kubernetes.Interface, namespace, name string, current T, patchData map[string]interface{}) (T, error)
 	Delete(clientset kubernetes.Interface, namespace, name string) error
-	Watch(clientset kubernetes.Interface, namespace, selector string, resourceVersion string, timeoutSeconds int64) (watch.Interface, error)
+	Watch(ctx context.Context, clientset kubernetes.Interface, namespace, selector string, resourceVersion string, timeoutSeconds int64) (watch.Interface, error)
 }
 
 // BaseResourceService basic resource service implementation
@@ -99,17 +98,17 @@ func (s *BaseResourceService[T]) Delete(clientset kubernetes.Interface, namespac
 }
 
 // Watch watches resource changes
-func (s *BaseResourceService[T]) Watch(clientset kubernetes.Interface, namespace, selector string, resourceVersion string, timeoutSeconds int64) (watch.Interface, error) {
-	ctx := context.Background()
-	if timeoutSeconds > 0 {
-		var cancel context.CancelFunc
-		ctx, cancel = context.WithTimeout(ctx, time.Duration(timeoutSeconds)*time.Second)
-		defer cancel()
+func (s *BaseResourceService[T]) Watch(ctx context.Context, clientset kubernetes.Interface, namespace, selector string, resourceVersion string, timeoutSeconds int64) (watch.Interface, error) {
+	if ctx == nil {
+		ctx = context.Background()
 	}
 	opts := metav1.ListOptions{
 		LabelSelector:   selector,
 		ResourceVersion: resourceVersion,
 		Watch:           true,
+	}
+	if timeoutSeconds > 0 {
+		opts.TimeoutSeconds = &timeoutSeconds
 	}
 	return s.client.Watch(ctx, clientset, namespace, opts)
 }

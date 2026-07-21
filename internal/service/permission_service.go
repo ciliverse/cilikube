@@ -280,3 +280,60 @@ func (s *PermissionService) GetUserPermissions(userID uint) ([][]string, error) 
 	log.Printf("User %d has %d effective permissions", userID, len(allPermissions))
 	return allPermissions, nil
 }
+
+// ClearRolePolicies removes all Casbin policies for a role
+func (s *PermissionService) ClearRolePolicies(role string) error {
+	if s.enforcer == nil {
+		return fmt.Errorf("Casbin enforcer not available")
+	}
+
+	_, err := s.enforcer.RemoveFilteredPolicy(0, role)
+	if err != nil {
+		return fmt.Errorf("failed to clear policies for role %s: %w", role, err)
+	}
+	return nil
+}
+
+// GetLogicalPermissionsForRole returns UI-facing logical permission names for a role
+func (s *PermissionService) GetLogicalPermissionsForRole(role string) ([]string, error) {
+	if s.enforcer == nil {
+		return []string{}, nil
+	}
+
+	policies, err := s.GetRolePolicies(role)
+	if err != nil {
+		return nil, err
+	}
+	return logicalPermissionsFromPolicies(policies), nil
+}
+
+// SetLogicalPermissionsForRole replaces a role's Casbin policies from logical permission names
+func (s *PermissionService) SetLogicalPermissionsForRole(role string, permissions []string) error {
+	if s.enforcer == nil {
+		return fmt.Errorf("Casbin enforcer not available")
+	}
+
+	if err := s.ClearRolePolicies(role); err != nil {
+		return err
+	}
+
+	seen := make(map[string]bool)
+	for _, name := range permissions {
+		if seen[name] {
+			continue
+		}
+		seen[name] = true
+
+		policies, ok := policiesForLogicalPermission(name)
+		if !ok {
+			return fmt.Errorf("unknown permission: %s", name)
+		}
+		for _, policy := range policies {
+			if err := s.addPolicyIfNotExists(role, policy.Object, policy.Action); err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
+}
