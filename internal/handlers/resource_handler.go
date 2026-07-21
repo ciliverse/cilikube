@@ -1,6 +1,8 @@
 package handlers
 
 import (
+	"encoding/json"
+	"fmt"
 	"net/http"
 	"strconv"
 
@@ -162,7 +164,53 @@ func (h *ResourceHandler[T]) Delete(c *gin.Context) {
 	utils.ApiSuccess(c, nil, "resource deleted successfully")
 }
 
-// Watch handles resource watch requests
+// Watch handles resource watch requests via Server-Sent Events
 func (h *ResourceHandler[T]) Watch(c *gin.Context) {
-	utils.ApiError(c, http.StatusNotImplemented, "Watch not yet implemented", "")
+	k8sClient, ok := k8s.GetClientFromQuery(c, h.clusterManager)
+	if !ok {
+		return
+	}
+
+	namespace := c.Param("namespace")
+	selector := c.Query("labelSelector")
+	resourceVersion := c.Query("resourceVersion")
+	timeoutSeconds, _ := strconv.ParseInt(c.DefaultQuery("timeoutSeconds", "0"), 10, 64)
+
+	watcher, err := h.service.Watch(c.Request.Context(), k8sClient.Clientset, namespace, selector, resourceVersion, timeoutSeconds)
+	if err != nil {
+		utils.ApiError(c, http.StatusInternalServerError, "failed to watch resource", err.Error())
+		return
+	}
+	defer watcher.Stop()
+
+	c.Writer.Header().Set("Content-Type", "text/event-stream; charset=utf-8")
+	c.Writer.Header().Set("Cache-Control", "no-cache")
+	c.Writer.Header().Set("Connection", "keep-alive")
+	c.Writer.Flush()
+
+	clientGone := c.Request.Context().Done()
+	for {
+		select {
+		case <-clientGone:
+			return
+		case event, ok := <-watcher.ResultChan():
+			if !ok {
+				return
+			}
+
+			payload := gin.H{
+				"type":   string(event.Type),
+				"object": event.Object,
+			}
+			data, err := json.Marshal(payload)
+			if err != nil {
+				fmt.Fprintf(c.Writer, "event: error\ndata: %q\n\n", err.Error())
+				c.Writer.Flush()
+				return
+			}
+
+			fmt.Fprintf(c.Writer, "event: watch\ndata: %s\n\n", data)
+			c.Writer.Flush()
+		}
+	}
 }

@@ -60,7 +60,7 @@ func initializeResourceService[T runtime.Object](factory *service.ResourceServic
 }
 
 // Initialize Handlers function
-func InitializeHandlers(router *gin.RouterGroup, services *service.AppServices, k8sManager *k8s.ClusterManager) {
+func InitializeHandlers(router *gin.RouterGroup, services *service.AppServices, k8sManager *k8s.ClusterManager, cfg *configs.Config) {
 	// --- 1. Register special routes for non-resource types ---
 	routes.RegisterAuthRoutes(router.Group("/auth"), services.AuthService, services.OAuthService)
 	routes.RegisterProfileRoutes(router, services.AuthService, services.RoleService)
@@ -69,7 +69,7 @@ func InitializeHandlers(router *gin.RouterGroup, services *service.AppServices, 
 	adminGroup := router.Group("/admin")
 	routes.RegisterUserManagementRoutes(adminGroup, services.AuthService, services.RoleService)
 	routes.RegisterRoleManagementRoutes(adminGroup, services.RoleService)
-	routes.RegisterSystemSettingsRoutes(router)
+	routes.RegisterSystemSettingsRoutes(router, cfg)
 	routes.RegisterClusterRoutes(router, handlers.NewClusterHandler(services.ClusterService))
 	routes.RegisterInstallerRoutes(router, handlers.NewInstallerHandler(services.InstallerService))
 	routes.KubernetesProxyRoutes(router, handlers.NewProxyHandler(k8sManager))
@@ -215,7 +215,7 @@ func SetupRouter(cfg *configs.Config, services *service.AppServices, k8sManager 
 
 	apiV1 := router.Group("/api/v1")
 	{
-		InitializeHandlers(apiV1, services, k8sManager)
+		InitializeHandlers(apiV1, services, k8sManager, cfg)
 	}
 
 	return router
