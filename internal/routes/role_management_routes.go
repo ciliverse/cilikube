@@ -13,8 +13,7 @@ func RegisterRoleManagementRoutes(router *gin.RouterGroup, roleService *service.
 
 	// Apply JWT middleware and admin permission check to all role management routes
 	roleRoutes := router.Group("/roles")
-	roleRoutes.Use(auth.JWTAuthMiddleware())
-	// TODO: Add admin permission middleware here
+	roleRoutes.Use(auth.JWTAuthMiddleware(), auth.AdminRequiredMiddleware())
 	{
 		// Role CRUD operations
 		roleRoutes.GET("", roleHandler.ListRoles)
@@ -38,8 +37,7 @@ func RegisterRoleManagementRoutes(router *gin.RouterGroup, roleService *service.
 
 	// Permission management routes
 	permissionRoutes := router.Group("/permissions")
-	permissionRoutes.Use(auth.JWTAuthMiddleware())
-	// TODO: Add admin permission middleware here
+	permissionRoutes.Use(auth.JWTAuthMiddleware(), auth.AdminRequiredMiddleware())
 	{
 		permissionRoutes.GET("", roleHandler.GetAvailablePermissions)
 	}

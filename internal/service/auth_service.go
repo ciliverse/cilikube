@@ -169,13 +169,21 @@ func (s *AuthService) RefreshToken(tokenString string) (*models.TokenResponse, e
 	}, nil
 }
 
-// Logout invalidates a user session (placeholder for future session management)
+// Logout invalidates a user session
 func (s *AuthService) Logout(userID uint) error {
+	if err := s.securityService.InvalidateAllUserSessions(userID); err != nil {
+		fmt.Printf("Failed to invalidate sessions on logout: %v\n", err)
+	}
+
 	// Create audit log
 	s.createAuditLog(&userID, "logout", "user", fmt.Sprintf("%d", userID), "", "", "User logged out")
 
-	// In the future, we could implement token blacklisting here
 	return nil
+}
+
+// GetUserActivityLog returns paginated audit logs for a user
+func (s *AuthService) GetUserActivityLog(userID uint, offset, limit int) ([]*store.AuditLog, int64, error) {
+	return s.store.GetAuditLogsByUserID(userID, offset, limit)
 }
 
 // Register creates a new user account

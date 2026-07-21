@@ -3,6 +3,7 @@ package handlers
 import (
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 
@@ -315,13 +316,10 @@ func (h *RoleManagementHandler) GetRolePermissions(c *gin.Context) {
 		return
 	}
 
-	// For now, return mock permissions
-	// TODO: Implement actual permission retrieval from database
-	permissions := []string{
-		"read:clusters",
-		"read:pods",
-		"read:deployments",
-		"read:services",
+	permissions, err := h.roleService.GetRolePermissions(uint(roleID))
+	if err != nil {
+		utils.ApiError(c, http.StatusNotFound, "Failed to get role permissions", err.Error())
+		return
 	}
 
 	utils.ApiSuccess(c, gin.H{
@@ -347,8 +345,18 @@ func (h *RoleManagementHandler) UpdateRolePermissions(c *gin.Context) {
 		return
 	}
 
-	// TODO: Implement actual permission update in database
-	// For now, just return success
+	if err := h.roleService.SetRolePermissions(uint(roleID), req.Permissions); err != nil {
+		status := http.StatusInternalServerError
+		if err.Error() == "role not found" {
+			status = http.StatusNotFound
+		} else if err.Error() == "system role permissions cannot be modified" {
+			status = http.StatusForbidden
+		} else if strings.HasPrefix(err.Error(), "unknown permission") {
+			status = http.StatusBadRequest
+		}
+		utils.ApiError(c, status, "Failed to update role permissions", err.Error())
+		return
+	}
 
 	utils.ApiSuccess(c, gin.H{
 		"role_id":     roleID,

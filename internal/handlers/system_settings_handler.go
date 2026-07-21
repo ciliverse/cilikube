@@ -2,34 +2,53 @@ package handlers
 
 import (
 	"net/http"
+	"os"
+	"runtime"
+	"strings"
+	"time"
 
 	"github.com/gin-gonic/gin"
 
+	"github.com/ciliverse/cilikube/configs"
 	"github.com/ciliverse/cilikube/pkg/utils"
 )
 
 // SystemSettingsHandler handles system settings operations for administrators
 type SystemSettingsHandler struct {
-	// Add services as needed
+	config *configs.Config
 }
 
 // NewSystemSettingsHandler creates a new SystemSettingsHandler instance
-func NewSystemSettingsHandler() *SystemSettingsHandler {
-	return &SystemSettingsHandler{}
+func NewSystemSettingsHandler(config *configs.Config) *SystemSettingsHandler {
+	return &SystemSettingsHandler{config: config}
+}
+
+func (h *SystemSettingsHandler) cfg() *configs.Config {
+	if h.config != nil {
+		return h.config
+	}
+	return configs.GlobalConfig
 }
 
 // GetSystemInfo gets basic system information
 func (h *SystemSettingsHandler) GetSystemInfo(c *gin.Context) {
+	cfg := h.cfg()
+	version := readVersion()
+	env := "production"
+	if cfg != nil && cfg.Server.Mode == "debug" {
+		env = "development"
+	}
+
 	systemInfo := gin.H{
-		"version":     "1.0.0",
-		"build_time":  "2024-01-01T00:00:00Z",
-		"go_version":  "go1.21",
-		"environment": "production",
+		"version":     version,
+		"build_time":  time.Now().UTC().Format(time.RFC3339),
+		"go_version":  runtime.Version(),
+		"environment": env,
 		"features": gin.H{
-			"oauth_enabled":     true,
-			"rbac_enabled":      true,
-			"audit_log_enabled": true,
-			"metrics_enabled":   true,
+			"oauth_enabled":     cfg != nil && cfg.OAuth.GitHub.Enabled && cfg.OAuth.GitHub.ClientID != "",
+			"rbac_enabled":      cfg != nil && cfg.Database.Enabled,
+			"audit_log_enabled": cfg != nil && cfg.Security.Audit.LogAdminActions,
+			"metrics_enabled":   cfg == nil || cfg.Preferences.FeatureFlags.AdvancedMetrics,
 		},
 	}
 
@@ -38,21 +57,27 @@ func (h *SystemSettingsHandler) GetSystemInfo(c *gin.Context) {
 
 // GetOAuthSettings gets OAuth provider settings
 func (h *SystemSettingsHandler) GetOAuthSettings(c *gin.Context) {
-	// Return OAuth provider configuration (without sensitive data)
+	cfg := h.cfg()
+	if cfg == nil {
+		utils.ApiError(c, http.StatusInternalServerError, "Configuration not available")
+		return
+	}
+
 	oauthSettings := gin.H{
 		"providers": []gin.H{
 			{
 				"name":         "github",
 				"display_name": "GitHub",
-				"enabled":      true,
+				"enabled":      cfg.OAuth.GitHub.Enabled,
+				"configured":   cfg.OAuth.GitHub.ClientID != "",
 				"icon":         "github",
 				"description":  "Login with your GitHub account",
+				"redirect_url": cfg.OAuth.GitHub.RedirectURL,
 			},
-			// Future providers can be added here
 		},
 		"settings": gin.H{
-			"allow_registration": true,
-			"auto_link_accounts": true,
+			"allow_registration": cfg.OAuth.AllowRegistration,
+			"auto_link_accounts": cfg.OAuth.AutoLinkAccounts,
 		},
 	}
 
@@ -61,9 +86,16 @@ func (h *SystemSettingsHandler) GetOAuthSettings(c *gin.Context) {
 
 // UpdateOAuthSettings updates OAuth provider settings
 func (h *SystemSettingsHandler) UpdateOAuthSettings(c *gin.Context) {
+	cfg := h.cfg()
+	if cfg == nil {
+		utils.ApiError(c, http.StatusInternalServerError, "Configuration not available")
+		return
+	}
+
 	var req struct {
-		AllowRegistration bool `json:"allow_registration"`
-		AutoLinkAccounts  bool `json:"auto_link_accounts"`
+		AllowRegistration bool  `json:"allow_registration"`
+		AutoLinkAccounts  bool  `json:"auto_link_accounts"`
+		GitHubEnabled     *bool `json:"github_enabled"`
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -71,13 +103,22 @@ func (h *SystemSettingsHandler) UpdateOAuthSettings(c *gin.Context) {
 		return
 	}
 
-	// TODO: Implement OAuth settings update logic
-	// This would typically update configuration in database or config file
+	cfg.OAuth.AllowRegistration = req.AllowRegistration
+	cfg.OAuth.AutoLinkAccounts = req.AutoLinkAccounts
+	if req.GitHubEnabled != nil {
+		cfg.OAuth.GitHub.Enabled = *req.GitHubEnabled
+	}
+
+	if err := configs.SaveGlobalConfig(); err != nil {
+		utils.ApiError(c, http.StatusInternalServerError, "Failed to save OAuth settings", err.Error())
+		return
+	}
 
 	response := gin.H{
-		"allow_registration": req.AllowRegistration,
-		"auto_link_accounts": req.AutoLinkAccounts,
-		"updated_at":         "2024-01-01T00:00:00Z",
+		"allow_registration": cfg.OAuth.AllowRegistration,
+		"auto_link_accounts": cfg.OAuth.AutoLinkAccounts,
+		"github_enabled":     cfg.OAuth.GitHub.Enabled,
+		"updated_at":         time.Now().UTC().Format(time.RFC3339),
 	}
 
 	utils.ApiSuccess(c, response, "OAuth settings updated successfully")
@@ -85,25 +126,31 @@ func (h *SystemSettingsHandler) UpdateOAuthSettings(c *gin.Context) {
 
 // GetSecuritySettings gets security-related settings
 func (h *SystemSettingsHandler) GetSecuritySettings(c *gin.Context) {
+	cfg := h.cfg()
+	if cfg == nil {
+		utils.ApiError(c, http.StatusInternalServerError, "Configuration not available")
+		return
+	}
+
 	securitySettings := gin.H{
 		"password_policy": gin.H{
-			"min_length":        8,
-			"require_uppercase": true,
-			"require_lowercase": true,
-			"require_numbers":   true,
-			"require_symbols":   false,
-			"password_history":  5,
+			"min_length":        cfg.Security.Password.MinLength,
+			"require_uppercase": cfg.Security.Password.RequireUppercase,
+			"require_lowercase": cfg.Security.Password.RequireLowercase,
+			"require_numbers":   cfg.Security.Password.RequireNumbers,
+			"require_symbols":   cfg.Security.Password.RequireSymbols,
+			"password_history":  cfg.Security.Password.PasswordHistory,
 		},
 		"session_settings": gin.H{
-			"session_timeout": 3600, // seconds
-			"max_sessions":    5,
-			"require_2fa":     false,
+			"session_timeout": int(cfg.Security.Session.IdleTimeout.Seconds()),
+			"max_sessions":    cfg.Security.Session.MaxConcurrentSessions,
+			"require_2fa":     cfg.Security.Session.Require2FA,
 		},
 		"audit_settings": gin.H{
-			"log_login_attempts": true,
-			"log_api_calls":      true,
-			"log_admin_actions":  true,
-			"retention_days":     90,
+			"log_login_attempts": cfg.Security.Audit.LogLoginAttempts,
+			"log_api_calls":      cfg.Security.Audit.LogAPICalls,
+			"log_admin_actions":  cfg.Security.Audit.LogAdminActions,
+			"retention_days":     cfg.Security.Audit.RetentionDays,
 		},
 	}
 
@@ -112,6 +159,12 @@ func (h *SystemSettingsHandler) GetSecuritySettings(c *gin.Context) {
 
 // UpdateSecuritySettings updates security-related settings
 func (h *SystemSettingsHandler) UpdateSecuritySettings(c *gin.Context) {
+	cfg := h.cfg()
+	if cfg == nil {
+		utils.ApiError(c, http.StatusInternalServerError, "Configuration not available")
+		return
+	}
+
 	var req struct {
 		PasswordPolicy struct {
 			MinLength        int  `json:"min_length"`
@@ -139,35 +192,65 @@ func (h *SystemSettingsHandler) UpdateSecuritySettings(c *gin.Context) {
 		return
 	}
 
-	// TODO: Implement security settings update logic
-	// This would typically update configuration in database or config file
+	if req.PasswordPolicy.MinLength > 0 {
+		cfg.Security.Password.MinLength = req.PasswordPolicy.MinLength
+	}
+	cfg.Security.Password.RequireUppercase = req.PasswordPolicy.RequireUppercase
+	cfg.Security.Password.RequireLowercase = req.PasswordPolicy.RequireLowercase
+	cfg.Security.Password.RequireNumbers = req.PasswordPolicy.RequireNumbers
+	cfg.Security.Password.RequireSymbols = req.PasswordPolicy.RequireSymbols
+	if req.PasswordPolicy.PasswordHistory >= 0 {
+		cfg.Security.Password.PasswordHistory = req.PasswordPolicy.PasswordHistory
+	}
+
+	if req.SessionSettings.SessionTimeout > 0 {
+		cfg.Security.Session.IdleTimeout = time.Duration(req.SessionSettings.SessionTimeout) * time.Second
+	}
+	if req.SessionSettings.MaxSessions > 0 {
+		cfg.Security.Session.MaxConcurrentSessions = req.SessionSettings.MaxSessions
+	}
+	cfg.Security.Session.Require2FA = req.SessionSettings.Require2FA
+
+	cfg.Security.Audit.LogLoginAttempts = req.AuditSettings.LogLoginAttempts
+	cfg.Security.Audit.LogAPICalls = req.AuditSettings.LogAPICalls
+	cfg.Security.Audit.LogAdminActions = req.AuditSettings.LogAdminActions
+	if req.AuditSettings.RetentionDays > 0 {
+		cfg.Security.Audit.RetentionDays = req.AuditSettings.RetentionDays
+	}
+
+	if err := configs.SaveGlobalConfig(); err != nil {
+		utils.ApiError(c, http.StatusInternalServerError, "Failed to save security settings", err.Error())
+		return
+	}
 
 	utils.ApiSuccess(c, req, "Security settings updated successfully")
 }
 
 // GetSystemPreferences gets system preferences
 func (h *SystemSettingsHandler) GetSystemPreferences(c *gin.Context) {
+	cfg := h.cfg()
+	if cfg == nil {
+		utils.ApiError(c, http.StatusInternalServerError, "Configuration not available")
+		return
+	}
+
 	preferences := gin.H{
 		"ui_settings": gin.H{
-			"default_theme":    "light",
-			"default_language": "en",
-			"items_per_page":   20,
-			"auto_refresh":     true,
-			"refresh_interval": 30, // seconds
+			"default_theme":    cfg.Preferences.UI.DefaultTheme,
+			"default_language": cfg.Preferences.UI.DefaultLanguage,
+			"items_per_page":   cfg.Preferences.UI.ItemsPerPage,
+			"auto_refresh":     cfg.Preferences.UI.AutoRefresh,
+			"refresh_interval": cfg.Preferences.UI.RefreshInterval,
 		},
 		"notification_settings": gin.H{
-			"email_notifications":   true,
-			"browser_notifications": true,
-			"notification_types": []string{
-				"system_alerts",
-				"security_events",
-				"resource_warnings",
-			},
+			"email_notifications":   cfg.Preferences.Notifications.EmailNotifications,
+			"browser_notifications": cfg.Preferences.Notifications.BrowserNotifications,
+			"notification_types":    cfg.Preferences.Notifications.NotificationTypes,
 		},
 		"feature_flags": gin.H{
-			"beta_features":    false,
-			"experimental_ui":  false,
-			"advanced_metrics": true,
+			"beta_features":    cfg.Preferences.FeatureFlags.BetaFeatures,
+			"experimental_ui":  cfg.Preferences.FeatureFlags.ExperimentalUI,
+			"advanced_metrics": cfg.Preferences.FeatureFlags.AdvancedMetrics,
 		},
 	}
 
@@ -176,6 +259,12 @@ func (h *SystemSettingsHandler) GetSystemPreferences(c *gin.Context) {
 
 // UpdateSystemPreferences updates system preferences
 func (h *SystemSettingsHandler) UpdateSystemPreferences(c *gin.Context) {
+	cfg := h.cfg()
+	if cfg == nil {
+		utils.ApiError(c, http.StatusInternalServerError, "Configuration not available")
+		return
+	}
+
 	var req struct {
 		UISettings struct {
 			DefaultTheme    string `json:"default_theme"`
@@ -201,8 +290,45 @@ func (h *SystemSettingsHandler) UpdateSystemPreferences(c *gin.Context) {
 		return
 	}
 
-	// TODO: Implement system preferences update logic
-	// This would typically update configuration in database or config file
+	if req.UISettings.DefaultTheme != "" {
+		cfg.Preferences.UI.DefaultTheme = req.UISettings.DefaultTheme
+	}
+	if req.UISettings.DefaultLanguage != "" {
+		cfg.Preferences.UI.DefaultLanguage = req.UISettings.DefaultLanguage
+	}
+	if req.UISettings.ItemsPerPage > 0 {
+		cfg.Preferences.UI.ItemsPerPage = req.UISettings.ItemsPerPage
+	}
+	cfg.Preferences.UI.AutoRefresh = req.UISettings.AutoRefresh
+	if req.UISettings.RefreshInterval > 0 {
+		cfg.Preferences.UI.RefreshInterval = req.UISettings.RefreshInterval
+	}
+
+	cfg.Preferences.Notifications.EmailNotifications = req.NotificationSettings.EmailNotifications
+	cfg.Preferences.Notifications.BrowserNotifications = req.NotificationSettings.BrowserNotifications
+	if req.NotificationSettings.NotificationTypes != nil {
+		cfg.Preferences.Notifications.NotificationTypes = req.NotificationSettings.NotificationTypes
+	}
+
+	cfg.Preferences.FeatureFlags.BetaFeatures = req.FeatureFlags.BetaFeatures
+	cfg.Preferences.FeatureFlags.ExperimentalUI = req.FeatureFlags.ExperimentalUI
+	cfg.Preferences.FeatureFlags.AdvancedMetrics = req.FeatureFlags.AdvancedMetrics
+
+	if err := configs.SaveGlobalConfig(); err != nil {
+		utils.ApiError(c, http.StatusInternalServerError, "Failed to save system preferences", err.Error())
+		return
+	}
 
 	utils.ApiSuccess(c, req, "System preferences updated successfully")
+}
+
+func readVersion() string {
+	if v := os.Getenv("CILIKUBE_VERSION"); v != "" {
+		return v
+	}
+	data, err := os.ReadFile("VERSION")
+	if err != nil {
+		return "v0.5.0"
+	}
+	return strings.TrimSpace(string(data))
 }

@@ -47,6 +47,12 @@ func (s *RoleService) CreateRole(req *models.CreateRoleRequest) (*models.RoleRes
 		return nil, fmt.Errorf("failed to create role: %w", err)
 	}
 
+	if len(req.Permissions) > 0 && s.permissionService != nil {
+		if err := s.permissionService.SetLogicalPermissionsForRole(role.Name, req.Permissions); err != nil {
+			return nil, fmt.Errorf("failed to set role permissions: %w", err)
+		}
+	}
+
 	// Create audit log
 	s.createAuditLog(nil, "role_create", "role", fmt.Sprintf("%d", role.ID), "", "", fmt.Sprintf("Role '%s' created", role.Name))
 
@@ -74,6 +80,12 @@ func (s *RoleService) UpdateRole(roleID uint, req *models.UpdateRoleRequest) (*m
 
 	if err := s.store.UpdateRole(role); err != nil {
 		return nil, fmt.Errorf("failed to update role: %w", err)
+	}
+
+	if req.Permissions != nil && s.permissionService != nil {
+		if err := s.permissionService.SetLogicalPermissionsForRole(role.Name, req.Permissions); err != nil {
+			return nil, fmt.Errorf("failed to update role permissions: %w", err)
+		}
 	}
 
 	// Create audit log
@@ -112,9 +124,53 @@ func (s *RoleService) DeleteRole(roleID uint) error {
 		return fmt.Errorf("failed to delete role: %w", err)
 	}
 
+	if s.permissionService != nil {
+		if err := s.permissionService.ClearRolePolicies(role.Name); err != nil {
+			fmt.Printf("Failed to clear Casbin policies for deleted role %s: %v\n", role.Name, err)
+		}
+	}
+
 	// Create audit log
 	s.createAuditLog(nil, "role_delete", "role", fmt.Sprintf("%d", roleID), "", "", fmt.Sprintf("Role '%s' deleted", role.Name))
 
+	return nil
+}
+
+// GetRolePermissions returns logical permissions assigned to a role
+func (s *RoleService) GetRolePermissions(roleID uint) ([]string, error) {
+	role, err := s.store.GetRoleByID(roleID)
+	if err != nil {
+		return nil, errors.New("role not found")
+	}
+
+	if s.permissionService == nil {
+		return []string{}, nil
+	}
+
+	return s.permissionService.GetLogicalPermissionsForRole(role.Name)
+}
+
+// SetRolePermissions replaces logical permissions for a role
+func (s *RoleService) SetRolePermissions(roleID uint, permissions []string) error {
+	role, err := s.store.GetRoleByID(roleID)
+	if err != nil {
+		return errors.New("role not found")
+	}
+
+	if role.IsSystem {
+		return errors.New("system role permissions cannot be modified")
+	}
+
+	if s.permissionService == nil {
+		return errors.New("permission service not available")
+	}
+
+	if err := s.permissionService.SetLogicalPermissionsForRole(role.Name, permissions); err != nil {
+		return err
+	}
+
+	s.createAuditLog(nil, "role_permissions_update", "role", fmt.Sprintf("%d", roleID), "", "",
+		fmt.Sprintf("Permissions updated for role '%s'", role.Name))
 	return nil
 }
 
@@ -451,15 +507,11 @@ func (s *RoleService) convertStoreRoleToResponse(role *store.Role) models.RoleRe
 		roleType = "system"
 	}
 
-	// Mock main permissions for now - in a real implementation,
-	// you would fetch these from the database
 	mainPermissions := []string{}
-	if role.Name == "admin" {
-		mainPermissions = []string{"admin:users", "admin:roles", "admin:system"}
-	} else if role.Name == "editor" {
-		mainPermissions = []string{"read:clusters", "write:pods", "write:deployments"}
-	} else if role.Name == "viewer" {
-		mainPermissions = []string{"read:clusters", "read:pods", "read:deployments"}
+	if s.permissionService != nil {
+		if perms, err := s.permissionService.GetLogicalPermissionsForRole(role.Name); err == nil {
+			mainPermissions = perms
+		}
 	}
 
 	return models.RoleResponse{
