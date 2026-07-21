@@ -9,48 +9,42 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// APIAuditLogger records API audit events without importing internal packages.
+type APIAuditLogger interface {
+	LogAPIRequest(userID *uint, username, ip, userAgent, resource, action, result, severity string, details map[string]interface{}) error
+}
+
 // AuditMiddleware creates middleware for auditing API requests
-func AuditMiddleware(auditService interface{}) gin.HandlerFunc {
+func AuditMiddleware(auditLogger APIAuditLogger) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		// Skip audit for health checks and static files
-		if shouldSkipAudit(c.Request.URL.Path) {
+		if auditLogger == nil || shouldSkipAudit(c.Request.URL.Path) {
 			c.Next()
 			return
 		}
 
 		startTime := time.Now()
 
-		// Capture request body for audit (if needed)
 		var requestBody []byte
 		if c.Request.Body != nil && shouldCaptureBody(c.Request.Method) {
 			requestBody, _ = io.ReadAll(c.Request.Body)
 			c.Request.Body = io.NopCloser(bytes.NewBuffer(requestBody))
 		}
 
-		// Get user information if available
-		userID, username, role, hasAuth := GetCurrentUser(c)
-
-		// Process request
+		// Process request first so JWT middleware can populate user context
 		c.Next()
 
-		// Record audit log after request completion
+		userID, username, _, hasAuth := GetCurrentUser(c)
 		duration := time.Since(startTime)
 
-		// Prepare audit details
 		details := map[string]interface{}{
-			"method":       c.Request.Method,
-			"path":         c.Request.URL.Path,
-			"query":        c.Request.URL.RawQuery,
-			"status_code":  c.Writer.Status(),
-			"duration_ms":  duration.Milliseconds(),
-			"content_type": c.GetHeader("Content-Type"),
-			"user_agent":   c.GetHeader("User-Agent"),
-			"referer":      c.GetHeader("Referer"),
+			"method":      c.Request.Method,
+			"path":        c.Request.URL.Path,
+			"query":       c.Request.URL.RawQuery,
+			"status_code": c.Writer.Status(),
+			"duration_ms": duration.Milliseconds(),
 		}
 
-		// Add request body to details if it's a sensitive operation
 		if shouldCaptureBody(c.Request.Method) && len(requestBody) > 0 && len(requestBody) < 1024 {
-			// Only capture small request bodies and sanitize sensitive data
 			var bodyMap map[string]interface{}
 			if err := json.Unmarshal(requestBody, &bodyMap); err == nil {
 				sanitizeRequestBody(bodyMap)
@@ -58,37 +52,27 @@ func AuditMiddleware(auditService interface{}) gin.HandlerFunc {
 			}
 		}
 
-		// Determine action and resource from path
 		action, resource := parsePathForAudit(c.Request.Method, c.Request.URL.Path)
-
-		// Determine if this was a successful operation
 		success := c.Writer.Status() < 400
 
-		// Create audit event
-		auditEvent := map[string]interface{}{
-			"type":       "api_request",
-			"severity":   getSeverityFromStatus(c.Writer.Status()),
-			"user_id":    getUserIDForAudit(userID, hasAuth),
-			"username":   username,
-			"user_role":  role,
-			"ip_address": c.ClientIP(),
-			"user_agent": c.GetHeader("User-Agent"),
-			"resource":   resource,
-			"action":     action,
-			"result":     getResultFromStatus(success),
-			"details":    details,
-			"timestamp":  startTime,
+		if !shouldLogEvent(c.Request.Method, c.Request.URL.Path, c.Writer.Status()) {
+			return
 		}
 
-		// Log the audit event (in a real implementation, you would call the audit service)
-		// For now, we'll just log high-priority events
-		if shouldLogEvent(c.Request.Method, c.Request.URL.Path, c.Writer.Status()) {
-			logAuditEvent(auditEvent)
-		}
+		_ = auditLogger.LogAPIRequest(
+			getUserIDForAudit(userID, hasAuth),
+			username,
+			c.ClientIP(),
+			c.GetHeader("User-Agent"),
+			resource,
+			action,
+			getResultFromStatus(success),
+			getSeverityFromStatus(c.Writer.Status()),
+			details,
+		)
 	}
 }
 
-// shouldSkipAudit determines if a request should be skipped from auditing
 func shouldSkipAudit(path string) bool {
 	skipPaths := []string{
 		"/health",
@@ -96,6 +80,7 @@ func shouldSkipAudit(path string) bool {
 		"/favicon.ico",
 		"/static/",
 		"/assets/",
+		"/uploads/",
 	}
 
 	for _, skipPath := range skipPaths {
@@ -103,16 +88,13 @@ func shouldSkipAudit(path string) bool {
 			return true
 		}
 	}
-
 	return false
 }
 
-// shouldCaptureBody determines if request body should be captured
 func shouldCaptureBody(method string) bool {
 	return method == "POST" || method == "PUT" || method == "PATCH"
 }
 
-// sanitizeRequestBody removes sensitive information from request body
 func sanitizeRequestBody(body map[string]interface{}) {
 	sensitiveFields := []string{
 		"password", "token", "secret", "key", "auth",
@@ -125,7 +107,6 @@ func sanitizeRequestBody(body map[string]interface{}) {
 		}
 	}
 
-	// Also check for nested objects
 	for _, value := range body {
 		if nestedMap, ok := value.(map[string]interface{}); ok {
 			sanitizeRequestBody(nestedMap)
@@ -133,23 +114,19 @@ func sanitizeRequestBody(body map[string]interface{}) {
 	}
 }
 
-// parsePathForAudit extracts action and resource from HTTP method and path
 func parsePathForAudit(method, path string) (string, string) {
-	// Simple parsing logic - in a real implementation, this would be more sophisticated
 	resource := "unknown"
 	action := method
 
-	// Extract resource from path
 	if len(path) > 1 {
 		parts := splitPath(path)
-		if len(parts) >= 3 && parts[1] == "api" {
-			if len(parts) >= 4 {
-				resource = parts[3] // e.g., /api/v1/users -> users
+		if len(parts) >= 3 && parts[0] == "api" {
+			if len(parts) >= 3 {
+				resource = parts[2] // /api/v1/<resource>
 			}
 		}
 	}
 
-	// Map HTTP methods to actions
 	switch method {
 	case "GET":
 		action = "read"
@@ -164,7 +141,6 @@ func parsePathForAudit(method, path string) (string, string) {
 	return action, resource
 }
 
-// splitPath splits a path into components
 func splitPath(path string) []string {
 	var parts []string
 	current := ""
@@ -187,21 +163,17 @@ func splitPath(path string) []string {
 	return parts
 }
 
-// getSeverityFromStatus determines severity based on HTTP status code
 func getSeverityFromStatus(statusCode int) string {
 	switch {
 	case statusCode >= 500:
 		return "error"
 	case statusCode >= 400:
 		return "warning"
-	case statusCode >= 300:
-		return "info"
 	default:
 		return "info"
 	}
 }
 
-// getResultFromStatus determines result based on success
 func getResultFromStatus(success bool) string {
 	if success {
 		return "success"
@@ -209,7 +181,6 @@ func getResultFromStatus(success bool) string {
 	return "failure"
 }
 
-// getUserIDForAudit returns user ID for audit or nil if not authenticated
 func getUserIDForAudit(userID uint, hasAuth bool) *uint {
 	if hasAuth && userID > 0 {
 		return &userID
@@ -217,32 +188,22 @@ func getUserIDForAudit(userID uint, hasAuth bool) *uint {
 	return nil
 }
 
-// shouldLogEvent determines if an event should be logged based on priority
 func shouldLogEvent(method, path string, statusCode int) bool {
-	// Always log authentication-related requests
 	if containsString(path, []string{"/auth/", "/login", "/logout"}) {
 		return true
 	}
-
-	// Always log admin operations
-	if containsString(path, []string{"/admin/", "/users/", "/roles/"}) {
+	if containsString(path, []string{"/admin/", "/users/", "/roles/", "/settings/"}) {
 		return true
 	}
-
-	// Always log errors
 	if statusCode >= 400 {
 		return true
 	}
-
-	// Log write operations
 	if method == "POST" || method == "PUT" || method == "PATCH" || method == "DELETE" {
 		return true
 	}
-
 	return false
 }
 
-// containsString checks if a string contains any of the substrings
 func containsString(str string, substrings []string) bool {
 	for _, substring := range substrings {
 		if len(str) >= len(substring) {
@@ -254,14 +215,4 @@ func containsString(str string, substrings []string) bool {
 		}
 	}
 	return false
-}
-
-// logAuditEvent logs an audit event (placeholder implementation)
-func logAuditEvent(event map[string]interface{}) {
-	// In a real implementation, this would call the audit service
-	// For now, we'll just print important events
-	if event["severity"] == "error" || event["severity"] == "warning" {
-		// This would be replaced with actual audit service call
-		// auditService.LogSecurityEvent(event)
-	}
 }

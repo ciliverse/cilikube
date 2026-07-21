@@ -18,15 +18,20 @@ import (
 
 // OAuthService provides OAuth authentication functionality
 type OAuthService struct {
-	store  store.Store
-	config *configs.Config
+	store           store.Store
+	config          *configs.Config
+	securityService *SecurityService
 }
 
 // NewOAuthService creates a new OAuthService instance
-func NewOAuthService(store store.Store, config *configs.Config) *OAuthService {
+func NewOAuthService(store store.Store, config *configs.Config, securityService *SecurityService) *OAuthService {
+	if securityService == nil {
+		securityService = NewSecurityService(store, config)
+	}
 	return &OAuthService{
-		store:  store,
-		config: config,
+		store:           store,
+		config:          config,
+		securityService: securityService,
 	}
 }
 
@@ -374,10 +379,9 @@ func (s *OAuthService) loginExistingOAuthUser(oauthProvider *store.OAuthProvider
 		user.Role = "viewer"
 	}
 
-	// Generate JWT token
-	token, expiresAtJWT, err := auth.GenerateToken(&user)
+	token, expiresAtJWT, err := s.issueTokenWithSession(&user, storeUser.ID)
 	if err != nil {
-		return nil, fmt.Errorf("failed to generate token: %w", err)
+		return nil, err
 	}
 
 	// Create audit log
@@ -448,10 +452,9 @@ func (s *OAuthService) linkOAuthToExistingUser(existingUser *store.User, provide
 		user.Role = "viewer"
 	}
 
-	// Generate JWT token
-	token, expiresAtJWT, err := auth.GenerateToken(&user)
+	token, expiresAtJWT, err := s.issueTokenWithSession(&user, existingUser.ID)
 	if err != nil {
-		return nil, fmt.Errorf("failed to generate token: %w", err)
+		return nil, err
 	}
 
 	// Create audit log
@@ -514,10 +517,9 @@ func (s *OAuthService) createNewOAuthUser(provider string, userInfo *OAuthUserIn
 	user := s.convertStoreUserToModelsUser(storeUser)
 	user.Role = "viewer"
 
-	// Generate JWT token
-	token, expiresAtJWT, err := auth.GenerateToken(&user)
+	token, expiresAtJWT, err := s.issueTokenWithSession(&user, storeUser.ID)
 	if err != nil {
-		return nil, fmt.Errorf("failed to generate token: %w", err)
+		return nil, err
 	}
 
 	// Create audit log
@@ -528,6 +530,19 @@ func (s *OAuthService) createNewOAuthUser(provider string, userInfo *OAuthUserIn
 		ExpiresAt: expiresAtJWT,
 		User:      user.ToResponse(),
 	}, nil
+}
+
+func (s *OAuthService) issueTokenWithSession(user *models.User, userID uint) (string, time.Time, error) {
+	sessionID, err := s.securityService.CreateSession(userID, "", "oauth")
+	if err != nil {
+		return "", time.Time{}, fmt.Errorf("failed to create session: %w", err)
+	}
+	token, expiresAt, err := auth.GenerateToken(user, sessionID)
+	if err != nil {
+		_ = s.securityService.InvalidateSession(sessionID)
+		return "", time.Time{}, fmt.Errorf("failed to generate token: %w", err)
+	}
+	return token, expiresAt, nil
 }
 
 // Helper methods

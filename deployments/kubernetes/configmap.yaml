@@ -1,0 +1,29 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cilikube-config
+  namespace: cilikube
+  labels:
+    app.kubernetes.io/name: cilikube
+data:
+  config.yaml: |
+    server:
+      port: "8080"
+      read_timeout: 30
+      write_timeout: 30
+      mode: release
+      encryptionKey: change-me-in-production-32chars!!
+    kubernetes:
+      kubeconfig: in-cluster
+    database:
+      enabled: true
+      type: sqlite
+      database: /app/data/cilikube.db
+    jwt:
+      secret_key: change-me-jwt-secret-in-production
+      expire_duration: 24h0m0s
+      issuer: cilikube
+    installer:
+      minikubePath: /usr/local/bin/minikube
+      minikubeDriver: docker
+      downloadDir: /tmp/cilikube_downloads

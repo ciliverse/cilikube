@@ -6,6 +6,8 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
+	storagev1 "k8s.io/api/storage/v1"
 )
 
 // ResourceServiceFactory resource service factory
@@ -49,4 +51,10 @@ func (f *ResourceServiceFactory) InitializeDefaultServices() {
 	f.RegisterService("persistentvolumes", NewBaseResourceService[*corev1.PersistentVolume](new(PVClient)))
 	f.RegisterService("statefulsets", NewBaseResourceService[*appsv1.StatefulSet](new(StatefulSetClient)))
 	f.RegisterService("namespaces", NewBaseResourceService[*corev1.Namespace](new(NamespaceClient)))
+	f.RegisterService("storageclasses", NewBaseResourceService[*storagev1.StorageClass](new(StorageClassClient)))
+	f.RegisterService("serviceaccounts", NewBaseResourceService[*corev1.ServiceAccount](new(ServiceAccountClient)))
+	f.RegisterService("roles", NewBaseResourceService[*rbacv1.Role](new(RoleClient)))
+	f.RegisterService("rolebindings", NewBaseResourceService[*rbacv1.RoleBinding](new(RoleBindingClient)))
+	f.RegisterService("clusterroles", NewBaseResourceService[*rbacv1.ClusterRole](new(ClusterRoleClient)))
+	f.RegisterService("clusterrolebindings", NewBaseResourceService[*rbacv1.ClusterRoleBinding](new(ClusterRoleBindingClient)))
 }

@@ -54,6 +54,8 @@ func (s *DatabaseStore) Initialize() error {
 		&UserRole{},
 		&OAuthProvider{},
 		&AuditLog{},
+		&LoginAttempt{},
+		&UserSession{},
 	); err != nil {
 		return fmt.Errorf("failed to migrate database: %w", err)
 	}
