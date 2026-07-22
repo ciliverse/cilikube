@@ -30,9 +30,9 @@ prometheus:
     timeout: 15s
 clusters:
     - id: 907cab34-53f0-4c31-8b32-e238e5bf5769
-      name: Test
+      name: zbl-prod
       config_path: default
-      description: test cluster
-      provider: minikube
-      environment: test
+      description: zbl-prod (kubectl context zbl-sz-read-only-zbl-prod-readonly)
+      provider: kubernetes
+      environment: production
       is_active: true
