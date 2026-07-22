@@ -6,7 +6,7 @@ import {
   getPrometheusStatus,
 } from '@/api/cluster'
 import { useCluster } from '@/store/cluster'
-import { Badge, Card, PageHeader } from '@/components/ui'
+import { Badge, Card, EmptyState, PageHeader, StatCard } from '@/components/ui'
 import { formatPercent } from '@/lib/utils'
 
 export function MonitoringPage() {
@@ -36,14 +36,10 @@ export function MonitoringPage() {
   return (
     <div>
       <PageHeader
-        title="Monitoring"
+        title="MONITORING"
         subtitle="Security posture, Prometheus health, and node telemetry"
         action={
-          <Badge
-            tone={
-              prom?.healthy ? 'ok' : prom?.enabled ? 'danger' : 'neutral'
-            }
-          >
+          <Badge tone={prom?.healthy ? 'ok' : prom?.enabled ? 'danger' : 'neutral'}>
             Prometheus {prom?.enabled ? (prom.healthy ? 'healthy' : 'down') : 'off'}
           </Badge>
         }
@@ -62,50 +58,45 @@ export function MonitoringPage() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: index * 0.05 }}
           >
-            <Card className="p-5">
-              <div className="text-xs font-semibold uppercase tracking-wider text-ink-soft">
-                {card.label}
-              </div>
-              <div className="mt-2 font-display text-3xl font-extrabold">{card.value}</div>
-            </Card>
+            <StatCard label={card.label} value={card.value} />
           </motion.div>
         ))}
       </div>
 
       <div className="mt-4 grid gap-4 xl:grid-cols-2">
         <Card className="p-5">
-          <h2 className="font-display text-xl font-bold">Prometheus</h2>
-          <p className="mt-1 text-sm text-ink-soft">
+          <h2 className="font-display text-lg font-bold tracking-[0.12em]">PROMETHEUS</h2>
+          <p className="mt-1 text-sm text-text-dim">
             Endpoint: {prom?.url || 'not configured'}
           </p>
           {prom?.error ? (
-            <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-warn">
+            <div className="mt-3 rounded border border-warn/40 bg-warn/10 px-3 py-2 text-sm text-warn">
               {prom.error}
             </div>
           ) : (
-            <div className="mt-3 text-sm text-ink-soft">
+            <div className="mt-3 text-sm text-text-dim">
               Configure `prometheus.enabled` and `prometheus.url` in backend config to enable
               PromQL queries.
             </div>
           )}
-          <div className="mt-4 rounded-xl bg-mist px-3 py-2 font-mono text-xs text-ink-soft">
+          <div className="mt-4 rounded border border-line bg-mist px-3 py-2 font-mono text-xs text-text-dim">
             GET /api/v1/prometheus/query?query=up
           </div>
         </Card>
 
         <Card className="p-5">
-          <h2 className="font-display text-xl font-bold">Security health</h2>
+          <h2 className="font-display text-lg font-bold tracking-[0.12em]">SECURITY HEALTH</h2>
           <div className="mt-3 space-y-2">
             <div className="flex justify-between text-sm">
-              <span className="text-ink-soft">Status</span>
+              <span className="text-text-dim">Status</span>
               <Badge tone="accent">{dashQ.data?.health?.status || summary?.status || '-'}</Badge>
             </div>
             <div className="flex justify-between text-sm">
-              <span className="text-ink-soft">Violations</span>
+              <span className="text-text-dim">Violations</span>
               <span className="font-semibold">{summary?.security_violations ?? '-'}</span>
             </div>
             <div className="flex justify-between text-sm">
-              <span className="text-ink-soft">Alerts</span>
+              <span className="text-text-dim">Alerts</span>
               <span className="font-semibold">
                 {dashQ.data?.alerts
                   ? dashQ.data.alerts.critical +
@@ -120,33 +111,33 @@ export function MonitoringPage() {
 
       <Card className="mt-4 overflow-hidden">
         <div className="border-b border-line px-5 py-4">
-          <h2 className="font-display text-xl font-bold">Node telemetry</h2>
+          <h2 className="font-display text-lg font-bold tracking-[0.12em]">NODE TELEMETRY</h2>
         </div>
         <div className="overflow-x-auto">
-          <table className="min-w-full text-left text-sm">
-            <thead className="bg-mist/80 text-xs uppercase tracking-wide text-ink-soft">
+          <table className="hud-table">
+            <thead>
               <tr>
-                <th className="px-5 py-3">Node</th>
-                <th className="px-5 py-3">CPU</th>
-                <th className="px-5 py-3">Memory</th>
-                <th className="px-5 py-3">CPU req</th>
-                <th className="px-5 py-3">Mem req</th>
+                <th>Node</th>
+                <th>CPU</th>
+                <th>Memory</th>
+                <th>CPU req</th>
+                <th>Mem req</th>
               </tr>
             </thead>
             <tbody>
               {nodes.map((n: any) => (
-                <tr key={n.nodeName} className="border-t border-line/70">
-                  <td className="px-5 py-3 font-semibold">{n.nodeName}</td>
-                  <td className="px-5 py-3">{formatPercent(n.cpuPercent)}</td>
-                  <td className="px-5 py-3">{formatPercent(n.memoryPercent)}</td>
-                  <td className="px-5 py-3">{n.cpuRequestsPercent || '-'}</td>
-                  <td className="px-5 py-3">{n.memoryRequestsPercent || '-'}</td>
+                <tr key={n.nodeName}>
+                  <td className="font-semibold text-cyan">{n.nodeName}</td>
+                  <td>{formatPercent(n.cpuPercent)}</td>
+                  <td>{formatPercent(n.memoryPercent)}</td>
+                  <td>{n.cpuRequestsPercent || '-'}</td>
+                  <td>{n.memoryRequestsPercent || '-'}</td>
                 </tr>
               ))}
               {!nodes.length ? (
                 <tr>
-                  <td colSpan={5} className="px-5 py-8 text-ink-soft">
-                    No node metrics available.
+                  <td colSpan={5}>
+                    <EmptyState>No node metrics available.</EmptyState>
                   </td>
                 </tr>
               ) : null}

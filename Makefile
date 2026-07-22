@@ -4,7 +4,7 @@ VERSION := $(shell git describe --tags --always --dirty)
 BUILD_TIME := $(shell date -u '+%Y-%m-%d_%H:%M:%S')
 LDFLAGS := -ldflags "-X main.Version=$(VERSION) -X main.BuildTime=$(BUILD_TIME) -w -s"
 
-.PHONY: build run build-linux build-mac build-windows build-all test lint clean dev docker help
+.PHONY: build run build-linux build-mac build-windows build-all test lint clean dev web-dev web-build docker help
 
 # 默认目标
 all: build
@@ -24,6 +24,15 @@ build: clean update-dependencies
 dev: build
 	@echo "Starting development server..."
 	./$(OUT_DIR)/$(BINARY_NAME) --config configs/config.yaml
+
+# React control plane (web/)
+web-dev:
+	@echo "Starting React frontend (http://localhost:8888)..."
+	pnpm --dir web dev
+
+web-build:
+	@echo "Building React frontend..."
+	pnpm --dir web build
 
 # 生产环境运行
 run: build

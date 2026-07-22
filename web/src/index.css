@@ -1,22 +1,29 @@
 @import "tailwindcss";
 
 @theme {
-  --font-display: "Syne", ui-sans-serif, system-ui, sans-serif;
-  --font-sans: "DM Sans", ui-sans-serif, system-ui, sans-serif;
-  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+  --font-display: "Orbitron", "JetBrains Mono", ui-monospace, monospace;
+  --font-sans: "JetBrains Mono", "Fira Code", Menlo, Consolas, monospace;
+  --font-mono: "JetBrains Mono", "Fira Code", Menlo, Consolas, monospace;
 
-  --color-ink: #101828;
-  --color-ink-soft: #344054;
-  --color-mist: #f4f7fb;
-  --color-panel: #ffffff;
-  --color-line: #d7e0ea;
-  --color-accent: #0f766e;
-  --color-accent-bright: #14b8a6;
-  --color-accent-soft: #ccfbf1;
-  --color-signal: #ea580c;
-  --color-ok: #059669;
-  --color-warn: #d97706;
-  --color-danger: #dc2626;
+  --color-bg: #04070a;
+  --color-panel: rgba(8, 18, 24, 0.78);
+  --color-panel-solid: #071016;
+  --color-line: rgba(53, 230, 255, 0.18);
+  --color-cyan: #35e6ff;
+  --color-cyan-dim: #1a7f92;
+  --color-cyan-faint: rgba(53, 230, 255, 0.14);
+  --color-orange: #ffae00;
+  --color-text: #cfeef5;
+  --color-text-dim: #6f98a3;
+  --color-ok: #4dffb0;
+  --color-warn: #ffae00;
+  --color-danger: #ff4d5e;
+  --color-accent: #35e6ff;
+  --color-accent-bright: #7af0ff;
+  --color-signal: #ffae00;
+  --color-ink: #cfeef5;
+  --color-ink-soft: #6f98a3;
+  --color-mist: rgba(53, 230, 255, 0.06);
 }
 
 * {
@@ -31,28 +38,125 @@ body,
 
 body {
   margin: 0;
-  color: var(--color-ink);
+  color: var(--color-text);
   font-family: var(--font-sans);
   background:
-    radial-gradient(1200px 600px at 10% -10%, rgba(20, 184, 166, 0.18), transparent 55%),
-    radial-gradient(900px 500px at 90% 0%, rgba(234, 88, 12, 0.1), transparent 50%),
-    linear-gradient(180deg, #eef3f8 0%, #f7fafc 40%, #f4f7fb 100%);
+    radial-gradient(1200px 800px at 70% -10%, rgba(53, 230, 255, 0.08), transparent),
+    linear-gradient(rgba(53, 230, 255, 0.06) 1px, transparent 1px) 0 0 / 100% 28px,
+    linear-gradient(90deg, rgba(53, 230, 255, 0.06) 1px, transparent 1px) 0 0 / 28px 100%,
+    var(--color-bg);
   background-attachment: fixed;
-}
-
-body::before {
-  content: "";
-  position: fixed;
-  inset: 0;
-  pointer-events: none;
-  opacity: 0.35;
-  background-image:
-    linear-gradient(rgba(16, 24, 40, 0.04) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(16, 24, 40, 0.04) 1px, transparent 1px);
-  background-size: 48px 48px;
-  mask-image: radial-gradient(ellipse at center, black 30%, transparent 75%);
+  -webkit-font-smoothing: antialiased;
 }
 
 ::selection {
-  background: rgba(20, 184, 166, 0.25);
+  background: rgba(53, 230, 255, 0.28);
+}
+
+.hud-panel {
+  position: relative;
+  border: 1px solid var(--color-line);
+  background: var(--color-panel);
+  backdrop-filter: blur(10px);
+  box-shadow: inset 0 0 0 1px rgba(53, 230, 255, 0.04), 0 0 24px rgba(53, 230, 255, 0.06);
+}
+
+.hud-panel::before,
+.hud-panel::after {
+  content: "";
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  border-color: var(--color-cyan);
+  border-style: solid;
+  pointer-events: none;
+}
+
+.hud-panel::before {
+  top: -1px;
+  left: -1px;
+  border-width: 2px 0 0 2px;
+}
+
+.hud-panel::after {
+  right: -1px;
+  bottom: -1px;
+  border-width: 0 2px 2px 0;
+}
+
+.hud-label {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--color-text-dim);
+}
+
+.hud-brand {
+  font-family: var(--font-display);
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  color: var(--color-cyan);
+  text-shadow: 0 0 10px rgba(53, 230, 255, 0.35);
+}
+
+.hud-brand .accent {
+  color: var(--color-orange);
+}
+
+.hud-select {
+  width: 100%;
+  border: 1px solid var(--color-line);
+  background: var(--color-panel-solid);
+  color: var(--color-text);
+  border-radius: 4px;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.8125rem;
+  font-family: var(--font-mono);
+  outline: none;
+}
+
+.hud-select:focus {
+  border-color: var(--color-cyan);
+  box-shadow: 0 0 0 3px var(--color-cyan-faint);
+}
+
+.hud-table {
+  width: 100%;
+  min-width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 0.8125rem;
+}
+
+.hud-table thead {
+  background: rgba(53, 230, 255, 0.06);
+  color: var(--color-text-dim);
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.hud-table th,
+.hud-table td {
+  padding: 0.75rem 1.25rem;
+}
+
+.hud-table tbody tr {
+  border-top: 1px solid rgba(53, 230, 255, 0.1);
+}
+
+.hud-table tbody tr:hover {
+  background: rgba(53, 230, 255, 0.04);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }

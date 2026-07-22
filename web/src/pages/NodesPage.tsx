@@ -3,7 +3,7 @@ import { motion } from 'framer-motion'
 import dayjs from 'dayjs'
 import { listNodes } from '@/api/cluster'
 import { useCluster } from '@/store/cluster'
-import { Badge, Card, PageHeader } from '@/components/ui'
+import { Badge, Card, EmptyState, PageHeader } from '@/components/ui'
 
 function nodeReady(node: any) {
   const conditions = node?.status?.conditions || []
@@ -21,17 +21,17 @@ export function NodesPage() {
 
   return (
     <div>
-      <PageHeader title="Nodes" subtitle="Cluster compute fabric" />
+      <PageHeader title="NODES" subtitle="Cluster compute fabric" />
       <Card className="overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="min-w-full text-left text-sm">
-            <thead className="bg-mist/80 text-xs uppercase tracking-wide text-ink-soft">
+          <table className="hud-table">
+            <thead>
               <tr>
-                <th className="px-5 py-3">Name</th>
-                <th className="px-5 py-3">Status</th>
-                <th className="px-5 py-3">Roles</th>
-                <th className="px-5 py-3">Version</th>
-                <th className="px-5 py-3">Created</th>
+                <th>Name</th>
+                <th>Status</th>
+                <th>Roles</th>
+                <th>Version</th>
+                <th>Created</th>
               </tr>
             </thead>
             <tbody>
@@ -46,21 +46,20 @@ export function NodesPage() {
                     initial={{ opacity: 0, y: 8 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: index * 0.03 }}
-                    className="border-t border-line/70"
                   >
-                    <td className="px-5 py-3 font-semibold">{name}</td>
-                    <td className="px-5 py-3">
+                    <td className="font-semibold text-cyan">{name}</td>
+                    <td>
                       <Badge tone={nodeReady(node) ? 'ok' : 'danger'}>
                         {nodeReady(node) ? 'Ready' : 'NotReady'}
                       </Badge>
                     </td>
-                    <td className="px-5 py-3 text-ink-soft">
+                    <td className="text-text-dim">
                       {roles.length ? roles.join(', ') : 'worker'}
                     </td>
-                    <td className="px-5 py-3 font-mono text-xs">
+                    <td className="font-mono text-xs">
                       {node.status?.nodeInfo?.kubeletVersion || '-'}
                     </td>
-                    <td className="px-5 py-3 text-ink-soft">
+                    <td className="text-text-dim">
                       {node.metadata?.creationTimestamp
                         ? dayjs(node.metadata.creationTimestamp).format('YYYY-MM-DD HH:mm')
                         : '-'}
@@ -70,8 +69,8 @@ export function NodesPage() {
               })}
               {!isLoading && !data.length ? (
                 <tr>
-                  <td colSpan={5} className="px-5 py-10 text-ink-soft">
-                    No nodes found for this cluster.
+                  <td colSpan={5}>
+                    <EmptyState>No nodes found for this cluster.</EmptyState>
                   </td>
                 </tr>
               ) : null}

@@ -4,7 +4,7 @@ import { motion } from 'framer-motion'
 import dayjs from 'dayjs'
 import { listEvents, listNamespaces } from '@/api/cluster'
 import { useCluster } from '@/store/cluster'
-import { Badge, Card, PageHeader } from '@/components/ui'
+import { Badge, Card, EmptyState, PageHeader } from '@/components/ui'
 
 export function EventsPage() {
   const { clusterId } = useCluster()
@@ -31,7 +31,7 @@ export function EventsPage() {
   return (
     <div>
       <PageHeader
-        title="Events"
+        title="EVENTS"
         subtitle="Cluster signal stream"
         action={<Badge tone="neutral">{events.length} events</Badge>}
       />
@@ -40,7 +40,7 @@ export function EventsPage() {
         <select
           value={namespace}
           onChange={(e) => setNamespace(e.target.value)}
-          className="rounded-xl border border-line bg-white px-3 py-2 text-sm"
+          className="hud-select w-auto min-w-[160px]"
         >
           <option value="">All namespaces</option>
           {(nsQ.data || []).map((ns) => (
@@ -52,7 +52,7 @@ export function EventsPage() {
         <select
           value={type}
           onChange={(e) => setType(e.target.value)}
-          className="rounded-xl border border-line bg-white px-3 py-2 text-sm"
+          className="hud-select w-auto min-w-[140px]"
         >
           <option value="">All types</option>
           <option value="Normal">Normal</option>
@@ -70,30 +70,32 @@ export function EventsPage() {
           >
             <Card className="p-4">
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
                   <Badge tone={event.type === 'Warning' ? 'warn' : 'ok'}>
                     {event.type || 'Normal'}
                   </Badge>
-                  <span className="font-semibold">{event.reason}</span>
-                  <span className="text-xs text-ink-soft">
+                  <span className="font-semibold text-cyan">{event.reason}</span>
+                  <span className="text-xs text-text-dim">
                     {event.objectKind}/{event.object || event.name}
                   </span>
                 </div>
-                <span className="text-xs text-ink-soft">
+                <span className="text-xs text-text-dim">
                   {event.lastTime
                     ? dayjs(event.lastTime).format('YYYY-MM-DD HH:mm:ss')
                     : '-'}
                 </span>
               </div>
-              <p className="mt-2 text-sm text-ink-soft">{event.message}</p>
-              <div className="mt-2 text-xs text-ink-soft">
+              <p className="mt-2 text-sm text-text-dim">{event.message}</p>
+              <div className="mt-2 text-xs text-text-dim">
                 ns: {event.namespace || '-'} · count: {event.count ?? 1}
               </div>
             </Card>
           </motion.div>
         ))}
         {!eventsQ.isLoading && !events.length ? (
-          <Card className="p-8 text-center text-sm text-ink-soft">No events matched.</Card>
+          <Card>
+            <EmptyState>No events matched.</EmptyState>
+          </Card>
         ) : null}
       </div>
     </div>

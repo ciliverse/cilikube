@@ -1,13 +1,8 @@
-# UI 已迁回 monorepo
+# UI (moved)
 
-前端源码位于本仓库 [`web/`](../web)，技术栈为 **React 19 + Vite + Tailwind + TanStack Query**。
+The monorepo frontend lives in [`../web`](../web) — **React 19 + Vite 8 + Tailwind CSS v4 + TanStack Query**.
 
-```bash
-cd web
-pnpm install
-pnpm dev
-```
+The previous Vue application is maintained in the separate repository:
+[`cillianxtech/cilikube-web`](https://github.com/cillianxtech/cilikube-web).
 
-默认开发地址 http://localhost:8888，后端默认 `http://localhost:8080`。
-
-原 Vue 版本见独立仓库 [cillianxtech/cilikube-web](https://github.com/cillianxtech/cilikube-web)；同步补丁见 [`patches/`](../patches)。
+See also [`../patches/README.md`](../patches/README.md) for Vue sync patches.

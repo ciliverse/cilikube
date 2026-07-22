@@ -3,8 +3,6 @@ import { motion } from 'framer-motion'
 import {
   Activity,
   Boxes,
-  Cpu,
-  Hexagon,
   LayoutDashboard,
   LogOut,
   Network,
@@ -12,7 +10,7 @@ import {
 } from 'lucide-react'
 import { useAuth } from '@/store/auth'
 import { useCluster } from '@/store/cluster'
-import { Button } from './ui'
+import { Button, ConnDot } from './ui'
 import { cn } from '@/lib/utils'
 
 const nav = [
@@ -29,18 +27,33 @@ export function AppShell() {
 
   return (
     <div className="relative min-h-screen">
-      <div className="mx-auto flex min-h-screen max-w-[1500px]">
-        <aside className="sticky top-0 flex h-screen w-[260px] shrink-0 flex-col border-r border-line/70 bg-white/55 px-4 py-5 backdrop-blur-xl">
-          <div className="mb-8 flex items-center gap-3 px-2">
-            <div className="grid h-11 w-11 place-items-center rounded-2xl bg-accent text-white shadow-lg shadow-accent/30">
-              <Hexagon className="h-6 w-6" />
-            </div>
-            <div>
-              <div className="font-display text-xl font-extrabold tracking-tight">CiliKube</div>
-              <div className="text-xs text-ink-soft">Control Plane</div>
-            </div>
+      <header className="sticky top-0 z-20 flex items-center gap-4 border-b border-line bg-panel-solid/90 px-4 py-3 backdrop-blur md:px-6">
+        <div className="hud-brand text-sm md:text-base">
+          CILI<span className="accent">KUBE</span>
+        </div>
+        <div className="hidden text-xs tracking-[0.2em] text-text-dim uppercase sm:block">
+          Control plane
+        </div>
+        <div className="ml-auto flex items-center gap-4">
+          <div className="hidden items-center gap-2 text-xs text-text-dim md:flex">
+            <ConnDot online />
+            <span className="tracking-wider uppercase">
+              {activeCluster?.name || clusterId || 'no-cluster'}
+            </span>
           </div>
+          <div className="text-xs text-text-dim">
+            <span className="text-text">{user?.username || 'operator'}</span>
+            <span className="mx-2 text-line">/</span>
+            <span>{user?.role || 'admin'}</span>
+          </div>
+          <Button variant="ghost" className="px-2" onClick={() => void logout()} title="Logout">
+            <LogOut className="h-4 w-4" />
+          </Button>
+        </div>
+      </header>
 
+      <div className="mx-auto flex min-h-[calc(100vh-57px)] max-w-[1500px]">
+        <aside className="sticky top-[57px] flex h-[calc(100vh-57px)] w-[240px] shrink-0 flex-col border-r border-line bg-panel-solid/50 px-3 py-4">
           <nav className="flex flex-1 flex-col gap-1">
             {nav.map((item) => (
               <NavLink
@@ -49,10 +62,10 @@ export function AppShell() {
                 end={item.to === '/'}
                 className={({ isActive }) =>
                   cn(
-                    'group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold transition',
+                    'group flex items-center gap-3 rounded px-3 py-2.5 text-sm font-semibold tracking-wide transition',
                     isActive
-                      ? 'bg-accent text-white shadow-md shadow-accent/25'
-                      : 'text-ink-soft hover:bg-black/5 hover:text-ink',
+                      ? 'border border-cyan/40 bg-cyan/15 text-cyan shadow-[0_0_16px_rgba(53,230,255,0.12)]'
+                      : 'border border-transparent text-text-dim hover:border-line hover:bg-mist hover:text-text',
                   )
                 }
               >
@@ -62,15 +75,12 @@ export function AppShell() {
             ))}
           </nav>
 
-          <div className="mt-4 space-y-3 rounded-2xl border border-line bg-mist/70 p-3">
-            <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-ink-soft">
-              <Cpu className="h-3.5 w-3.5" />
-              Cluster
-            </div>
+          <div className="hud-panel mt-4 space-y-3 rounded p-3">
+            <div className="hud-label">Cluster</div>
             <select
               value={clusterId}
               onChange={(e) => setClusterId(e.target.value)}
-              className="w-full rounded-xl border border-line bg-white px-3 py-2 text-sm outline-none focus:border-accent"
+              className="hud-select"
             >
               {clusters.map((c) => (
                 <option key={c.id || c.name} value={c.id || c.name}>
@@ -78,25 +88,15 @@ export function AppShell() {
                 </option>
               ))}
             </select>
-            <div className="text-xs text-ink-soft">
+            <div className="text-xs text-text-dim">
               {activeCluster?.status || activeCluster?.version || 'Ready'}
             </div>
-          </div>
-
-          <div className="mt-4 flex items-center justify-between gap-2 px-1">
-            <div className="min-w-0">
-              <div className="truncate text-sm font-semibold">{user?.username || 'operator'}</div>
-              <div className="truncate text-xs text-ink-soft">{user?.role || 'admin'}</div>
-            </div>
-            <Button variant="ghost" className="px-2" onClick={() => void logout()} title="Logout">
-              <LogOut className="h-4 w-4" />
-            </Button>
           </div>
         </aside>
 
         <main className="relative flex-1 px-5 py-6 md:px-8">
           <motion.div
-            initial={{ opacity: 0, y: 10 }}
+            initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.35, ease: 'easeOut' }}
           >

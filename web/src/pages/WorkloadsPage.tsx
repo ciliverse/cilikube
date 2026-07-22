@@ -4,7 +4,7 @@ import { motion } from 'framer-motion'
 import dayjs from 'dayjs'
 import { listNamespaces, listPods } from '@/api/cluster'
 import { useCluster } from '@/store/cluster'
-import { Badge, Card, PageHeader } from '@/components/ui'
+import { Badge, Card, EmptyState, PageHeader, StatCard } from '@/components/ui'
 
 function podTone(phase?: string) {
   const p = (phase || '').toLowerCase()
@@ -42,13 +42,13 @@ export function WorkloadsPage() {
   return (
     <div>
       <PageHeader
-        title="Workloads"
+        title="WORKLOADS"
         subtitle="Pods across the selected namespace"
         action={
           <select
             value={namespace}
             onChange={(e) => setNamespace(e.target.value)}
-            className="rounded-xl border border-line bg-white px-3 py-2 text-sm outline-none focus:border-accent"
+            className="hud-select w-auto min-w-[160px]"
           >
             {(nsQ.data || []).map((ns) => (
               <option key={ns} value={ns}>
@@ -60,38 +60,27 @@ export function WorkloadsPage() {
       />
 
       <div className="mb-4 grid gap-3 sm:grid-cols-3">
-        {[
-          { label: 'Total', value: pods.length },
-          {
-            label: 'Running',
-            value: pods.filter((p: any) => p.status?.phase === 'Running').length,
-          },
-          {
-            label: 'Pending / Failed',
-            value: pods.filter((p: any) =>
-              ['Pending', 'Failed'].includes(p.status?.phase),
-            ).length,
-          },
-        ].map((stat) => (
-          <Card key={stat.label} className="p-4">
-            <div className="text-xs font-semibold uppercase tracking-wider text-ink-soft">
-              {stat.label}
-            </div>
-            <div className="mt-1 font-display text-2xl font-extrabold">{stat.value}</div>
-          </Card>
-        ))}
+        <StatCard label="Total" value={pods.length} />
+        <StatCard
+          label="Running"
+          value={pods.filter((p: any) => p.status?.phase === 'Running').length}
+        />
+        <StatCard
+          label="Pending / Failed"
+          value={pods.filter((p: any) => ['Pending', 'Failed'].includes(p.status?.phase)).length}
+        />
       </div>
 
       <Card className="overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="min-w-full text-left text-sm">
-            <thead className="bg-mist/80 text-xs uppercase tracking-wide text-ink-soft">
+          <table className="hud-table">
+            <thead>
               <tr>
-                <th className="px-5 py-3">Name</th>
-                <th className="px-5 py-3">Namespace</th>
-                <th className="px-5 py-3">Status</th>
-                <th className="px-5 py-3">Restarts</th>
-                <th className="px-5 py-3">Created</th>
+                <th>Name</th>
+                <th>Namespace</th>
+                <th>Status</th>
+                <th>Restarts</th>
+                <th>Created</th>
               </tr>
             </thead>
             <tbody>
@@ -106,17 +95,16 @@ export function WorkloadsPage() {
                     initial={{ opacity: 0, y: 8 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: Math.min(index, 12) * 0.02 }}
-                    className="border-t border-line/70"
                   >
-                    <td className="px-5 py-3 font-semibold">{pod.metadata?.name}</td>
-                    <td className="px-5 py-3">{pod.metadata?.namespace}</td>
-                    <td className="px-5 py-3">
+                    <td className="font-semibold text-cyan">{pod.metadata?.name}</td>
+                    <td>{pod.metadata?.namespace}</td>
+                    <td>
                       <Badge tone={podTone(pod.status?.phase)}>
                         {pod.status?.phase || 'Unknown'}
                       </Badge>
                     </td>
-                    <td className="px-5 py-3">{restarts}</td>
-                    <td className="px-5 py-3 text-ink-soft">
+                    <td>{restarts}</td>
+                    <td className="text-text-dim">
                       {pod.metadata?.creationTimestamp
                         ? dayjs(pod.metadata.creationTimestamp).format('YYYY-MM-DD HH:mm')
                         : '-'}
@@ -126,8 +114,8 @@ export function WorkloadsPage() {
               })}
               {!podsQ.isLoading && !pods.length ? (
                 <tr>
-                  <td colSpan={5} className="px-5 py-10 text-ink-soft">
-                    No pods in namespace {namespace}.
+                  <td colSpan={5}>
+                    <EmptyState>No pods in namespace {namespace}.</EmptyState>
                   </td>
                 </tr>
               ) : null}
