@@ -23,3 +23,8 @@ output/
 cilikube
 cilikube.exe
 cilikube-*
+# Compiled Go server binaries (曾被误提交，导致历史膨胀)
+cilikube-server
+cmd/server/server
+# Runtime logs (曾被误提交，导致历史膨胀)
+*.log
