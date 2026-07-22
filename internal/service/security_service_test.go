@@ -33,7 +33,7 @@ func TestPasswordValidation(t *testing.T) {
 	}{
 		{
 			name:     "Valid password",
-			password: "Password123",
+			password: "SecurePass2024",
 			valid:    true,
 		},
 		{

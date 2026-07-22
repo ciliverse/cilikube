@@ -15,6 +15,11 @@ import (
 func setupTestAuthService() (*AuthService, store.Store) {
 	// Create test configuration
 	config := &configs.Config{
+		JWT: configs.JWTConfig{
+			SecretKey:      "test-secret-key",
+			ExpireDuration: 24 * time.Hour,
+			Issuer:         "cilikube-test",
+		},
 		Security: configs.SecurityConfig{
 			Password: configs.PasswordConfig{
 				MinLength:        8,
@@ -31,6 +36,10 @@ func setupTestAuthService() (*AuthService, store.Store) {
 			},
 		},
 	}
+
+	// GenerateToken/ParseToken read the package-level GlobalConfig, so it must be
+	// populated for auth flows (e.g. Login) to work in tests.
+	configs.GlobalConfig = config
 
 	// Create in-memory store
 	testStore := store.NewMemoryStore()
@@ -56,7 +65,7 @@ func TestAuthService_Register(t *testing.T) {
 			request: &models.RegisterRequest{
 				Username: "testuser",
 				Email:    "test@example.com",
-				Password: "password123",
+				Password: "securepass2024",
 			},
 			expectError: false,
 		},
@@ -75,7 +84,7 @@ func TestAuthService_Register(t *testing.T) {
 			request: &models.RegisterRequest{
 				Username: "testuser",
 				Email:    "different@example.com",
-				Password: "password123",
+				Password: "securepass2024",
 			},
 			expectError: true,
 			errorMsg:    "username already exists",
@@ -85,7 +94,7 @@ func TestAuthService_Register(t *testing.T) {
 			request: &models.RegisterRequest{
 				Username: "differentuser",
 				Email:    "test@example.com",
-				Password: "password123",
+				Password: "securepass2024",
 			},
 			expectError: true,
 			errorMsg:    "email already exists",
@@ -239,8 +248,10 @@ func TestAuthService_ChangePassword(t *testing.T) {
 		{
 			name:   "Weak new password",
 			userID: testUser.ID,
+			// NOTE: the "Valid password change" case above already rotated the
+			// password to "newpassword123", so that is the current old password.
 			request: &models.ChangePasswordRequest{
-				OldPassword: "oldpassword123",
+				OldPassword: "newpassword123",
 				NewPassword: "weak",
 			},
 			expectError: true,
@@ -501,7 +512,7 @@ func TestAuthService_ValidatePassword(t *testing.T) {
 	}{
 		{
 			name:           "Valid password",
-			password:       "password123",
+			password:       "securepass2024",
 			expectValid:    true,
 			expectedErrors: 0,
 		},
@@ -513,7 +524,7 @@ func TestAuthService_ValidatePassword(t *testing.T) {
 		},
 		{
 			name:           "No numbers",
-			password:       "password",
+			password:       "securepass",
 			expectValid:    false,
 			expectedErrors: 1,
 		},
