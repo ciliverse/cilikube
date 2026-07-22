@@ -29,3 +29,7 @@ output/
 cmd/server/server
 # Runtime logs (曾被误提交，导致历史膨胀)
 *.log
+# Runtime SQLite database files (含密码哈希/审计日志等，禁止提交)
+*.db
+*.db-shm
+*.db-wal
