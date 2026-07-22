@@ -1,4 +1,6 @@
 node_modules
+web/node_modules
+web/dist
 .idea/
 minikube-darwin-arm64
 output/
@@ -19,12 +21,11 @@ out/
 minikube-darwin-arm64
 # Ignore output directory
 output/
-# Ignore Cilikube binary and related files
-cilikube
-cilikube.exe
-cilikube-*
-# Compiled Go server binaries (曾被误提交，导致历史膨胀)
-cilikube-server
+# Ignore Cilikube binary and related files (root only; do not ignore deployments/helm/cilikube)
+/cilikube
+/cilikube.exe
+/cilikube-*
+# Compiled Go server binary (曾被误提交，导致历史膨胀)
 cmd/server/server
 # Runtime logs (曾被误提交，导致历史膨胀)
 *.log

@@ -83,6 +83,30 @@ const (
 	SeverityCritical EventSeverity = "critical"
 )
 
+// LogAPIRequest implements auth.APIAuditLogger for HTTP audit middleware.
+func (s *AuditService) LogAPIRequest(userID *uint, username, ip, userAgent, resource, action, result, severity string, details map[string]interface{}) error {
+	if s.config != nil && !s.config.Security.Audit.LogAPICalls {
+		// Still record auth/admin failures even when general API audit is disabled
+		if result == "success" && resource != "auth" && resource != "admin" && resource != "users" && resource != "roles" && resource != "settings" {
+			return nil
+		}
+	}
+
+	return s.LogSecurityEvent(SecurityEvent{
+		Type:      "api_request",
+		Severity:  severity,
+		UserID:    userID,
+		Username:  username,
+		IPAddress: ip,
+		UserAgent: userAgent,
+		Resource:  resource,
+		Action:    action,
+		Result:    result,
+		Details:   details,
+		Timestamp: time.Now(),
+	})
+}
+
 // LogSecurityEvent logs a security event
 func (s *AuditService) LogSecurityEvent(event SecurityEvent) error {
 	// Set timestamp if not provided

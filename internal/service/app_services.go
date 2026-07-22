@@ -4,6 +4,8 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
+	storagev1 "k8s.io/api/storage/v1"
 )
 
 // AppServices serves as a collection of all application services, defined here uniformly
@@ -29,20 +31,29 @@ type AppServices struct {
 	OAuthService      *OAuthService
 	RoleService       *RoleService
 	PermissionService *PermissionService
+	AuditService      *AuditService
+	MonitoringService *MonitoringService
+	PrometheusService *PrometheusService
 
 	// Kubernetes resource services
-	NodeService        ResourceService[*corev1.Node]
-	NamespaceService   ResourceService[*corev1.Namespace]
-	PVService          ResourceService[*corev1.PersistentVolume]
-	PodService         ResourceService[*corev1.Pod]
-	DeploymentService  ResourceService[*appsv1.Deployment]
-	ServiceService     ResourceService[*corev1.Service]
-	DaemonSetService   ResourceService[*appsv1.DaemonSet]
-	IngressService     ResourceService[*networkingv1.Ingress]
-	ConfigMapService   ResourceService[*corev1.ConfigMap]
-	SecretService      ResourceService[*corev1.Secret]
-	PVCService         ResourceService[*corev1.PersistentVolumeClaim]
-	StatefulSetService ResourceService[*appsv1.StatefulSet]
+	NodeService               ResourceService[*corev1.Node]
+	NamespaceService          ResourceService[*corev1.Namespace]
+	PVService                 ResourceService[*corev1.PersistentVolume]
+	PodService                ResourceService[*corev1.Pod]
+	DeploymentService         ResourceService[*appsv1.Deployment]
+	ServiceService            ResourceService[*corev1.Service]
+	DaemonSetService          ResourceService[*appsv1.DaemonSet]
+	IngressService            ResourceService[*networkingv1.Ingress]
+	ConfigMapService          ResourceService[*corev1.ConfigMap]
+	SecretService             ResourceService[*corev1.Secret]
+	PVCService                ResourceService[*corev1.PersistentVolumeClaim]
+	StatefulSetService        ResourceService[*appsv1.StatefulSet]
+	StorageClassService       ResourceService[*storagev1.StorageClass]
+	ServiceAccountService     ResourceService[*corev1.ServiceAccount]
+	RoleResourceService       ResourceService[*rbacv1.Role]
+	RoleBindingService        ResourceService[*rbacv1.RoleBinding]
+	ClusterRoleService        ResourceService[*rbacv1.ClusterRole]
+	ClusterRoleBindingService ResourceService[*rbacv1.ClusterRoleBinding]
 
 	// Pod logs and terminal services
 	PodLogsService *PodLogsService

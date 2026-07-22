@@ -5,10 +5,10 @@
 </div>
 
 <div align="center">
-  <img src="https://img.shields.io/badge/Frontend-Vue3-blue?style=flat-square&logo=vue.js" alt="Vue3">
+  <img src="https://img.shields.io/badge/Frontend-React-61DAFB?style=flat-square&logo=react" alt="React">
   <img src="https://img.shields.io/badge/Frontend-TypeScript-blue?style=flat-square&logo=typescript" alt="TypeScript">
   <img src="https://img.shields.io/badge/Frontend-Vite-blue?style=flat-square&logo=vite" alt="Vite">
-  <img src="https://img.shields.io/badge/Frontend-Element%20Plus-blue?style=flat-square&logo=element-plus" alt="Element Plus">
+  <img src="https://img.shields.io/badge/Frontend-Tailwind-38BDF8?style=flat-square&logo=tailwindcss" alt="Tailwind">
   <img src="https://img.shields.io/badge/Backend-Go-blue?style=flat-square&logo=go" alt="Go">
   <img src="https://img.shields.io/badge/Backend-Gin-blue?style=flat-square&logo=gin" alt="Gin">
   <img src="https://img.shields.io/badge/1.33.0-Kubernetes-blue?style=flat-square&logo=kubernetes" alt="Kubernetes">
@@ -41,7 +41,7 @@
 
 ## 📖 产品概述
 
-CiliKube 是一个企业级开源 Kubernetes 多集群管理平台，采用现代化 Web 技术栈构建，包括 Vue3、TypeScript、Go 和 Gin。该平台为全面的 Kubernetes 资源管理提供直观、简化的界面，同时保持自定义需求的可扩展性。CiliKube 为寻求高效集群运维的组织和学习云原生技术的开发者提供了理想的基础平台。
+CiliKube 是一个企业级开源 Kubernetes 多集群管理平台，采用现代化 Web 技术栈构建，包括 React、TypeScript、Go 和 Gin。该平台为全面的 Kubernetes 资源管理提供直观、简化的界面，同时保持自定义需求的可扩展性。CiliKube 为寻求高效集群运维的组织和学习云原生技术的开发者提供了理想的基础平台。
 
 <div align="center">
   <img src="docs/cluster-overview2.png" alt="Cluster Overview" width="100%">
@@ -63,12 +63,12 @@ CiliKube 是一个企业级开源 Kubernetes 多集群管理平台，采用现�
 CiliKube 通过专注于简洁性和可用性而非复杂的企业级解决方案，在不牺牲功能性的前提下实现了差异化：
 
 1. **精简界面**: 为核心 Kubernetes 资源管理操作提供直观、清晰的界面
-2. **开发者导向设计**: 采用现代开发实践和清晰架构构建，是学习 **Vue3/Go Web 开发** 和 **Kubernetes API 集成** 的优秀参考
+2. **开发者导向设计**: 采用现代开发实践和清晰架构构建，是学习 **React/Go Web 开发** 和 **Kubernetes API 集成** 的优秀参考
 3. **可扩展架构**: 采用模块化设计，支持自定义功能和工作流的无缝集成
 
 ## 🎯 目标用户
 
-- **前端开发者**: 寻求 **Vue3 + TypeScript + Element Plus** 生态系统实践经验
+- **前端开发者**: 寻求 **React + TypeScript + Tailwind** 生态系统实践经验
 - **后端开发者**: 学习 **Go + Gin** Web 开发和微服务架构
 - **云原生工程师**: 探索 **Kubernetes API** 集成和 **client-go** 库实现
 - **DevOps 团队**: 需要轻量级、可定制的 Kubernetes 管理界面
@@ -99,12 +99,12 @@ CiliKube 采用行业标准技术和框架，确保可靠性、可维护性和�
 - PNPM >= 8.x (包管理工具)
 
 **前端架构**: 
-- **核心技术**: `Vue3` `TypeScript` `Vite` `Element Plus`
-- **状态管理**: `Pinia` `Vue Router`
+- **核心技术**: `React 19` `TypeScript` `Vite` `Tailwind CSS`
+- **数据 / 路由**: `TanStack Query` `React Router`
+- **动效 / 图表**: `Framer Motion` `Recharts`
 - **HTTP 客户端**: `Axios`
-- **样式系统**: `UnoCSS` `Scss`
-- **代码质量**: `ESLint` `Prettier`
-- 基于 un-pany 开发的强大 [v3-admin-vite](https://github.com/un-pany/v3-admin-vite) 模板构建。
+- 原 Vue 前端仍保留在独立仓库 [cilikube-web](https://github.com/cillianxtech/cilikube-web)。
+
 
 **后端架构**: 
 - **框架**: `Go` `Gin`
@@ -172,8 +172,8 @@ CiliKube 采用行业标准技术和框架，确保可靠性、可维护性和�
 
 ### 运行前端
 ```bash
-# 进入前端目录
-cd cilikube-web
+# 进入前端目录（本仓库 monorepo 下的 web/）
+cd web
 # 安装依赖
 pnpm install
 # 启动开发服务器
@@ -184,8 +184,7 @@ pnpm dev
 
 ### 运行后端
 ```bash
-# 进入后端目录
-cd cilikube
+# 在仓库根目录
 # (可选) 更新 Go 依赖
 go mod tidy
 # 运行后端服务 (默认监听 8080 端口)
@@ -195,13 +194,13 @@ go run cmd/server/main.go
 
 ### 构建项目
 ```bash
-# 构建前端生产环境包 (输出到 cilikube-web/dist)
-cd cilikube-web
+# 构建前端生产环境包 (输出到 web/dist)
+cd web
 pnpm build
 
 # 构建后端可执行文件
-cd ../cilikube
-go build -o cilikube cmd/server/main.go
+cd ..
+go build -o bin/cilikube cmd/server/main.go
 ```
 
 ## 🐳 Docker 部署

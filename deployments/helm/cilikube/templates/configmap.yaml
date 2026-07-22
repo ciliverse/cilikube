@@ -1,0 +1,24 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "cilikube.fullname" . }}-config
+  labels:
+    {{- include "cilikube.labels" . | nindent 4 }}
+data:
+  config.yaml: |
+    server:
+      port: "8080"
+      read_timeout: 30
+      write_timeout: 30
+      mode: {{ .Values.config.serverMode | quote }}
+      encryptionKey: {{ .Values.secrets.encryptionKey | quote }}
+    kubernetes:
+      kubeconfig: in-cluster
+    database:
+      enabled: true
+      type: sqlite
+      database: /app/data/cilikube.db
+    jwt:
+      secret_key: {{ .Values.secrets.jwtSecret | quote }}
+      expire_duration: {{ .Values.config.jwtExpire }}
+      issuer: cilikube

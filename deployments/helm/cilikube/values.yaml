@@ -1,0 +1,61 @@
+app:
+  name: cilikube
+
+backend:
+  image:
+    repository: cilliantech/cilikube
+    tag: latest
+    pullPolicy: IfNotPresent
+  replicas: 1
+  service:
+    port: 8080
+  resources:
+    requests:
+      cpu: 250m
+      memory: 256Mi
+    limits:
+      cpu: "1"
+      memory: 1Gi
+
+frontend:
+  image:
+    repository: cilliantech/cilikube-web
+    tag: latest
+    pullPolicy: IfNotPresent
+  replicas: 1
+  service:
+    port: 80
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      cpu: 200m
+      memory: 256Mi
+
+persistence:
+  enabled: true
+  size: 5Gi
+  storageClass: ""
+
+rbac:
+  create: true
+
+ingress:
+  enabled: false
+  className: nginx
+  host: cilikube.local
+
+config:
+  serverMode: release
+  jwtExpire: 24h0m0s
+
+secrets:
+  jwtSecret: change-me-jwt-secret-in-production
+  encryptionKey: change-me-in-production-32chars!!
+
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 3
+  targetCPUUtilizationPercentage: 80

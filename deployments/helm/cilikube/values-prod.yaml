@@ -1,0 +1,24 @@
+backend:
+  replicas: 2
+  resources:
+    requests:
+      cpu: 500m
+      memory: 512Mi
+    limits:
+      cpu: "1"
+      memory: 1Gi
+
+frontend:
+  replicas: 2
+
+config:
+  serverMode: release
+
+ingress:
+  enabled: true
+  host: cilikube.example.com
+
+autoscaling:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 5

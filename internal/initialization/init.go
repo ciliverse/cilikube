@@ -9,7 +9,9 @@ import (
 	"github.com/ciliverse/cilikube/internal/routes"
 	"github.com/ciliverse/cilikube/internal/service"
 	"github.com/ciliverse/cilikube/internal/store"
+	"github.com/ciliverse/cilikube/pkg/auth"
 	"github.com/ciliverse/cilikube/pkg/k8s"
+	"github.com/ciliverse/cilikube/pkg/metrics"
 	"github.com/gin-gonic/gin"
 	"k8s.io/apimachinery/pkg/runtime"
 )
@@ -18,6 +20,8 @@ func InitializeServices(k8sManager *k8s.ClusterManager, store store.Store, cfg *
 	log.Println("initializing service layer...")
 	resourceFactory := service.NewResourceServiceFactory()
 	resourceFactory.InitializeDefaultServices()
+	authService := service.NewAuthService(store, cfg)
+	auditService := service.NewAuditService(store, cfg)
 	appServices := &service.AppServices{
 		ClusterService:     service.NewClusterService(k8sManager),
 		InstallerService:   service.NewInstallerService(cfg),
@@ -26,9 +30,12 @@ func InitializeServices(k8sManager *k8s.ClusterManager, store store.Store, cfg *
 		SummaryService:     service.NewSummaryService(),
 		EventService:       service.NewEventService(k8sManager),
 		CRDService:         service.NewCRDService(),
-		AuthService:        service.NewAuthService(store, cfg),
-		OAuthService:       service.NewOAuthService(store, cfg),
+		AuthService:        authService,
+		OAuthService:       service.NewOAuthService(store, cfg, authService.GetSecurityService()),
 		RoleService:        service.NewRoleService(store),
+		AuditService:       auditService,
+		MonitoringService:  service.NewMonitoringService(store, cfg, auditService),
+		PrometheusService:  service.NewPrometheusService(cfg),
 	}
 	// PodExecService requires rest.Config
 	if activeClient, err := k8sManager.GetActiveClient(); err == nil && activeClient != nil {
@@ -48,6 +55,12 @@ func InitializeServices(k8sManager *k8s.ClusterManager, store store.Store, cfg *
 	initializeResourceService(resourceFactory, "persistentvolumes", &appServices.PVService)
 	initializeResourceService(resourceFactory, "statefulsets", &appServices.StatefulSetService)
 	initializeResourceService(resourceFactory, "namespaces", &appServices.NamespaceService)
+	initializeResourceService(resourceFactory, "storageclasses", &appServices.StorageClassService)
+	initializeResourceService(resourceFactory, "serviceaccounts", &appServices.ServiceAccountService)
+	initializeResourceService(resourceFactory, "roles", &appServices.RoleResourceService)
+	initializeResourceService(resourceFactory, "rolebindings", &appServices.RoleBindingService)
+	initializeResourceService(resourceFactory, "clusterroles", &appServices.ClusterRoleService)
+	initializeResourceService(resourceFactory, "clusterrolebindings", &appServices.ClusterRoleBindingService)
 	return appServices
 }
 
@@ -83,6 +96,9 @@ func InitializeHandlers(router *gin.RouterGroup, services *service.AppServices, 
 	// --- Register CRD routes ---
 	routes.SetupCRDRoutes(router, handlers.NewCRDHandler(services.CRDService, k8sManager))
 
+	// --- Register monitoring / prometheus / informer routes ---
+	routes.RegisterMonitoringRoutes(router, services.MonitoringService, services.PrometheusService, k8sManager)
+
 	// --- 2. Create Handler instances for all resources ---
 	nodesHandler := handlers.NewResourceHandler(services.NodeService, k8sManager, "nodes")
 	pvHandler := handlers.NewResourceHandler(services.PVService, k8sManager, "persistentvolumes")
@@ -96,6 +112,12 @@ func InitializeHandlers(router *gin.RouterGroup, services *service.AppServices, 
 	secretsHandler := handlers.NewResourceHandler(services.SecretService, k8sManager, "secrets")
 	pvcHandler := handlers.NewResourceHandler(services.PVCService, k8sManager, "persistentvolumeclaims")
 	statefulsetsHandler := handlers.NewResourceHandler(services.StatefulSetService, k8sManager, "statefulsets")
+	storageClassHandler := handlers.NewResourceHandler(services.StorageClassService, k8sManager, "storageclasses")
+	serviceAccountHandler := handlers.NewResourceHandler(services.ServiceAccountService, k8sManager, "serviceaccounts")
+	k8sRoleHandler := handlers.NewResourceHandler(services.RoleResourceService, k8sManager, "roles")
+	roleBindingHandler := handlers.NewResourceHandler(services.RoleBindingService, k8sManager, "rolebindings")
+	clusterRoleHandler := handlers.NewResourceHandler(services.ClusterRoleService, k8sManager, "clusterroles")
+	clusterRoleBindingHandler := handlers.NewResourceHandler(services.ClusterRoleBindingService, k8sManager, "clusterrolebindings")
 	nodeMetricsHandler := handlers.NewNodeMetricsHandler(services.NodeMetricsService, k8sManager)
 
 	// Pod logs and terminal Handler
@@ -131,6 +153,10 @@ func InitializeHandlers(router *gin.RouterGroup, services *service.AppServices, 
 		pvRoutes.GET("/:name/watch", pvHandler.Watch)
 	}
 
+	registerClusterScopedResource(router, "storageclasses", storageClassHandler)
+	registerClusterScopedResource(router, "clusterroles", clusterRoleHandler)
+	registerClusterScopedResource(router, "clusterrolebindings", clusterRoleBindingHandler)
+
 	podsTopLevelRoutes := router.Group("/pods")
 	{
 		podsTopLevelRoutes.GET("", podsHandler.List)
@@ -159,6 +185,9 @@ func InitializeHandlers(router *gin.RouterGroup, services *service.AppServices, 
 			registerResourceInNamespace(nsMemberRoutes, "secrets", secretsHandler)
 			registerResourceInNamespace(nsMemberRoutes, "persistentvolumeclaims", pvcHandler)
 			registerResourceInNamespace(nsMemberRoutes, "statefulsets", statefulsetsHandler)
+			registerResourceInNamespace(nsMemberRoutes, "serviceaccounts", serviceAccountHandler)
+			registerResourceInNamespace(nsMemberRoutes, "roles", k8sRoleHandler)
+			registerResourceInNamespace(nsMemberRoutes, "rolebindings", roleBindingHandler)
 
 			// New: Pod logs and terminal routes
 			podsMemberRoutes := nsMemberRoutes.Group("/pods/:name")
@@ -169,6 +198,22 @@ func InitializeHandlers(router *gin.RouterGroup, services *service.AppServices, 
 		}
 	}
 }
+
+func registerClusterScopedResource[T runtime.Object](router *gin.RouterGroup, resourceName string, handler *handlers.ResourceHandler[T]) {
+	if handler == nil {
+		return
+	}
+	routes := router.Group("/" + resourceName)
+	{
+		routes.GET("", handler.List)
+		routes.POST("", handler.Create)
+		routes.GET("/:name", handler.Get)
+		routes.PUT("/:name", handler.Update)
+		routes.DELETE("/:name", handler.Delete)
+		routes.GET("/:name/watch", handler.Watch)
+	}
+}
+
 func registerResourceInNamespace[T runtime.Object](nsRouter *gin.RouterGroup, resourceName string, handler *handlers.ResourceHandler[T]) {
 	if handler == nil {
 		return
@@ -194,6 +239,12 @@ func registerResourceInNamespace[T runtime.Object](nsRouter *gin.RouterGroup, re
 func SetupRouter(cfg *configs.Config, services *service.AppServices, k8sManager *k8s.ClusterManager, e *casbin.Enforcer) *gin.Engine {
 	router := gin.New()
 	router.Use(gin.Recovery(), gin.Logger())
+	router.Use(metrics.PromMiddleware())
+
+	// Enable session validation for JWT middleware so logout can revoke access
+	if services.AuthService != nil && services.AuthService.GetSecurityService() != nil {
+		auth.SetSessionValidator(services.AuthService.GetSecurityService())
+	}
 
 	// Configure custom CORS middleware, allow all required headers
 	router.Use(func(c *gin.Context) {
@@ -210,10 +261,38 @@ func SetupRouter(cfg *configs.Config, services *service.AppServices, k8sManager 
 		c.Next()
 	})
 
+	// API audit logging (after CORS, before handlers; JWT runs later on protected routes)
+	if services.AuditService != nil {
+		router.Use(auth.AuditMiddleware(services.AuditService))
+	}
+
+	// Public operational endpoints
+	router.GET("/health", handlers.HealthCheck)
+	router.GET("/ready", handlers.ReadinessCheck)
+	router.GET("/live", handlers.LivenessCheck)
+	router.GET("/metrics", metrics.PromHandler())
+	router.GET("/version", handlers.GetVersion)
+
 	// Serve static files for uploaded avatars
 	router.Static("/uploads", "./uploads")
 
 	apiV1 := router.Group("/api/v1")
+	// Require JWT for all API routes except public auth endpoints
+	apiV1.Use(auth.JWTAuthUnless(
+		"/api/v1/auth/login",
+		"/api/v1/auth/register",
+		"/api/v1/auth/oauth/",
+		"/api/v1/system/healthz",
+	))
+	// Enforce Casbin policies when available
+	if e != nil {
+		apiV1.Use(auth.NewCasbinBuilder().
+			IgnorePath("/api/v1/auth/login").
+			IgnorePath("/api/v1/auth/register").
+			IgnorePath("/api/v1/auth/oauth/*").
+			IgnorePath("/api/v1/system/healthz").
+			CasbinMiddleware(e))
+	}
 	{
 		InitializeHandlers(apiV1, services, k8sManager, cfg)
 	}
