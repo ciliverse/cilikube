@@ -65,12 +65,13 @@ func (h *NodeMetricsHandler) GetAllNodesMetrics(c *gin.Context) {
 	// 2. Call service layer to get all nodes metrics
 	metrics, err := h.service.GetAllNodesMetrics(k8sClient.Config)
 	if err != nil {
-		// Judge the error here, if it's caused by metrics-server not being installed, give a friendly prompt
-		if clientErr, ok := err.(interface{ IsNotFound() bool }); ok && clientErr.IsNotFound() {
-			utils.ApiError(c, http.StatusNotFound, "failed to get metrics", "Please confirm that Metrics-Server is properly installed and running in the target cluster.")
-			return
-		}
-		utils.ApiError(c, http.StatusInternalServerError, "failed to get nodes metrics", err.Error())
+		// Soft-fail so Overview/Monitoring still render (same idea as pod metrics).
+		utils.ApiSuccess(c, gin.H{
+			"nodes":     []any{},
+			"total":     0,
+			"available": false,
+			"message":   err.Error(),
+		}, "node metrics unavailable")
 		return
 	}
 

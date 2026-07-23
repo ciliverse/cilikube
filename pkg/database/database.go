@@ -9,7 +9,7 @@ import (
 
 	"github.com/ciliverse/cilikube/configs"
 	"github.com/ciliverse/cilikube/internal/models"
-	"gorm.io/driver/mysql"
+	"gorm.io/driver/postgres"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
@@ -41,11 +41,10 @@ func InitDatabase() error {
 			return fmt.Errorf("failed to create SQLite directory: %v", err)
 		}
 		DB, err = gorm.Open(sqlite.Open(dsn), gormConfig)
-	case "mysql", "":
-		// Default to MySQL for backward compatibility
-		DB, err = gorm.Open(mysql.Open(dsn), gormConfig)
+	case "postgresql", "postgres":
+		DB, err = gorm.Open(postgres.Open(dsn), gormConfig)
 	default:
-		return fmt.Errorf("unsupported database type: %s", dbType)
+		return fmt.Errorf("unsupported database type: %s (supported: sqlite, postgresql)", dbType)
 	}
 
 	if err != nil {

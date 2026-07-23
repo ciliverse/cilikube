@@ -2,8 +2,11 @@ package service
 
 import (
 	appsv1 "k8s.io/api/apps/v1"
+	autoscalingv2 "k8s.io/api/autoscaling/v2"
+	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
+	policyv1 "k8s.io/api/policy/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	storagev1 "k8s.io/api/storage/v1"
 )
@@ -16,6 +19,7 @@ type AppServices struct {
 
 	// [Added] Node metrics service
 	NodeMetricsService *NodeMetricsService
+	PodMetricsService  *PodMetricsService
 
 	// [Added] Summary service
 	SummaryService *SummaryService
@@ -48,14 +52,23 @@ type AppServices struct {
 	SecretService             ResourceService[*corev1.Secret]
 	PVCService                ResourceService[*corev1.PersistentVolumeClaim]
 	StatefulSetService        ResourceService[*appsv1.StatefulSet]
+	JobService                ResourceService[*batchv1.Job]
+	CronJobService            ResourceService[*batchv1.CronJob]
+	NetworkPolicyService      ResourceService[*networkingv1.NetworkPolicy]
 	StorageClassService       ResourceService[*storagev1.StorageClass]
 	ServiceAccountService     ResourceService[*corev1.ServiceAccount]
 	RoleResourceService       ResourceService[*rbacv1.Role]
 	RoleBindingService        ResourceService[*rbacv1.RoleBinding]
 	ClusterRoleService        ResourceService[*rbacv1.ClusterRole]
 	ClusterRoleBindingService ResourceService[*rbacv1.ClusterRoleBinding]
+	HPAService                ResourceService[*autoscalingv2.HorizontalPodAutoscaler]
+	PDBService                ResourceService[*policyv1.PodDisruptionBudget]
+	ResourceQuotaService      ResourceService[*corev1.ResourceQuota]
+	LimitRangeService         ResourceService[*corev1.LimitRange]
 
 	// Pod logs and terminal services
-	PodLogsService *PodLogsService
-	PodExecService *PodExecService
+	PodLogsService        *PodLogsService
+	PodExecService        *PodExecService
+	PodPortForwardService *PodPortForwardService
+	HelmService           *HelmService
 }

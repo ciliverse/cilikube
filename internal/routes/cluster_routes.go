@@ -11,15 +11,19 @@ func RegisterClusterRoutes(router *gin.RouterGroup, handler *handlers.ClusterHan
 	{
 		clusterRoutes.GET("", handler.ListClusters)
 		clusterRoutes.POST("", handler.CreateCluster)
-		clusterRoutes.GET("/:id", handler.GetCluster)
-		clusterRoutes.PUT("/:id", handler.UpdateCluster)
-		clusterRoutes.DELETE("/:id", handler.DeleteCluster)
 
-		// Active cluster API
+		// Static paths must be registered before /:id
+		clusterRoutes.GET("/local-contexts", handler.ListLocalKubeContexts)
+		clusterRoutes.POST("/import-local", handler.ImportLocalClusters)
+
 		activeRoutes := clusterRoutes.Group("/active")
 		{
 			activeRoutes.GET("", handler.GetActiveCluster)
 			activeRoutes.POST("", handler.SetActiveCluster)
 		}
+
+		clusterRoutes.GET("/:id", handler.GetCluster)
+		clusterRoutes.PUT("/:id", handler.UpdateCluster)
+		clusterRoutes.DELETE("/:id", handler.DeleteCluster)
 	}
 }

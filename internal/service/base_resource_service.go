@@ -2,7 +2,10 @@ package service
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
 
+	appsv1 "k8s.io/api/apps/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/watch"
@@ -74,21 +77,53 @@ func (s *BaseResourceService[T]) Update(clientset kubernetes.Interface, namespac
 
 // Patch patches resource (for partial updates like scaling)
 func (s *BaseResourceService[T]) Patch(clientset kubernetes.Interface, namespace, name string, current T, patchData map[string]interface{}) (T, error) {
-	// For now, we'll implement a simple patch by modifying the current object
-	// In a production environment, you might want to use strategic merge patch or JSON patch
+	obj := any(current)
 
-	// This is a simplified implementation - we'll update the current object and then call Update
-	// For deployment scaling, we expect patchData to contain spec.replicas
 	if spec, ok := patchData["spec"].(map[string]interface{}); ok {
-		if _, exists := spec["replicas"]; exists {
-			// This is a hack for deployment scaling - in a real implementation,
-			// you'd use proper reflection or type assertions based on the resource type
-			// For now, we'll just call Update with the modified object
+		if rawReplicas, exists := spec["replicas"]; exists {
+			replicas, convOK := toInt32(rawReplicas)
+			if !convOK {
+				var zero T
+				return zero, fmt.Errorf("invalid spec.replicas value: %v", rawReplicas)
+			}
+			switch v := obj.(type) {
+			case *appsv1.Deployment:
+				v.Spec.Replicas = &replicas
+			case *appsv1.StatefulSet:
+				v.Spec.Replicas = &replicas
+			case *appsv1.ReplicaSet:
+				v.Spec.Replicas = &replicas
+			default:
+				var zero T
+				return zero, fmt.Errorf("scaling not supported for resource type %T", current)
+			}
 		}
 	}
 
-	// For simplicity, we'll just call Update - this should be improved for production use
 	return s.Update(clientset, namespace, name, current)
+}
+
+func toInt32(v interface{}) (int32, bool) {
+	switch n := v.(type) {
+	case float64:
+		return int32(n), true
+	case float32:
+		return int32(n), true
+	case int:
+		return int32(n), true
+	case int32:
+		return n, true
+	case int64:
+		return int32(n), true
+	case json.Number:
+		i, err := n.Int64()
+		if err != nil {
+			return 0, false
+		}
+		return int32(i), true
+	default:
+		return 0, false
+	}
 }
 
 // Delete deletes resource

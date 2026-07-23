@@ -5,13 +5,14 @@
 </div>
 
 <div align="center">
-  <img src="https://img.shields.io/badge/Frontend-React-61DAFB?style=flat-square&logo=react" alt="React">
-  <img src="https://img.shields.io/badge/Frontend-TypeScript-blue?style=flat-square&logo=typescript" alt="TypeScript">
-  <img src="https://img.shields.io/badge/Frontend-Vite-blue?style=flat-square&logo=vite" alt="Vite">
-  <img src="https://img.shields.io/badge/Frontend-Tailwind-38BDF8?style=flat-square&logo=tailwindcss" alt="Tailwind">
-  <img src="https://img.shields.io/badge/Backend-Go-blue?style=flat-square&logo=go" alt="Go">
+  <img src="https://img.shields.io/badge/Release-v0.8.0-green?style=flat-square" alt="Release v0.8.0">
+  <img src="https://img.shields.io/badge/Frontend-React%2019-61DAFB?style=flat-square&logo=react" alt="React 19">
+  <img src="https://img.shields.io/badge/Frontend-TypeScript%207-blue?style=flat-square&logo=typescript" alt="TypeScript 7">
+  <img src="https://img.shields.io/badge/Frontend-Vite%208-blue?style=flat-square&logo=vite" alt="Vite 8">
+  <img src="https://img.shields.io/badge/Frontend-Tailwind%204-38BDF8?style=flat-square&logo=tailwindcss" alt="Tailwind 4">
+  <img src="https://img.shields.io/badge/Backend-Go%201.26+-blue?style=flat-square&logo=go" alt="Go 1.26+">
   <img src="https://img.shields.io/badge/Backend-Gin-blue?style=flat-square&logo=gin" alt="Gin">
-  <img src="https://img.shields.io/badge/1.34.0-Kubernetes-blue?style=flat-square&logo=kubernetes" alt="Kubernetes">
+  <img src="https://img.shields.io/badge/Kubernetes-1.36.2-blue?style=flat-square&logo=kubernetes" alt="Kubernetes 1.36.2">
   <img src="https://img.shields.io/badge/License-Apache%202.0-blue?style=flat-square" alt="License: Apache 2.0">
   <img src="https://img.shields.io/github/stars/ciliverse/cilikube?style=social" alt="GitHub Stars">
   <img src="https://img.shields.io/github/forks/ciliverse/cilikube?style=social" alt="GitHub Forks">
@@ -43,19 +44,31 @@ This project's CDN acceleration and security protection services are generously 
 
 CiliKube is an enterprise-grade, open-source Kubernetes multi-cluster management platform built with modern web technologies including React, TypeScript, Go, and Gin. The platform provides an intuitive, streamlined interface for comprehensive Kubernetes resource management while maintaining extensibility for custom requirements. CiliKube serves as an ideal foundation for organizations seeking efficient cluster operations and developers learning cloud-native technologies.
 
+### v0.8.0 React UI (current)
+
 <div align="center">
-  <img src="docs/cluster-overview2.png" alt="Cluster Overview" width="100%">
-  <p><strong>Cluster Overview 1</strong></p>
+  <img src="docs/v0.8/overview.png" alt="React Overview" width="100%">
+  <p><strong>Cluster Overview</strong></p>
 </div>
 
 <div align="center">
-  <img src="docs/cluster-overview1.png" alt="Cluster Overview 1" width="100%">
-  <p><strong>Cluster Overview 2</strong></p>
+  <img src="docs/v0.8/nodes.png" alt="React Nodes" width="100%">
+  <p><strong>Nodes</strong></p>
 </div>
 
 <div align="center">
-  <img src="docs/cluster-overview.png" alt="Cluster Overview 2" width="100%">
-  <p><strong>Cluster Overview 3</strong></p>
+  <img src="docs/v0.8/pods.png" alt="React Pods" width="100%">
+  <p><strong>Pods</strong></p>
+</div>
+
+<div align="center">
+  <img src="docs/v0.8/clusters.png" alt="React Clusters" width="100%">
+  <p><strong>Clusters</strong></p>
+</div>
+
+<div align="center">
+  <img src="docs/v0.8/login.png" alt="React Login" width="100%">
+  <p><strong>Sign In</strong></p>
 </div>
 
 
@@ -81,10 +94,10 @@ CiliKube emerged from a comprehensive full-stack development learning initiative
 
 ## 🌐 Online Demo
 
-- Online Demo: http://cilikubedemo.cillian.website
-- Demo Credentials:
-  - Username: admin
-  - Password: 12345678
+- Online Demo: https://cilikube.cillian.website
+- Demo Credentials (read-only viewer):
+  - Username: `guest`
+  - Password: `CiliKubeGuest2026!`
 
 ## 📚 Documentation
 
@@ -95,12 +108,13 @@ CiliKube emerged from a comprehensive full-stack development learning initiative
 CiliKube leverages industry-standard technologies and frameworks to ensure reliability, maintainability, and developer productivity.
 
 **System Requirements**:
-- Node.js >= 18.0.0 (Developed and tested with v22.14.0)
-- Go >= 1.20 (Developed and tested with v1.24.2)
-- PNPM >= 8.x (Package management)
+- Node.js >= 20.0.0 (Developed and tested with v24.14.1)
+- Go >= 1.26.0 (Developed and tested with v1.26.4)
+- PNPM >= 10.x (Package management)
+- Kubernetes / kubectl 1.36.2 (client-go aligned)
 
 **Frontend Architecture**: 
-- **Core**: `React 19` `TypeScript` `Vite` `Tailwind CSS`
+- **Core**: `React 19` `TypeScript 7` `Vite 8` `Tailwind CSS 4`
 - **Data / Routing**: `TanStack Query` `React Router`
 - **Motion / Charts**: `Framer Motion` `Recharts`
 - **HTTP Client**: `Axios`
@@ -226,27 +240,27 @@ Visit http://localhost to access the interface.
 ### Environment Preparation
 - Install Helm (>=3.0)
 - Have a Kubernetes cluster and configure the kubeconfig file
-- Install kubectl (>=1.20)
+- Install kubectl (>=1.36.2)
 
 ### Deployment Steps
 ```bash
 # Add Helm repository
-helm repo add cilikube https://charts.cillian.website
+helm repo add ciliverse https://charts.cillian.website
 
 # Update Helm repository
 helm repo update
 
 # Install CiliKube
-helm install cilikube cilikube/cilikube -n cilikube --create-namespace
+helm install cilikube ciliverse/cilikube -n cilikube --create-namespace
 
 # Check service status
 kubectl get svc cilikube -n cilikube
 ```
 
-## 🎨 Feature Preview
+## 🎨 Previous UI (Vue)
 
 <details>
-<summary>Click to view screenshots</summary>
+<summary>Click to view historical Vue screenshots</summary>
 
 <table>
   <tr>

@@ -7,6 +7,8 @@ import {
 } from '@/api/cluster'
 import { useCluster } from '@/store/cluster'
 import { Badge, Card, EmptyState, PageHeader, StatCard } from '@/components/ui'
+import { HudTable, HudTableScroll } from '@/components/HudTableScroll'
+import { PromTimeChart } from '@/components/PromTimeChart'
 import { formatPercent } from '@/lib/utils'
 
 export function MonitoringPage() {
@@ -34,7 +36,7 @@ export function MonitoringPage() {
   const nodes = metricsQ.data?.nodes || []
 
   return (
-    <div>
+    <div className="flex w-full min-w-0 flex-col gap-4">
       <PageHeader
         title="MONITORING"
         subtitle="Security posture, Prometheus health, and node telemetry"
@@ -45,7 +47,7 @@ export function MonitoringPage() {
         }
       />
 
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+      <div className="grid w-full grid-cols-2 gap-4 lg:grid-cols-4">
         {[
           { label: 'Active sessions', value: summary?.active_sessions ?? '-' },
           { label: 'Active users', value: summary?.active_users ?? '-' },
@@ -54,6 +56,7 @@ export function MonitoringPage() {
         ].map((card, index) => (
           <motion.div
             key={card.label}
+            className="min-w-0"
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: index * 0.05 }}
@@ -63,9 +66,38 @@ export function MonitoringPage() {
         ))}
       </div>
 
-      <div className="mt-4 grid gap-4 xl:grid-cols-2">
-        <Card className="p-5">
-          <h2 className="font-display text-lg font-bold tracking-[0.12em]">PROMETHEUS</h2>
+      <div className="grid w-full gap-4 lg:grid-cols-2">
+        <Card className="min-w-0 p-5">
+          <div className="mb-2 flex items-center justify-between">
+            <h2 className="font-display text-lg font-bold tracking-[0.12em]">CLUSTER CPU (1h)</h2>
+            <Badge tone="neutral">time axis</Badge>
+          </div>
+          <p className="mb-3 text-xs text-text-dim">
+            Prometheus query_range · endpoint {prom?.url || 'not configured'}
+          </p>
+          <PromTimeChart
+            query={'sum(rate(container_cpu_usage_seconds_total{container!="",container!="POD"}[5m]))'}
+            hours={1}
+            yFormatter={(v) => `${v.toFixed(2)} cores`}
+          />
+        </Card>
+        <Card className="min-w-0 p-5">
+          <div className="mb-2 flex items-center justify-between">
+            <h2 className="font-display text-lg font-bold tracking-[0.12em]">CLUSTER MEMORY (1h)</h2>
+            <Badge tone="neutral">time axis</Badge>
+          </div>
+          <PromTimeChart
+            query={'sum(container_memory_working_set_bytes{container!="",container!="POD"}) / 1024 / 1024 / 1024'}
+            hours={1}
+            color="#ffae00"
+            yFormatter={(v) => `${v.toFixed(1)} GiB`}
+          />
+        </Card>
+      </div>
+
+      <div className="grid w-full gap-4 lg:grid-cols-[minmax(0,1.7fr)_minmax(0,1fr)]">
+        <Card className="min-w-0 p-5">
+          <h2 className="font-display text-lg font-bold tracking-[0.12em]">PROMETHEUS STATUS</h2>
           <p className="mt-1 text-sm text-text-dim">
             Endpoint: {prom?.url || 'not configured'}
           </p>
@@ -75,16 +107,13 @@ export function MonitoringPage() {
             </div>
           ) : (
             <div className="mt-3 text-sm text-text-dim">
-              Configure `prometheus.enabled` and `prometheus.url` in backend config to enable
-              PromQL queries.
+              Time-series charts above require a healthy Prometheus. Snapshot node table below uses
+              metrics-server.
             </div>
           )}
-          <div className="mt-4 rounded border border-line bg-mist px-3 py-2 font-mono text-xs text-text-dim">
-            GET /api/v1/prometheus/query?query=up
-          </div>
         </Card>
 
-        <Card className="p-5">
+        <Card className="min-w-0 p-5">
           <h2 className="font-display text-lg font-bold tracking-[0.12em]">SECURITY HEALTH</h2>
           <div className="mt-3 space-y-2">
             <div className="flex justify-between text-sm">
@@ -109,12 +138,22 @@ export function MonitoringPage() {
         </Card>
       </div>
 
-      <Card className="mt-4 overflow-hidden">
+      <Card className="w-full min-w-0 overflow-hidden">
         <div className="border-b border-line px-5 py-4">
-          <h2 className="font-display text-lg font-bold tracking-[0.12em]">NODE TELEMETRY</h2>
+          <h2 className="font-display text-lg font-bold tracking-[0.12em]">NODE RESOURCE USAGE</h2>
+          <p className="mt-1 text-sm text-text-dim">
+            Point-in-time metrics-server snapshot (CPU / memory / requests)
+          </p>
         </div>
-        <div className="overflow-x-auto">
-          <table className="hud-table">
+        <HudTableScroll>
+          <HudTable className="table-fixed">
+            <colgroup>
+              <col className="w-[40%]" />
+              <col className="w-[15%]" />
+              <col className="w-[15%]" />
+              <col className="w-[15%]" />
+              <col className="w-[15%]" />
+            </colgroup>
             <thead>
               <tr>
                 <th>Node</th>
@@ -127,7 +166,9 @@ export function MonitoringPage() {
             <tbody>
               {nodes.map((n: any) => (
                 <tr key={n.nodeName}>
-                  <td className="font-semibold text-cyan">{n.nodeName}</td>
+                  <td className="truncate font-semibold text-cyan" title={n.nodeName}>
+                    {n.nodeName}
+                  </td>
                   <td>{formatPercent(n.cpuPercent)}</td>
                   <td>{formatPercent(n.memoryPercent)}</td>
                   <td>{n.cpuRequestsPercent || '-'}</td>
@@ -142,8 +183,8 @@ export function MonitoringPage() {
                 </tr>
               ) : null}
             </tbody>
-          </table>
-        </div>
+          </HudTable>
+        </HudTableScroll>
       </Card>
     </div>
   )

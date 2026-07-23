@@ -23,9 +23,10 @@ func InitializeServices(k8sManager *k8s.ClusterManager, store store.Store, cfg *
 	authService := service.NewAuthService(store, cfg)
 	auditService := service.NewAuditService(store, cfg)
 	appServices := &service.AppServices{
-		ClusterService:     service.NewClusterService(k8sManager),
+		ClusterService:     service.NewClusterService(k8sManager, cfg.Kubernetes.Kubeconfig),
 		InstallerService:   service.NewInstallerService(cfg),
 		NodeMetricsService: service.NewNodeMetricsService(),
+		PodMetricsService:  service.NewPodMetricsService(),
 		PodLogsService:     service.NewPodLogsService(),
 		SummaryService:     service.NewSummaryService(),
 		EventService:       service.NewEventService(k8sManager),
@@ -37,12 +38,10 @@ func InitializeServices(k8sManager *k8s.ClusterManager, store store.Store, cfg *
 		MonitoringService:  service.NewMonitoringService(store, cfg, auditService),
 		PrometheusService:  service.NewPrometheusService(cfg),
 	}
-	// PodExecService requires rest.Config
-	if activeClient, err := k8sManager.GetActiveClient(); err == nil && activeClient != nil {
-		appServices.PodExecService = service.NewPodExecService(activeClient.Config)
-	} else {
-		appServices.PodExecService = nil // or can panic/log
-	}
+	// PodExecService uses per-request rest.Config (multi-cluster safe)
+	appServices.PodExecService = service.NewPodExecService()
+	appServices.PodPortForwardService = service.NewPodPortForwardService()
+	appServices.HelmService = service.NewHelmService(k8sManager)
 	initializeResourceService(resourceFactory, "nodes", &appServices.NodeService)
 	initializeResourceService(resourceFactory, "pods", &appServices.PodService)
 	initializeResourceService(resourceFactory, "deployments", &appServices.DeploymentService)
@@ -54,6 +53,9 @@ func InitializeServices(k8sManager *k8s.ClusterManager, store store.Store, cfg *
 	initializeResourceService(resourceFactory, "persistentvolumeclaims", &appServices.PVCService)
 	initializeResourceService(resourceFactory, "persistentvolumes", &appServices.PVService)
 	initializeResourceService(resourceFactory, "statefulsets", &appServices.StatefulSetService)
+	initializeResourceService(resourceFactory, "jobs", &appServices.JobService)
+	initializeResourceService(resourceFactory, "cronjobs", &appServices.CronJobService)
+	initializeResourceService(resourceFactory, "networkpolicies", &appServices.NetworkPolicyService)
 	initializeResourceService(resourceFactory, "namespaces", &appServices.NamespaceService)
 	initializeResourceService(resourceFactory, "storageclasses", &appServices.StorageClassService)
 	initializeResourceService(resourceFactory, "serviceaccounts", &appServices.ServiceAccountService)
@@ -61,6 +63,10 @@ func InitializeServices(k8sManager *k8s.ClusterManager, store store.Store, cfg *
 	initializeResourceService(resourceFactory, "rolebindings", &appServices.RoleBindingService)
 	initializeResourceService(resourceFactory, "clusterroles", &appServices.ClusterRoleService)
 	initializeResourceService(resourceFactory, "clusterrolebindings", &appServices.ClusterRoleBindingService)
+	initializeResourceService(resourceFactory, "horizontalpodautoscalers", &appServices.HPAService)
+	initializeResourceService(resourceFactory, "poddisruptionbudgets", &appServices.PDBService)
+	initializeResourceService(resourceFactory, "resourcequotas", &appServices.ResourceQuotaService)
+	initializeResourceService(resourceFactory, "limitranges", &appServices.LimitRangeService)
 	return appServices
 }
 
@@ -99,6 +105,18 @@ func InitializeHandlers(router *gin.RouterGroup, services *service.AppServices, 
 	// --- Register monitoring / prometheus / informer routes ---
 	routes.RegisterMonitoringRoutes(router, services.MonitoringService, services.PrometheusService, k8sManager)
 
+	// --- Audit log APIs (admin) ---
+	if services.AuditService != nil {
+		auditHandler := handlers.NewAuditHandler(services.AuditService)
+		auditGroup := router.Group("/audit")
+		auditGroup.Use(auth.AdminRequiredMiddleware())
+		{
+			auditGroup.GET("/logs", auditHandler.GetAuditLogs)
+			auditGroup.GET("/report", auditHandler.GetAuditReport)
+			auditGroup.GET("/metrics", auditHandler.GetSecurityMetrics)
+		}
+	}
+
 	// --- 2. Create Handler instances for all resources ---
 	nodesHandler := handlers.NewResourceHandler(services.NodeService, k8sManager, "nodes")
 	pvHandler := handlers.NewResourceHandler(services.PVService, k8sManager, "persistentvolumes")
@@ -112,6 +130,9 @@ func InitializeHandlers(router *gin.RouterGroup, services *service.AppServices, 
 	secretsHandler := handlers.NewResourceHandler(services.SecretService, k8sManager, "secrets")
 	pvcHandler := handlers.NewResourceHandler(services.PVCService, k8sManager, "persistentvolumeclaims")
 	statefulsetsHandler := handlers.NewResourceHandler(services.StatefulSetService, k8sManager, "statefulsets")
+	jobsHandler := handlers.NewResourceHandler(services.JobService, k8sManager, "jobs")
+	cronJobsHandler := handlers.NewResourceHandler(services.CronJobService, k8sManager, "cronjobs")
+	networkPoliciesHandler := handlers.NewResourceHandler(services.NetworkPolicyService, k8sManager, "networkpolicies")
 	storageClassHandler := handlers.NewResourceHandler(services.StorageClassService, k8sManager, "storageclasses")
 	serviceAccountHandler := handlers.NewResourceHandler(services.ServiceAccountService, k8sManager, "serviceaccounts")
 	k8sRoleHandler := handlers.NewResourceHandler(services.RoleResourceService, k8sManager, "roles")
@@ -119,10 +140,17 @@ func InitializeHandlers(router *gin.RouterGroup, services *service.AppServices, 
 	clusterRoleHandler := handlers.NewResourceHandler(services.ClusterRoleService, k8sManager, "clusterroles")
 	clusterRoleBindingHandler := handlers.NewResourceHandler(services.ClusterRoleBindingService, k8sManager, "clusterrolebindings")
 	nodeMetricsHandler := handlers.NewNodeMetricsHandler(services.NodeMetricsService, k8sManager)
+	podMetricsHandler := handlers.NewPodMetricsHandler(services.PodMetricsService, k8sManager)
 
 	// Pod logs and terminal Handler
 	podLogsHandler := handlers.NewPodLogsHandler(services.PodLogsService, k8sManager)
 	podExecHandler := handlers.NewPodExecHandler(services.PodExecService, k8sManager)
+	podPortForwardHandler := handlers.NewPodPortForwardHandler(services.PodPortForwardService, k8sManager)
+	hpaHandler := handlers.NewResourceHandler(services.HPAService, k8sManager, "horizontalpodautoscalers")
+	pdbHandler := handlers.NewResourceHandler(services.PDBService, k8sManager, "poddisruptionbudgets")
+	resourceQuotaHandler := handlers.NewResourceHandler(services.ResourceQuotaService, k8sManager, "resourcequotas")
+	limitRangeHandler := handlers.NewResourceHandler(services.LimitRangeService, k8sManager, "limitranges")
+	helmHandler := handlers.NewHelmHandler(services.HelmService, k8sManager)
 
 	// a. Cluster-scoped resources
 	nodesRoutes := router.Group("/nodes")
@@ -157,9 +185,39 @@ func InitializeHandlers(router *gin.RouterGroup, services *service.AppServices, 
 	registerClusterScopedResource(router, "clusterroles", clusterRoleHandler)
 	registerClusterScopedResource(router, "clusterrolebindings", clusterRoleBindingHandler)
 
-	podsTopLevelRoutes := router.Group("/pods")
+	// Cluster-wide list (all namespaces) — empty namespace in client-go lists all.
+	// Used by UI "All namespaces" selector. Create/Get/Update remain under /namespaces/:ns/...
+	// Pod metrics must be registered before /pods/:name style routes
+	router.GET("/pods/metrics", podMetricsHandler.ListPodMetrics)
+	registerNamespacedResourceClusterList(router, "pods", podsHandler)
+	registerNamespacedResourceClusterList(router, "deployments", deploymentsHandler)
+	registerNamespacedResourceClusterList(router, "services", servicesHandler)
+	registerNamespacedResourceClusterList(router, "daemonsets", daemonsetsHandler)
+	registerNamespacedResourceClusterList(router, "ingresses", ingressesHandler)
+	registerNamespacedResourceClusterList(router, "configmaps", configmapsHandler)
+	registerNamespacedResourceClusterList(router, "secrets", secretsHandler)
+	registerNamespacedResourceClusterList(router, "persistentvolumeclaims", pvcHandler)
+	registerNamespacedResourceClusterList(router, "statefulsets", statefulsetsHandler)
+	registerNamespacedResourceClusterList(router, "jobs", jobsHandler)
+	registerNamespacedResourceClusterList(router, "cronjobs", cronJobsHandler)
+	registerNamespacedResourceClusterList(router, "networkpolicies", networkPoliciesHandler)
+	registerNamespacedResourceClusterList(router, "serviceaccounts", serviceAccountHandler)
+	registerNamespacedResourceClusterList(router, "roles", k8sRoleHandler)
+	registerNamespacedResourceClusterList(router, "rolebindings", roleBindingHandler)
+	registerNamespacedResourceClusterList(router, "horizontalpodautoscalers", hpaHandler)
+	registerNamespacedResourceClusterList(router, "poddisruptionbudgets", pdbHandler)
+	registerNamespacedResourceClusterList(router, "resourcequotas", resourceQuotaHandler)
+	registerNamespacedResourceClusterList(router, "limitranges", limitRangeHandler)
+
+	// Helm releases (requires helm CLI on API host)
+	helmRoutes := router.Group("/helm")
 	{
-		podsTopLevelRoutes.GET("", podsHandler.List)
+		helmRoutes.GET("/releases", helmHandler.ListReleases)
+		helmRoutes.GET("/releases/:namespace/:name", helmHandler.GetRelease)
+		helmRoutes.POST("/releases", helmHandler.InstallRelease)
+		helmRoutes.PUT("/releases/:namespace/:name", helmHandler.UpgradeRelease)
+		helmRoutes.POST("/releases/:namespace/:name/rollback", helmHandler.RollbackRelease)
+		helmRoutes.DELETE("/releases/:namespace/:name", helmHandler.UninstallRelease)
 	}
 
 	// b. Namespace resources themselves, and all resources nested under them
@@ -185,15 +243,24 @@ func InitializeHandlers(router *gin.RouterGroup, services *service.AppServices, 
 			registerResourceInNamespace(nsMemberRoutes, "secrets", secretsHandler)
 			registerResourceInNamespace(nsMemberRoutes, "persistentvolumeclaims", pvcHandler)
 			registerResourceInNamespace(nsMemberRoutes, "statefulsets", statefulsetsHandler)
+			registerResourceInNamespace(nsMemberRoutes, "jobs", jobsHandler)
+			registerResourceInNamespace(nsMemberRoutes, "cronjobs", cronJobsHandler)
+			registerResourceInNamespace(nsMemberRoutes, "networkpolicies", networkPoliciesHandler)
 			registerResourceInNamespace(nsMemberRoutes, "serviceaccounts", serviceAccountHandler)
 			registerResourceInNamespace(nsMemberRoutes, "roles", k8sRoleHandler)
 			registerResourceInNamespace(nsMemberRoutes, "rolebindings", roleBindingHandler)
+			registerResourceInNamespace(nsMemberRoutes, "horizontalpodautoscalers", hpaHandler)
+			registerResourceInNamespace(nsMemberRoutes, "poddisruptionbudgets", pdbHandler)
+			registerResourceInNamespace(nsMemberRoutes, "resourcequotas", resourceQuotaHandler)
+			registerResourceInNamespace(nsMemberRoutes, "limitranges", limitRangeHandler)
 
-			// New: Pod logs and terminal routes
+			// Pod logs, terminal, attach, port-forward
 			podsMemberRoutes := nsMemberRoutes.Group("/pods/:name")
 			{
 				podsMemberRoutes.GET("/logs", podLogsHandler.GetPodLogs)
 				podsMemberRoutes.GET("/exec", podExecHandler.ExecPod)
+				podsMemberRoutes.GET("/attach", podExecHandler.AttachPod)
+				podsMemberRoutes.GET("/portforward", podPortForwardHandler.PortForward)
 			}
 		}
 	}
@@ -212,6 +279,14 @@ func registerClusterScopedResource[T runtime.Object](router *gin.RouterGroup, re
 		routes.DELETE("/:name", handler.Delete)
 		routes.GET("/:name/watch", handler.Watch)
 	}
+}
+
+// registerNamespacedResourceClusterList exposes GET /api/v1/<resource> for all-namespaces listing.
+func registerNamespacedResourceClusterList[T runtime.Object](router *gin.RouterGroup, resourceName string, handler *handlers.ResourceHandler[T]) {
+	if handler == nil {
+		return
+	}
+	router.Group("/" + resourceName).GET("", handler.List)
 }
 
 func registerResourceInNamespace[T runtime.Object](nsRouter *gin.RouterGroup, resourceName string, handler *handlers.ResourceHandler[T]) {

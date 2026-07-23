@@ -33,3 +33,11 @@ cmd/server/server
 *.db
 *.db-shm
 *.db-wal
+# Production secrets / host kubeconfig (never commit)
+.env
+.env.*
+!.env.example
+configs/config.prod.yaml
+/readonly.kubeconfig
+*.kubeconfig
+

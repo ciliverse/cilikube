@@ -4,8 +4,11 @@ import (
 	"sync"
 
 	appsv1 "k8s.io/api/apps/v1"
+	autoscalingv2 "k8s.io/api/autoscaling/v2"
+	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
+	policyv1 "k8s.io/api/policy/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	storagev1 "k8s.io/api/storage/v1"
 )
@@ -50,6 +53,9 @@ func (f *ResourceServiceFactory) InitializeDefaultServices() {
 	f.RegisterService("persistentvolumeclaims", NewBaseResourceService[*corev1.PersistentVolumeClaim](new(PVCClient)))
 	f.RegisterService("persistentvolumes", NewBaseResourceService[*corev1.PersistentVolume](new(PVClient)))
 	f.RegisterService("statefulsets", NewBaseResourceService[*appsv1.StatefulSet](new(StatefulSetClient)))
+	f.RegisterService("jobs", NewBaseResourceService[*batchv1.Job](new(JobClient)))
+	f.RegisterService("cronjobs", NewBaseResourceService[*batchv1.CronJob](new(CronJobClient)))
+	f.RegisterService("networkpolicies", NewBaseResourceService[*networkingv1.NetworkPolicy](new(NetworkPolicyClient)))
 	f.RegisterService("namespaces", NewBaseResourceService[*corev1.Namespace](new(NamespaceClient)))
 	f.RegisterService("storageclasses", NewBaseResourceService[*storagev1.StorageClass](new(StorageClassClient)))
 	f.RegisterService("serviceaccounts", NewBaseResourceService[*corev1.ServiceAccount](new(ServiceAccountClient)))
@@ -57,4 +63,8 @@ func (f *ResourceServiceFactory) InitializeDefaultServices() {
 	f.RegisterService("rolebindings", NewBaseResourceService[*rbacv1.RoleBinding](new(RoleBindingClient)))
 	f.RegisterService("clusterroles", NewBaseResourceService[*rbacv1.ClusterRole](new(ClusterRoleClient)))
 	f.RegisterService("clusterrolebindings", NewBaseResourceService[*rbacv1.ClusterRoleBinding](new(ClusterRoleBindingClient)))
+	f.RegisterService("horizontalpodautoscalers", NewBaseResourceService[*autoscalingv2.HorizontalPodAutoscaler](new(HPAClient)))
+	f.RegisterService("poddisruptionbudgets", NewBaseResourceService[*policyv1.PodDisruptionBudget](new(PDBClient)))
+	f.RegisterService("resourcequotas", NewBaseResourceService[*corev1.ResourceQuota](new(ResourceQuotaClient)))
+	f.RegisterService("limitranges", NewBaseResourceService[*corev1.LimitRange](new(LimitRangeClient)))
 }

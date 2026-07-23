@@ -22,48 +22,143 @@ func NewPermissionService(store store.Store, enforcer *casbin.Enforcer) *Permiss
 	}
 }
 
-// InitializeDefaultPolicies initializes default RBAC policies for the system
-func (s *PermissionService) InitializeDefaultPolicies() error {
-	if s.enforcer == nil {
-		log.Println("Casbin enforcer not available, skipping policy initialization")
-		return nil
+type rolePolicy struct {
+	role   string
+	object string
+	action string
+}
+
+// namespacedResourcePolicies builds cluster-list + namespaced CRUD path policies.
+// Uses :param segments (keyMatch2) so /namespaces/:ns does not grant nested pod exec/secrets.
+func namespacedResourcePolicies(role, resource, action string) []rolePolicy {
+	base := "/api/v1/" + resource
+	ns := "/api/v1/namespaces/:ns/" + resource
+	return []rolePolicy{
+		{role, base, action},
+		{role, base + "/:name", action},
+		{role, ns, action},
+		{role, ns + "/:name", action},
+		{role, ns + "/:name/watch", "GET"},
+	}
+}
+
+// systemViewerPolicies is the authoritative read-only role for public guest accounts.
+// Intentionally omits: secrets, proxy, exec, attach, portforward, admin, cluster writes.
+func systemViewerPolicies() []rolePolicy {
+	p := []rolePolicy{
+		{"viewer", "/api/v1/namespaces", "GET"},
+		{"viewer", "/api/v1/namespaces/:ns", "GET"},
+
+		{"viewer", "/api/v1/pods/metrics", "GET"},
+		{"viewer", "/api/v1/namespaces/:ns/pods/:name/logs", "GET"},
+
+		{"viewer", "/api/v1/nodes", "GET"},
+		{"viewer", "/api/v1/nodes/:name", "GET"},
+		{"viewer", "/api/v1/nodes/metrics", "GET"},
+
+		{"viewer", "/api/v1/events", "GET"},
+		{"viewer", "/api/v1/events/:name", "GET"},
+		{"viewer", "/api/v1/events/object/:kind/:name", "GET"},
+
+		{"viewer", "/api/v1/summary/:name", "GET"},
+		{"viewer", "/api/v1/summary/resources", "GET"},
+
+		{"viewer", "/api/v1/persistentvolumes", "GET"},
+		{"viewer", "/api/v1/persistentvolumes/:name", "GET"},
+		{"viewer", "/api/v1/storageclasses", "GET"},
+		{"viewer", "/api/v1/storageclasses/:name", "GET"},
+		{"viewer", "/api/v1/clusterroles", "GET"},
+		{"viewer", "/api/v1/clusterroles/:name", "GET"},
+		{"viewer", "/api/v1/clusterrolebindings", "GET"},
+		{"viewer", "/api/v1/clusterrolebindings/:name", "GET"},
+		{"viewer", "/api/v1/crds", "GET"},
+		{"viewer", "/api/v1/crds/:name", "GET"},
+
+		{"viewer", "/api/v1/helm/releases", "GET"},
+		{"viewer", "/api/v1/helm/releases/:namespace/:name", "GET"},
+
+		{"viewer", "/api/v1/informers/:name", "GET"},
+		{"viewer", "/api/v1/monitoring/:name", "GET"},
+		{"viewer", "/api/v1/monitoring/dashboard", "GET"},
+		{"viewer", "/api/v1/prometheus/:name", "GET"},
+		{"viewer", "/api/v1/prometheus/status", "GET"},
+		{"viewer", "/api/v1/prometheus/query", "GET"},
+		{"viewer", "/api/v1/prometheus/query_range", "GET"},
+
+		{"viewer", "/api/v1/clusters", "GET"},
+		{"viewer", "/api/v1/clusters/:id", "GET"},
+
+		{"viewer", "/api/v1/auth/profile", "GET"},
+		{"viewer", "/api/v1/auth/profile", "PUT"},
+		{"viewer", "/api/v1/auth/password", "PUT"},
+		{"viewer", "/api/v1/auth/change-password", "POST"},
+		{"viewer", "/api/v1/auth/refresh", "POST"},
+		{"viewer", "/api/v1/auth/logout", "POST"},
+		{"viewer", "/api/v1/profile", "GET"},
+		{"viewer", "/api/v1/profile", "PUT"},
+		{"viewer", "/api/v1/profile/:name", "GET"},
 	}
 
-	// Define default policies for each role
-	defaultPolicies := []struct {
-		role   string
-		object string
-		action string
-	}{
-		// Admin role - full access
-		{"admin", "/api/v1/*", "*"},
-		{"admin", "/api/v1/auth/*", "*"},
-		{"admin", "/api/v1/roles/*", "*"},
-		{"admin", "/api/v1/users/*", "*"},
-		{"admin", "/api/v1/clusters/*", "*"},
+	readResources := []string{
+		"pods", "deployments", "statefulsets", "daemonsets", "jobs", "cronjobs",
+		"services", "configmaps", "serviceaccounts", "persistentvolumeclaims",
+		"ingresses", "networkpolicies", "horizontalpodautoscalers",
+		"poddisruptionbudgets", "resourcequotas", "limitranges",
+		"roles", "rolebindings",
+	}
+	for _, res := range readResources {
+		p = append(p, namespacedResourcePolicies("viewer", res, "GET")...)
+	}
+	return p
+}
 
-		// Editor role - read/write access to most resources, but not user/role management
-		{"editor", "/api/v1/namespaces/*", "*"},
-		{"editor", "/api/v1/pods/*", "*"},
-		{"editor", "/api/v1/deployments/*", "*"},
-		{"editor", "/api/v1/services/*", "*"},
-		{"editor", "/api/v1/configmaps/*", "*"},
-		{"editor", "/api/v1/secrets/*", "*"},
-		{"editor", "/api/v1/persistentvolumes/*", "*"},
-		{"editor", "/api/v1/persistentvolumeclaims/*", "*"},
-		{"editor", "/api/v1/ingresses/*", "*"},
-		{"editor", "/api/v1/nodes/*", "GET"},
-		{"editor", "/api/v1/events/*", "GET"},
-		{"editor", "/api/v1/summary/*", "GET"},
-		{"editor", "/api/v1/storageclasses/*", "*"},
-		{"editor", "/api/v1/clusterroles/*", "GET"},
-		{"editor", "/api/v1/clusterrolebindings/*", "GET"},
-		{"editor", "/api/v1/crds/*", "*"},
+func systemEditorPolicies() []rolePolicy {
+	p := []rolePolicy{
+		{"editor", "/api/v1/namespaces", "*"},
+		{"editor", "/api/v1/namespaces/:ns", "*"},
+
+		{"editor", "/api/v1/pods/metrics", "GET"},
+		{"editor", "/api/v1/namespaces/:ns/pods/:name/logs", "GET"},
+		{"editor", "/api/v1/namespaces/:ns/pods/:name/exec", "*"},
+		{"editor", "/api/v1/namespaces/:ns/pods/:name/attach", "*"},
+		{"editor", "/api/v1/namespaces/:ns/pods/:name/portforward", "*"},
+
+		{"editor", "/api/v1/nodes", "GET"},
+		{"editor", "/api/v1/nodes/:name", "GET"},
+		{"editor", "/api/v1/nodes/metrics", "GET"},
+
+		{"editor", "/api/v1/events", "GET"},
+		{"editor", "/api/v1/events/:name", "GET"},
+		{"editor", "/api/v1/events/object/:kind/:name", "GET"},
+
+		{"editor", "/api/v1/summary/:name", "GET"},
+		{"editor", "/api/v1/summary/resources", "GET"},
+
+		{"editor", "/api/v1/persistentvolumes", "*"},
+		{"editor", "/api/v1/persistentvolumes/:name", "*"},
+		{"editor", "/api/v1/storageclasses", "*"},
+		{"editor", "/api/v1/storageclasses/:name", "*"},
+		{"editor", "/api/v1/clusterroles", "GET"},
+		{"editor", "/api/v1/clusterroles/:name", "GET"},
+		{"editor", "/api/v1/clusterrolebindings", "GET"},
+		{"editor", "/api/v1/clusterrolebindings/:name", "GET"},
+		{"editor", "/api/v1/crds", "*"},
+		{"editor", "/api/v1/crds/:name", "*"},
+
+		{"editor", "/api/v1/helm/*", "*"},
+
 		{"editor", "/api/v1/proxy/*", "*"},
-		{"editor", "/api/v1/informers/*", "GET"},
-		{"editor", "/api/v1/monitoring/*", "GET"},
-		{"editor", "/api/v1/prometheus/*", "GET"},
-		{"editor", "/api/v1/clusters/*", "*"},
+		{"editor", "/api/v1/informers/:name", "GET"},
+		{"editor", "/api/v1/monitoring/:name", "GET"},
+		{"editor", "/api/v1/monitoring/dashboard", "GET"},
+		{"editor", "/api/v1/prometheus/:name", "GET"},
+		{"editor", "/api/v1/prometheus/status", "GET"},
+		{"editor", "/api/v1/prometheus/query", "GET"},
+		{"editor", "/api/v1/prometheus/query_range", "GET"},
+
+		{"editor", "/api/v1/clusters", "GET"},
+		{"editor", "/api/v1/clusters/:id", "GET"},
+
 		{"editor", "/api/v1/auth/profile", "GET"},
 		{"editor", "/api/v1/auth/profile", "PUT"},
 		{"editor", "/api/v1/auth/profile/*", "*"},
@@ -71,54 +166,70 @@ func (s *PermissionService) InitializeDefaultPolicies() error {
 		{"editor", "/api/v1/auth/change-password", "POST"},
 		{"editor", "/api/v1/auth/refresh", "POST"},
 		{"editor", "/api/v1/auth/logout", "POST"},
-		{"editor", "/api/v1/profile/*", "*"},
-
-		// Viewer role - read-only access
-		{"viewer", "/api/v1/namespaces/*", "GET"},
-		{"viewer", "/api/v1/pods/*", "GET"},
-		{"viewer", "/api/v1/deployments/*", "GET"},
-		{"viewer", "/api/v1/services/*", "GET"},
-		{"viewer", "/api/v1/configmaps/*", "GET"},
-		{"viewer", "/api/v1/secrets/*", "GET"},
-		{"viewer", "/api/v1/persistentvolumes/*", "GET"},
-		{"viewer", "/api/v1/persistentvolumeclaims/*", "GET"},
-		{"viewer", "/api/v1/ingresses/*", "GET"},
-		{"viewer", "/api/v1/nodes/*", "GET"},
-		{"viewer", "/api/v1/events/*", "GET"},
-		{"viewer", "/api/v1/summary/*", "GET"},
-		{"viewer", "/api/v1/storageclasses/*", "GET"},
-		{"viewer", "/api/v1/clusterroles/*", "GET"},
-		{"viewer", "/api/v1/clusterrolebindings/*", "GET"},
-		{"viewer", "/api/v1/crds/*", "GET"},
-		{"viewer", "/api/v1/informers/*", "GET"},
-		{"viewer", "/api/v1/monitoring/*", "GET"},
-		{"viewer", "/api/v1/prometheus/*", "GET"},
-		{"viewer", "/api/v1/clusters/*", "GET"},
-		{"viewer", "/api/v1/auth/profile", "GET"},
-		{"viewer", "/api/v1/auth/profile", "PUT"},
-		{"viewer", "/api/v1/auth/profile/*", "GET"},
-		{"viewer", "/api/v1/auth/password", "PUT"},
-		{"viewer", "/api/v1/auth/change-password", "POST"},
-		{"viewer", "/api/v1/auth/refresh", "POST"},
-		{"viewer", "/api/v1/auth/logout", "POST"},
-		{"viewer", "/api/v1/profile/*", "GET"},
-		{"viewer", "/api/v1/profile", "GET"},
-		{"viewer", "/api/v1/profile", "PUT"},
+		{"editor", "/api/v1/profile", "*"},
+		{"editor", "/api/v1/profile/:name", "*"},
 	}
 
-	// Add policies if they don't exist
+	writeResources := []string{
+		"pods", "deployments", "statefulsets", "daemonsets", "jobs", "cronjobs",
+		"services", "configmaps", "serviceaccounts", "persistentvolumeclaims",
+		"ingresses", "networkpolicies", "horizontalpodautoscalers",
+		"poddisruptionbudgets", "resourcequotas", "limitranges",
+	}
+	for _, res := range writeResources {
+		p = append(p, namespacedResourcePolicies("editor", res, "*")...)
+	}
+	// Secrets: read-only for editor (no write via broad namespace grant)
+	p = append(p, namespacedResourcePolicies("editor", "secrets", "GET")...)
+	// RBAC objects: read-only
+	p = append(p, namespacedResourcePolicies("editor", "roles", "GET")...)
+	p = append(p, namespacedResourcePolicies("editor", "rolebindings", "GET")...)
+	return p
+}
+
+// InitializeDefaultPolicies initializes default RBAC policies for the system.
+// Viewer/editor policies are fully replaced on each startup so security fixes apply
+// to existing databases (add-if-missing alone cannot revoke over-broad rules).
+func (s *PermissionService) InitializeDefaultPolicies() error {
+	if s.enforcer == nil {
+		log.Println("Casbin enforcer not available, skipping policy initialization")
+		return nil
+	}
+
+	for _, role := range []string{"viewer", "editor"} {
+		if _, err := s.enforcer.RemoveFilteredPolicy(0, role); err != nil {
+			return fmt.Errorf("failed to clear %s policies: %w", role, err)
+		}
+		log.Printf("Cleared existing Casbin policies for system role: %s", role)
+	}
+
+	defaultPolicies := []rolePolicy{
+		{"admin", "/api/v1/*", "*"},
+		{"admin", "/api/v1/auth/*", "*"},
+		{"admin", "/api/v1/roles/*", "*"},
+		{"admin", "/api/v1/users/*", "*"},
+		{"admin", "/api/v1/clusters/*", "*"},
+	}
+	defaultPolicies = append(defaultPolicies, systemEditorPolicies()...)
+	defaultPolicies = append(defaultPolicies, systemViewerPolicies()...)
+
 	for _, policy := range defaultPolicies {
-		if err := s.addPolicyIfNotExists(policy.role, policy.object, policy.action); err != nil {
+		if policy.role == "admin" {
+			if err := s.addPolicyIfNotExists(policy.role, policy.object, policy.action); err != nil {
+				return fmt.Errorf("failed to add policy (%s, %s, %s): %w", policy.role, policy.object, policy.action, err)
+			}
+			continue
+		}
+		if _, err := s.enforcer.AddPolicy(policy.role, policy.object, policy.action); err != nil {
 			return fmt.Errorf("failed to add policy (%s, %s, %s): %w", policy.role, policy.object, policy.action, err)
 		}
 	}
 
-	// Initialize role inheritance (grouping policies)
 	if err := s.initializeRoleInheritance(); err != nil {
 		return fmt.Errorf("failed to initialize role inheritance: %w", err)
 	}
 
-	log.Println("Default RBAC policies initialized successfully")
+	log.Println("Default RBAC policies initialized successfully (viewer/editor resynced)")
 	return nil
 }
 

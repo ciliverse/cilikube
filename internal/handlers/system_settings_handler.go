@@ -63,16 +63,20 @@ func (h *SystemSettingsHandler) GetOAuthSettings(c *gin.Context) {
 		return
 	}
 
+	configured := cfg.OAuth.GitHub.ClientID != ""
 	oauthSettings := gin.H{
 		"providers": []gin.H{
 			{
-				"name":         "github",
-				"display_name": "GitHub",
-				"enabled":      cfg.OAuth.GitHub.Enabled,
-				"configured":   cfg.OAuth.GitHub.ClientID != "",
-				"icon":         "github",
-				"description":  "Login with your GitHub account",
-				"redirect_url": cfg.OAuth.GitHub.RedirectURL,
+				"name":              "github",
+				"display_name":      "GitHub",
+				"enabled":           cfg.OAuth.GitHub.Enabled,
+				"configured":        configured,
+				"login_ready":       cfg.OAuth.GitHub.Enabled && configured,
+				"icon":              "github",
+				"description":       "Login with your GitHub account",
+				"redirect_url":      cfg.OAuth.GitHub.RedirectURL,
+				"client_id":         cfg.OAuth.GitHub.ClientID,
+				"client_secret_set": cfg.OAuth.GitHub.ClientSecret != "",
 			},
 		},
 		"settings": gin.H{
@@ -93,9 +97,12 @@ func (h *SystemSettingsHandler) UpdateOAuthSettings(c *gin.Context) {
 	}
 
 	var req struct {
-		AllowRegistration bool  `json:"allow_registration"`
-		AutoLinkAccounts  bool  `json:"auto_link_accounts"`
-		GitHubEnabled     *bool `json:"github_enabled"`
+		AllowRegistration bool    `json:"allow_registration"`
+		AutoLinkAccounts  bool    `json:"auto_link_accounts"`
+		GitHubEnabled     *bool   `json:"github_enabled"`
+		GitHubClientID    *string `json:"github_client_id"`
+		GitHubClientSecret *string `json:"github_client_secret"`
+		GitHubRedirectURL *string `json:"github_redirect_url"`
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -108,6 +115,25 @@ func (h *SystemSettingsHandler) UpdateOAuthSettings(c *gin.Context) {
 	if req.GitHubEnabled != nil {
 		cfg.OAuth.GitHub.Enabled = *req.GitHubEnabled
 	}
+	if req.GitHubClientID != nil {
+		cfg.OAuth.GitHub.ClientID = strings.TrimSpace(*req.GitHubClientID)
+	}
+	if req.GitHubClientSecret != nil {
+		secret := strings.TrimSpace(*req.GitHubClientSecret)
+		// Empty string means "leave unchanged" so UI can omit re-sending secrets
+		if secret != "" {
+			cfg.OAuth.GitHub.ClientSecret = secret
+		}
+	}
+	if req.GitHubRedirectURL != nil {
+		// Empty means leave unchanged (UI placeholder must not wipe a saved callback).
+		if u := strings.TrimSpace(*req.GitHubRedirectURL); u != "" {
+			cfg.OAuth.GitHub.RedirectURL = u
+		}
+	}
+	if strings.TrimSpace(cfg.OAuth.GitHub.RedirectURL) == "" {
+		cfg.OAuth.GitHub.RedirectURL = "https://cilikube.cillian.website/login/oauth/callback"
+	}
 
 	if err := configs.SaveGlobalConfig(); err != nil {
 		utils.ApiError(c, http.StatusInternalServerError, "Failed to save OAuth settings", err.Error())
@@ -118,6 +144,8 @@ func (h *SystemSettingsHandler) UpdateOAuthSettings(c *gin.Context) {
 		"allow_registration": cfg.OAuth.AllowRegistration,
 		"auto_link_accounts": cfg.OAuth.AutoLinkAccounts,
 		"github_enabled":     cfg.OAuth.GitHub.Enabled,
+		"github_configured":  cfg.OAuth.GitHub.ClientID != "",
+		"github_login_ready": cfg.OAuth.GitHub.Enabled && cfg.OAuth.GitHub.ClientID != "",
 		"updated_at":         time.Now().UTC().Format(time.RFC3339),
 	}
 
@@ -328,7 +356,7 @@ func readVersion() string {
 	}
 	data, err := os.ReadFile("VERSION")
 	if err != nil {
-		return "v0.5.0"
+		return "v0.8.0"
 	}
 	return strings.TrimSpace(string(data))
 }

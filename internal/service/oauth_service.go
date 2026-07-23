@@ -56,9 +56,40 @@ type GitHubTokenResponse struct {
 func (s *OAuthService) GetAuthURL(provider, state string) (string, error) {
 	switch provider {
 	case "github":
+		if !s.config.OAuth.GitHub.Enabled {
+			return "", fmt.Errorf("GitHub OAuth is disabled")
+		}
+		if strings.TrimSpace(s.config.OAuth.GitHub.ClientID) == "" {
+			return "", fmt.Errorf("GitHub OAuth is not configured (missing client_id)")
+		}
 		return s.getGitHubAuthURL(state), nil
 	default:
 		return "", fmt.Errorf("unsupported OAuth provider: %s", provider)
+	}
+}
+
+// ListPublicProviders returns OAuth providers visible on the login page.
+func (s *OAuthService) ListPublicProviders() map[string]interface{} {
+	ghConfigured := strings.TrimSpace(s.config.OAuth.GitHub.ClientID) != ""
+	ghReady := s.config.OAuth.GitHub.Enabled && ghConfigured
+	var authURL string
+	if ghReady {
+		authURL, _ = s.GetAuthURL("github", "cilikube_login")
+	}
+	return map[string]interface{}{
+		"providers": []map[string]interface{}{
+			{
+				"name":         "github",
+				"display_name": "GitHub",
+				"enabled":      s.config.OAuth.GitHub.Enabled,
+				"configured":   ghConfigured,
+				"login_ready":  ghReady,
+				"auth_url":     authURL,
+			},
+		},
+		"allow_registration":  s.config.OAuth.AllowRegistration,
+		"auto_link_accounts":  s.config.OAuth.AutoLinkAccounts,
+		"default_oauth_role":  "viewer",
 	}
 }
 
@@ -103,11 +134,16 @@ func (s *OAuthService) LoginWithOAuth(provider, code string) (*models.LoginRespo
 		return s.loginExistingOAuthUser(oauthProvider, tokenResp)
 	}
 
-	// New OAuth account, check if user with same email exists
-	existingUser, err := s.store.GetUserByEmail(userInfo.Email)
-	if err == nil {
-		// User exists, link OAuth account
-		return s.linkOAuthToExistingUser(existingUser, provider, userInfo, tokenResp)
+	// New OAuth account: optionally auto-link by email
+	if s.config.OAuth.AutoLinkAccounts && userInfo.Email != "" {
+		existingUser, emailErr := s.store.GetUserByEmail(userInfo.Email)
+		if emailErr == nil {
+			return s.linkOAuthToExistingUser(existingUser, provider, userInfo, tokenResp)
+		}
+	}
+
+	if !s.config.OAuth.AllowRegistration {
+		return nil, errors.New("OAuth registration is disabled; contact an administrator to create an account or enable allow_registration")
 	}
 
 	// Create new user with OAuth account
@@ -128,9 +164,14 @@ func (s *OAuthService) LinkAccount(userID uint, provider, code string) error {
 		return fmt.Errorf("failed to get user info: %w", err)
 	}
 
-	// Check if this OAuth account is already linked to another user
-	existingProvider, err := s.store.GetOAuthProviderByProviderUserID(provider, userInfo.ProviderUserID)
-	if err == nil && existingProvider.UserID != userID {
+	// Check if this OAuth account is already linked (store may return non-nil zero value on miss)
+	existingProvider, lookupErr := s.store.GetOAuthProviderByProviderUserID(provider, userInfo.ProviderUserID)
+	found := lookupErr == nil && existingProvider != nil && existingProvider.ID != 0
+	if found && existingProvider.UserID != userID {
+		other, uErr := s.store.GetUserByID(existingProvider.UserID)
+		if uErr == nil && other != nil {
+			return fmt.Errorf("this %s account is already linked to user %q — sign in as that user and unlink, or ask an admin to remove/relink it", provider, other.Username)
+		}
 		return errors.New("this OAuth account is already linked to another user")
 	}
 
@@ -150,14 +191,12 @@ func (s *OAuthService) LinkAccount(userID uint, provider, code string) error {
 		ExpiresAt:      expiresAt,
 	}
 
-	if existingProvider != nil {
-		// Update existing provider
+	if found {
 		oauthProvider.ID = existingProvider.ID
 		if err := s.store.UpdateOAuthProvider(oauthProvider); err != nil {
 			return fmt.Errorf("failed to update OAuth provider: %w", err)
 		}
 	} else {
-		// Create new provider
 		if err := s.store.CreateOAuthProvider(oauthProvider); err != nil {
 			return fmt.Errorf("failed to create OAuth provider: %w", err)
 		}
@@ -171,6 +210,27 @@ func (s *OAuthService) LinkAccount(userID uint, provider, code string) error {
 
 // UnlinkAccount removes OAuth provider from user account
 func (s *OAuthService) UnlinkAccount(userID uint, provider string) error {
+	user, err := s.store.GetUserByID(userID)
+	if err != nil {
+		return fmt.Errorf("failed to get user: %w", err)
+	}
+
+	linked, err := s.store.ListUserOAuthProviders(userID)
+	if err != nil {
+		return fmt.Errorf("failed to list OAuth providers: %w", err)
+	}
+
+	hasPassword := strings.TrimSpace(user.PasswordHash) != ""
+	otherProviders := 0
+	for _, p := range linked {
+		if p.Provider != provider {
+			otherProviders++
+		}
+	}
+	if !hasPassword && otherProviders == 0 {
+		return errors.New("cannot unlink the only sign-in method; set a password in Profile first")
+	}
+
 	if err := s.store.DeleteOAuthProvider(userID, provider); err != nil {
 		return fmt.Errorf("failed to unlink OAuth provider: %w", err)
 	}
@@ -468,6 +528,10 @@ func (s *OAuthService) linkOAuthToExistingUser(existingUser *store.User, provide
 }
 
 func (s *OAuthService) createNewOAuthUser(provider string, userInfo *OAuthUserInfo, tokenResp *OAuthTokenResponse) (*models.LoginResponse, error) {
+	if !s.config.OAuth.AllowRegistration {
+		return nil, errors.New("OAuth registration is disabled")
+	}
+
 	// Create new user
 	storeUser := &store.User{
 		Username:      userInfo.Username,
@@ -529,6 +593,7 @@ func (s *OAuthService) createNewOAuthUser(provider string, userInfo *OAuthUserIn
 		Token:     token,
 		ExpiresAt: expiresAtJWT,
 		User:      user.ToResponse(),
+		IsNewUser: true,
 	}, nil
 }
 

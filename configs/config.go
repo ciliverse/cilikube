@@ -2,6 +2,7 @@ package configs
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"path/filepath"
 	"time"
@@ -53,7 +54,7 @@ type InstallerConfig struct {
 
 type DatabaseConfig struct {
 	Enabled  bool   `yaml:"enabled" json:"enabled"`
-	Type     string `yaml:"type" json:"type"` // "mysql", "postgresql", "sqlite"
+	Type     string `yaml:"type" json:"type"` // "sqlite" | "postgresql"
 	Host     string `yaml:"host" json:"host"`
 	Port     int    `yaml:"port" json:"port"`
 	Username string `yaml:"username" json:"username"` // Ensure this is username
@@ -207,11 +208,12 @@ func Load(path string) (*Config, error) {
 
 	switch ext {
 	case ".yaml", ".yml":
-		// Try to load configuration using viper
-		cfg, err = loadViperConfig(path)
+		// Prefer gopkg.in/yaml (honors `yaml:` tags). Viper's default mapstructure
+		// unmarshal ignores snake_case keys like oauth.github.client_id / jwt.secret_key,
+		// so UI-saved OAuth secrets looked "wiped" after every process restart.
+		cfg, err = loadYAMLConfig(path)
 		if err != nil {
-			// If viper fails, fallback to original yaml parsing
-			cfg, err = loadYAMLConfig(path)
+			cfg, err = loadViperConfig(path)
 		}
 	default:
 		return nil, fmt.Errorf("unsupported configuration file format: %s", ext)
@@ -326,7 +328,7 @@ func setDefaults() {
 	if GlobalConfig.Database.Enabled { // Fix: only set database default values when enabled
 		// Set default database type if not specified
 		if GlobalConfig.Database.Type == "" {
-			GlobalConfig.Database.Type = "mysql" // Default to MySQL for backward compatibility
+			GlobalConfig.Database.Type = "sqlite"
 		}
 
 		// Set defaults based on database type
@@ -352,26 +354,8 @@ func setDefaults() {
 			if GlobalConfig.Database.Database == "" {
 				GlobalConfig.Database.Database = "cilikube"
 			}
-		case "mysql":
 		default:
-			if GlobalConfig.Database.Host == "" {
-				GlobalConfig.Database.Host = "localhost"
-			}
-			if GlobalConfig.Database.Port == 0 {
-				GlobalConfig.Database.Port = 3306 // MySQL default port
-			}
-			if GlobalConfig.Database.Username == "" {
-				GlobalConfig.Database.Username = "root"
-			}
-			if GlobalConfig.Database.Password == "" {
-				GlobalConfig.Database.Password = "cilikube-password-change-in-production"
-			}
-			if GlobalConfig.Database.Database == "" {
-				GlobalConfig.Database.Database = "cilikube"
-			}
-			if GlobalConfig.Database.Charset == "" {
-				GlobalConfig.Database.Charset = "utf8mb4"
-			}
+			log.Printf("warning: unsupported database type %q; use sqlite or postgresql", GlobalConfig.Database.Type)
 		}
 	}
 
@@ -445,36 +429,18 @@ func (c *Config) GetDSN() string {
 		return "" // If database is not enabled, return empty DSN
 	}
 
-	// Support different database types
 	switch c.Database.Type {
 	case "sqlite":
 		return c.Database.Database // For SQLite, database field contains the file path
 	case "postgresql", "postgres":
-		// PostgreSQL DSN format
 		return fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=disable",
 			c.Database.Host,
 			c.Database.Port,
 			c.Database.Username,
 			c.Database.Password,
 			c.Database.Database)
-	case "mysql", "":
-		// Default to MySQL format for backward compatibility
-		return fmt.Sprintf("%s:%s@tcp(%s:%d)/%s?charset=%s&parseTime=true",
-			c.Database.Username,
-			c.Database.Password,
-			c.Database.Host,
-			c.Database.Port,
-			c.Database.Database,
-			c.Database.Charset)
 	default:
-		// Default to MySQL format
-		return fmt.Sprintf("%s:%s@tcp(%s:%d)/%s?charset=%s&parseTime=true",
-			c.Database.Username,
-			c.Database.Password,
-			c.Database.Host,
-			c.Database.Port,
-			c.Database.Database,
-			c.Database.Charset)
+		return ""
 	}
 }
 
@@ -554,7 +520,7 @@ func DetermineStorageType(config *StorageConfig) string {
 		return "database"
 	}
 
-	// For other database types (MySQL, PostgreSQL), need to check Host and Database
+	// For PostgreSQL, need to check Host and Database
 	if dbConfig.Host == "" || dbConfig.Database == "" {
 		return "memory"
 	}
@@ -583,36 +549,18 @@ func (c *Config) GetStorageDSN() string {
 		return ""
 	}
 
-	// Support different database types for storage
 	switch dbConfig.Type {
 	case "sqlite":
 		return dbConfig.Database // For SQLite, database field contains the file path
 	case "postgresql", "postgres":
-		// PostgreSQL DSN format
 		return fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=disable",
 			dbConfig.Host,
 			dbConfig.Port,
 			dbConfig.Username,
 			dbConfig.Password,
 			dbConfig.Database)
-	case "mysql", "":
-		// Default to MySQL format for backward compatibility
-		return fmt.Sprintf("%s:%s@tcp(%s:%d)/%s?charset=%s&parseTime=true",
-			dbConfig.Username,
-			dbConfig.Password,
-			dbConfig.Host,
-			dbConfig.Port,
-			dbConfig.Database,
-			dbConfig.Charset)
 	default:
-		// Default to MySQL format
-		return fmt.Sprintf("%s:%s@tcp(%s:%d)/%s?charset=%s&parseTime=true",
-			dbConfig.Username,
-			dbConfig.Password,
-			dbConfig.Host,
-			dbConfig.Port,
-			dbConfig.Database,
-			dbConfig.Charset)
+		return ""
 	}
 }
 

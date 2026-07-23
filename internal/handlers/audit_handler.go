@@ -1,13 +1,32 @@
 package handlers
 
 import (
+	"fmt"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/ciliverse/cilikube/internal/service"
+	"github.com/ciliverse/cilikube/internal/store"
 	"github.com/gin-gonic/gin"
 )
+
+// parseAuditPeriod accepts Go durations plus day units (e.g. 7d → 168h).
+func parseAuditPeriod(periodStr string) (time.Duration, error) {
+	periodStr = strings.TrimSpace(periodStr)
+	if periodStr == "" {
+		return 0, fmt.Errorf("empty period")
+	}
+	if strings.HasSuffix(periodStr, "d") {
+		days, err := strconv.ParseFloat(strings.TrimSuffix(periodStr, "d"), 64)
+		if err != nil || days <= 0 {
+			return 0, fmt.Errorf("invalid day period: %s", periodStr)
+		}
+		return time.Duration(days * 24 * float64(time.Hour)), nil
+	}
+	return time.ParseDuration(periodStr)
+}
 
 type AuditHandler struct {
 	auditService *service.AuditService
@@ -54,31 +73,37 @@ func (h *AuditHandler) GetAuditLogs(c *gin.Context) {
 
 	offset := (page - 1) * pageSize
 
-	// Parse time filters (for future use in filtering)
+	var startTime, endTime *time.Time
 	if startTimeStr != "" {
-		if _, parseErr := time.Parse(time.RFC3339, startTimeStr); parseErr != nil {
+		t, parseErr := time.Parse(time.RFC3339, startTimeStr)
+		if parseErr != nil {
 			c.JSON(http.StatusBadRequest, gin.H{
 				"code":    400,
 				"message": "Invalid start_time format. Use RFC3339 format.",
 			})
 			return
 		}
+		startTime = &t
 	}
 	if endTimeStr != "" {
-		if _, parseErr := time.Parse(time.RFC3339, endTimeStr); parseErr != nil {
+		t, parseErr := time.Parse(time.RFC3339, endTimeStr)
+		if parseErr != nil {
 			c.JSON(http.StatusBadRequest, gin.H{
 				"code":    400,
 				"message": "Invalid end_time format. Use RFC3339 format.",
 			})
 			return
 		}
+		endTime = &t
 	}
 
-	// Get audit logs based on filters
-	var logs interface{}
-	var total int64
-	var err error
-
+	q := store.AuditLogQuery{
+		Action:    action,
+		StartTime: startTime,
+		EndTime:   endTime,
+		Offset:    offset,
+		Limit:     pageSize,
+	}
 	if userIDStr != "" {
 		userID, parseErr := strconv.ParseUint(userIDStr, 10, 32)
 		if parseErr != nil {
@@ -88,12 +113,11 @@ func (h *AuditHandler) GetAuditLogs(c *gin.Context) {
 			})
 			return
 		}
-		logs, total, err = h.auditService.GetAuditLogsByUserID(uint(userID), offset, pageSize)
-	} else if action != "" {
-		logs, total, err = h.auditService.GetAuditLogsByAction(action, offset, pageSize)
-	} else {
-		logs, total, err = h.auditService.GetAllAuditLogs(offset, pageSize)
+		uid := uint(userID)
+		q.UserID = &uid
 	}
+
+	logs, total, err := h.auditService.QueryAuditLogs(q)
 
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
@@ -199,24 +223,51 @@ func (h *AuditHandler) GetAuditReport(c *gin.Context) {
 // @Produce json
 // @Security BearerAuth
 // @Param period query string false "Time period (e.g., '24h', '7d', '30d')" default("24h")
+// @Param start_time query string false "Absolute start (RFC3339); used with end_time"
+// @Param end_time query string false "Absolute end (RFC3339); used with start_time"
 // @Success 200 {object} service.SecurityMetrics
 // @Failure 400 {object} map[string]interface{}
 // @Failure 401 {object} map[string]interface{}
 // @Failure 403 {object} map[string]interface{}
 // @Router /api/v1/audit/metrics [get]
 func (h *AuditHandler) GetSecurityMetrics(c *gin.Context) {
-	periodStr := c.DefaultQuery("period", "24h")
+	startTimeStr := c.Query("start_time")
+	endTimeStr := c.Query("end_time")
 
-	period, err := time.ParseDuration(periodStr)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"code":    400,
-			"message": "Invalid period format. Use duration format like '24h', '7d', etc.",
-		})
-		return
+	var metrics *service.SecurityMetrics
+	var err error
+
+	if startTimeStr != "" && endTimeStr != "" {
+		startTime, parseErr := time.Parse(time.RFC3339, startTimeStr)
+		if parseErr != nil {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"code":    400,
+				"message": "Invalid start_time format. Use RFC3339 format.",
+			})
+			return
+		}
+		endTime, parseErr := time.Parse(time.RFC3339, endTimeStr)
+		if parseErr != nil {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"code":    400,
+				"message": "Invalid end_time format. Use RFC3339 format.",
+			})
+			return
+		}
+		metrics, err = h.auditService.GetSecurityMetricsInWindow(startTime, endTime)
+	} else {
+		periodStr := c.DefaultQuery("period", "24h")
+		period, parseErr := parseAuditPeriod(periodStr)
+		if parseErr != nil {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"code":    400,
+				"message": "Invalid period format. Use duration format like '24h', '7d', etc.",
+			})
+			return
+		}
+		metrics, err = h.auditService.GetSecurityMetrics(period)
 	}
 
-	metrics, err := h.auditService.GetSecurityMetrics(period)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"code":    500,
@@ -290,7 +341,7 @@ func (h *AuditHandler) GetUserActivity(c *gin.Context) {
 		return
 	}
 
-	period, err := time.ParseDuration(periodStr)
+	period, err := parseAuditPeriod(periodStr)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"code":    400,
@@ -335,7 +386,7 @@ func (h *AuditHandler) GetUserActivity(c *gin.Context) {
 func (h *AuditHandler) GetSystemActivity(c *gin.Context) {
 	periodStr := c.DefaultQuery("period", "24h")
 
-	period, err := time.ParseDuration(periodStr)
+	period, err := parseAuditPeriod(periodStr)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"code":    400,

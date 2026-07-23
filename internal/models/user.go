@@ -77,6 +77,8 @@ type LoginResponse struct {
 	Token     string       `json:"token"`
 	ExpiresAt time.Time    `json:"expires_at"`
 	User      UserResponse `json:"user"`
+	// IsNewUser is true when this login created a new account (e.g. first OAuth sign-in).
+	IsNewUser bool `json:"is_new_user,omitempty"`
 }
 
 type TokenResponse struct {

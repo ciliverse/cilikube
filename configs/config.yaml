@@ -3,8 +3,8 @@ server:
     read_timeout: 30
     write_timeout: 30
     mode: debug
-    activeCluster: "907cab34-53f0-4c31-8b32-e238e5bf5769"
-    encryptionKey: mobSIziSWMBZLMSDIIbuB9kMqc9QebV3
+    activeCluster: ""
+    encryptionKey: change-me-in-production-32chars!!
 kubernetes:
     kubeconfig: /root/.kube/config
 installer:
@@ -13,26 +13,89 @@ installer:
     downloadDir: /tmp/cilikube_downloads
 database:
     enabled: true
-    type: "sqlite"
-    database: "./data/cilikube.db"
+    type: sqlite
     host: ""
     port: 0
     username: ""
     password: ""
+    database: ./data/cilikube.db
     charset: ""
+storage:
+    type: database
+    database:
+        enabled: true
+        type: sqlite
+        host: ""
+        port: 0
+        username: ""
+        password: ""
+        database: ./data/cilikube.db
+        charset: ""
 jwt:
     secret_key: cilikube-secret-key-change-in-production
     expire_duration: 24h0m0s
     issuer: cilikube
+oauth:
+    github:
+        client_id: ""
+        client_secret: ""
+        redirect_url: http://localhost:8080/api/v1/auth/oauth/callback
+        enabled: true
+    allow_registration: false
+    auto_link_accounts: false
+security:
+    password:
+        min_length: 8
+        require_uppercase: false
+        require_lowercase: true
+        require_numbers: true
+        require_symbols: false
+        password_history: 5
+        max_age: 0
+    account_lock:
+        enabled: false
+        max_failed_attempts: 5
+        lockout_duration: 15m0s
+        reset_after: 1h0m0s
+    session:
+        max_concurrent_sessions: 3
+        idle_timeout: 30m0s
+        absolute_timeout: 8h0m0s
+        require_reauth: false
+        require_2fa: false
+    rate_limit:
+        enabled: false
+        login_attempts: 10
+        login_window: 15m0s
+        api_requests: 1000
+        api_window: 1h0m0s
+        burst_size: 50
+    audit:
+        log_login_attempts: true
+        log_api_calls: true
+        log_admin_actions: true
+        retention_days: 90
+preferences:
+    ui:
+        default_theme: paper
+        default_language: en
+        items_per_page: 20
+        auto_refresh: true
+        refresh_interval: 30
+    notifications:
+        email_notifications: true
+        browser_notifications: true
+        notification_types:
+            - system_alerts
+            - security_events
+            - resource_warnings
+    feature_flags:
+        beta_features: false
+        experimental_ui: false
+        advanced_metrics: true
 prometheus:
     enabled: false
     url: http://prometheus:9090
     timeout: 15s
-clusters:
-    - id: 907cab34-53f0-4c31-8b32-e238e5bf5769
-      name: zbl-prod
-      config_path: default
-      description: zbl-prod (kubectl context zbl-sz-read-only-zbl-prod-readonly)
-      provider: kubernetes
-      environment: production
-      is_active: true
+# clusters: (deprecated) — add via UI or import from kubernetes.kubeconfig
+clusters: []

@@ -1,6 +1,8 @@
 import type { ButtonHTMLAttributes, InputHTMLAttributes, ReactNode } from 'react'
 import { cn } from '@/lib/utils'
 
+export { HudSelect, type HudSelectOption } from './HudSelect'
+
 export function Button({
   className,
   variant = 'primary',
@@ -98,13 +100,13 @@ export function PageHeader({
   action?: ReactNode
 }) {
   return (
-    <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
-      <div>
-        <div className="hud-label mb-2">Control plane</div>
+    <div className="mb-3 flex w-full shrink-0 flex-wrap items-end justify-between gap-3">
+      <div className="min-w-0">
+        <div className="hud-label mb-1">Control plane</div>
         <h1 className="font-display text-2xl font-bold tracking-[0.12em] text-text md:text-3xl">
           {title}
         </h1>
-        {subtitle ? <p className="mt-2 text-sm text-text-dim">{subtitle}</p> : null}
+        {subtitle ? <p className="mt-1 text-sm text-text-dim">{subtitle}</p> : null}
       </div>
       {action}
     </div>
@@ -121,16 +123,16 @@ export function StatCard({
   icon?: ReactNode
 }) {
   return (
-    <Card className="p-5">
+    <Card className="h-full min-w-0 p-5">
       <div className="flex items-start justify-between gap-3">
-        <div>
+        <div className="min-w-0">
           <div className="hud-label">{label}</div>
           <div className="mt-2 font-display text-3xl font-bold tracking-wide text-cyan">
             {value}
           </div>
         </div>
         {icon ? (
-          <div className="grid h-10 w-10 place-items-center rounded border border-line bg-cyan-faint text-cyan">
+          <div className="grid h-10 w-10 shrink-0 place-items-center rounded border border-line bg-cyan-faint text-cyan">
             {icon}
           </div>
         ) : null}
@@ -155,5 +157,53 @@ export function ConnDot({ online = true }: { online?: boolean }) {
 export function EmptyState({ children }: { children: ReactNode }) {
   return (
     <div className="px-5 py-10 text-center text-sm text-text-dim">{children}</div>
+  )
+}
+
+export function Modal({
+  open,
+  title,
+  subtitle,
+  onClose,
+  children,
+  wide,
+}: {
+  open: boolean
+  title: string
+  subtitle?: string
+  onClose: () => void
+  children: ReactNode
+  wide?: boolean
+}) {
+  if (!open) return null
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 md:p-6">
+      <button
+        type="button"
+        aria-label="Close overlay"
+        className="absolute inset-0 bg-bg/80 backdrop-blur-sm"
+        onClick={onClose}
+      />
+      <div
+        className={cn(
+          'relative flex max-h-[88vh] w-full flex-col overflow-hidden rounded border border-line bg-panel-solid shadow-[0_0_40px_rgba(53,230,255,0.12)]',
+          wide ? 'max-w-6xl' : 'max-w-3xl',
+        )}
+      >
+        <div className="flex items-start justify-between gap-4 border-b border-line px-5 py-4">
+          <div className="min-w-0">
+            <div className="hud-label">Action</div>
+            <h2 className="mt-1 truncate font-display text-lg font-bold tracking-[0.12em] text-text">
+              {title}
+            </h2>
+            {subtitle ? <p className="mt-1 truncate text-xs text-text-dim">{subtitle}</p> : null}
+          </div>
+          <Button variant="ghost" className="px-2" onClick={onClose} type="button">
+            ✕
+          </Button>
+        </div>
+        <div className="min-h-0 flex-1 overflow-auto">{children}</div>
+      </div>
+    </div>
   )
 }

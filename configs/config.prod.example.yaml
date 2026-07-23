@@ -1,0 +1,93 @@
+# 宿主机部署（Nginx 静态前端 + 本机二进制）时复制并改密钥：
+#   cp configs/config.prod.example.yaml /opt/cilikube/configs/config.prod.yaml
+#   # 必改 encryptionKey、jwt.secret_key；按需改路径与域名
+
+server:
+  port: "8080"
+  read_timeout: 30
+  write_timeout: 30
+  mode: release
+  activeCluster: ""
+  # 恰好 32 字节。生成：openssl rand -base64 32 | head -c 32
+  encryptionKey: "CHANGE_ME_32_BYTE_ENCRYPTION_KEY!!"
+
+kubernetes:
+  # 本机只读 kubeconfig（勿用管理员 ~/.kube/config）
+  kubeconfig: /opt/cilikube/readonly.kubeconfig
+
+database:
+  enabled: true
+  type: sqlite
+  database: /opt/cilikube/data/cilikube.db
+
+storage:
+  type: database
+  database:
+    enabled: true
+    type: sqlite
+    database: /opt/cilikube/data/cilikube.db
+
+jwt:
+  # 生成：openssl rand -hex 32
+  secret_key: "CHANGE_ME_JWT_SECRET_KEY"
+  expire_duration: 24h0m0s
+  issuer: cilikube
+
+oauth:
+  github:
+    client_id: ""
+    client_secret: ""
+    # GitHub App 回调填前端页（SPA 再调 /api/v1/auth/oauth/callback 换票）
+    redirect_url: https://cilikube.cillian.website/login/oauth/callback
+    enabled: false
+  # 公网务必关闭自助注册，访客由管理员在 UI 创建
+  allow_registration: false
+  auto_link_accounts: false
+
+security:
+  password:
+    min_length: 8
+    require_uppercase: false
+    require_lowercase: true
+    require_numbers: true
+    require_symbols: false
+    password_history: 5
+    max_age: 0
+  account_lock:
+    enabled: true
+    max_failed_attempts: 5
+    lockout_duration: 15m0s
+    reset_after: 1h0m0s
+  session:
+    max_concurrent_sessions: 3
+    idle_timeout: 30m0s
+    absolute_timeout: 8h0m0s
+    require_reauth: false
+    require_2fa: false
+  rate_limit:
+    enabled: true
+    login_attempts: 10
+    login_window: 15m0s
+    api_requests: 1000
+    api_window: 1h0m0s
+    burst_size: 50
+  audit:
+    log_login_attempts: true
+    log_api_calls: true
+    log_admin_actions: true
+    retention_days: 90
+
+preferences:
+  ui:
+    default_theme: paper
+    default_language: en
+    items_per_page: 20
+    auto_refresh: true
+    refresh_interval: 30
+
+prometheus:
+  enabled: false
+  url: http://127.0.0.1:9090
+  timeout: 15s
+
+clusters: []

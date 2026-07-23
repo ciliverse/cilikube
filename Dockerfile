@@ -1,5 +1,5 @@
 # ---- Stage 1: BUILDER ----
-FROM golang:1.24-alpine AS builder
+FROM golang:1.26-alpine AS builder
 
 # 安装必要的工具
 RUN apk add --no-cache git ca-certificates tzdata
@@ -51,9 +51,12 @@ WORKDIR /app
 # 从构建阶段复制二进制文件和配置
 COPY --from=builder /build/cilikube ./
 COPY --from=builder /build/configs ./configs/
+# Casbin model (loaded as ./pkg/auth/model.conf from process cwd /app)
+COPY --from=builder /build/pkg/auth/model.conf ./pkg/auth/model.conf
 
 # 设置文件权限
-RUN chown -R appuser:appgroup /app && \
+RUN mkdir -p /app/data /app/kube && \
+    chown -R appuser:appgroup /app && \
     chmod +x /app/cilikube
 
 # 健康检查

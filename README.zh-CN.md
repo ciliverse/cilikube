@@ -5,13 +5,14 @@
 </div>
 
 <div align="center">
-  <img src="https://img.shields.io/badge/Frontend-React-61DAFB?style=flat-square&logo=react" alt="React">
-  <img src="https://img.shields.io/badge/Frontend-TypeScript-blue?style=flat-square&logo=typescript" alt="TypeScript">
-  <img src="https://img.shields.io/badge/Frontend-Vite-blue?style=flat-square&logo=vite" alt="Vite">
-  <img src="https://img.shields.io/badge/Frontend-Tailwind-38BDF8?style=flat-square&logo=tailwindcss" alt="Tailwind">
-  <img src="https://img.shields.io/badge/Backend-Go-blue?style=flat-square&logo=go" alt="Go">
+  <img src="https://img.shields.io/badge/Release-v0.8.0-green?style=flat-square" alt="Release v0.8.0">
+  <img src="https://img.shields.io/badge/Frontend-React%2019-61DAFB?style=flat-square&logo=react" alt="React 19">
+  <img src="https://img.shields.io/badge/Frontend-TypeScript%207-blue?style=flat-square&logo=typescript" alt="TypeScript 7">
+  <img src="https://img.shields.io/badge/Frontend-Vite%208-blue?style=flat-square&logo=vite" alt="Vite 8">
+  <img src="https://img.shields.io/badge/Frontend-Tailwind%204-38BDF8?style=flat-square&logo=tailwindcss" alt="Tailwind 4">
+  <img src="https://img.shields.io/badge/Backend-Go%201.26+-blue?style=flat-square&logo=go" alt="Go 1.26+">
   <img src="https://img.shields.io/badge/Backend-Gin-blue?style=flat-square&logo=gin" alt="Gin">
-  <img src="https://img.shields.io/badge/1.33.0-Kubernetes-blue?style=flat-square&logo=kubernetes" alt="Kubernetes">
+  <img src="https://img.shields.io/badge/Kubernetes-1.36.2-blue?style=flat-square&logo=kubernetes" alt="Kubernetes 1.36.2">
   <img src="https://img.shields.io/badge/License-Apache%202.0-blue?style=flat-square" alt="License: Apache 2.0">
   <img src="https://img.shields.io/github/stars/ciliverse/cilikube?style=social" alt="GitHub Stars">
   <img src="https://img.shields.io/github/forks/ciliverse/cilikube?style=social" alt="GitHub Forks">
@@ -43,19 +44,31 @@
 
 CiliKube 是一个企业级开源 Kubernetes 多集群管理平台，采用现代化 Web 技术栈构建，包括 React、TypeScript、Go 和 Gin。该平台为全面的 Kubernetes 资源管理提供直观、简化的界面，同时保持自定义需求的可扩展性。CiliKube 为寻求高效集群运维的组织和学习云原生技术的开发者提供了理想的基础平台。
 
+### v0.8.0 React UI（当前）
+
 <div align="center">
-  <img src="docs/cluster-overview2.png" alt="Cluster Overview" width="100%">
-  <p><strong>集群概览 1</strong></p>
+  <img src="docs/v0.8/overview.png" alt="React Overview" width="100%">
+  <p><strong>集群概览</strong></p>
 </div>
 
 <div align="center">
-  <img src="docs/cluster-overview1.png" alt="Cluster Overview 1" width="100%">
-  <p><strong>集群概览 2</strong></p>
+  <img src="docs/v0.8/nodes.png" alt="React Nodes" width="100%">
+  <p><strong>节点</strong></p>
 </div>
 
 <div align="center">
-  <img src="docs/cluster-overview.png" alt="Cluster Overview 2" width="100%">
-  <p><strong>集群概览 3</strong></p>
+  <img src="docs/v0.8/pods.png" alt="React Pods" width="100%">
+  <p><strong>Pods</strong></p>
+</div>
+
+<div align="center">
+  <img src="docs/v0.8/clusters.png" alt="React Clusters" width="100%">
+  <p><strong>集群管理</strong></p>
+</div>
+
+<div align="center">
+  <img src="docs/v0.8/login.png" alt="React Login" width="100%">
+  <p><strong>登录</strong></p>
 </div>
 
 ## ✨ 核心优势
@@ -80,10 +93,10 @@ CiliKube 源于一个全面的全栈开发学习计划，将实用的 Web 开发
 
 ## 🌐 在线预览
 
-- 在线演示: http://cilikubedemo.cillian.website
-- 演示账号:
-  - 用户名: admin
-  - 密码: 12345678
+- 在线演示: https://cilikube.cillian.website
+- 演示账号（只读 viewer）:
+  - 用户名: `guest`
+  - 密码: `CiliKubeGuest2026!`
 
 ## 📚 文档
 
@@ -94,12 +107,14 @@ CiliKube 源于一个全面的全栈开发学习计划，将实用的 Web 开发
 CiliKube 采用行业标准技术和框架，确保可靠性、可维护性和开发者生产力。
 
 **系统要求**:
-- Node.js >= 18.0.0 (开发和测试版本 v22.14.0)
-- Go >= 1.20 (开发和测试版本 v1.24.2)
+- Node.js >= 20.0.0 (开发和测试版本 v24.14.1)
+- Go >= 1.26.0 (开发和测试版本 v1.26.4)
+- PNPM >= 10.x
+- Kubernetes / kubectl 1.36.2（与 client-go 对齐）
 - PNPM >= 8.x (包管理工具)
 
 **前端架构**: 
-- **核心技术**: `React 19` `TypeScript` `Vite` `Tailwind CSS`
+- **核心技术**: `React 19` `TypeScript 7` `Vite 8` `Tailwind CSS 4`
 - **数据 / 路由**: `TanStack Query` `React Router`
 - **动效 / 图表**: `Framer Motion` `Recharts`
 - **HTTP 客户端**: `Axios`
@@ -226,27 +241,27 @@ docker-compose up -d
 ### 环境准备
 - 安装 Helm (>=3.0)
 - 拥有一个 Kubernetes 集群，并配置好 kubeconfig 文件
-- 安装 kubectl (>=1.20)
+- 安装 kubectl (>=1.36.2)
 
 ### 部署步骤
 ```bash
 # 添加 Helm 仓库
-helm repo add cilikube https://charts.cillian.website
+helm repo add ciliverse https://charts.cillian.website
 
 # 更新 Helm 仓库
 helm repo update
 
 # 安装 CiliKube
-helm install cilikube cilikube/cilikube -n cilikube --create-namespace
+helm install cilikube ciliverse/cilikube -n cilikube --create-namespace
 
 # 查看服务状态
 kubectl get svc cilikube -n cilikube
 ```
 
-## 🎨 功能预览
+## 🎨 历史界面（Vue）
 
 <details>
-<summary>点击查看界面截图</summary>
+<summary>点击查看历史 Vue 截图</summary>
 
 <table>
   <tr>

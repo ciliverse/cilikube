@@ -193,6 +193,10 @@ func (s *AuthService) GetUserActivityLog(userID uint, offset, limit int) ([]*sto
 
 // Register creates a new user account
 func (s *AuthService) Register(req *models.RegisterRequest) (*models.UserResponse, error) {
+	if s.config != nil && !s.config.OAuth.AllowRegistration {
+		return nil, errors.New("registration is disabled")
+	}
+
 	// Validate password against security policy
 	if validationErrors := s.securityService.ValidatePassword(req.Password); len(validationErrors) > 0 {
 		return nil, fmt.Errorf("password validation failed: %s", validationErrors[0].Message)

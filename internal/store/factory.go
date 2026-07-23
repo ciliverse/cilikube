@@ -6,6 +6,7 @@ import (
 
 	"github.com/ciliverse/cilikube/configs"
 	"github.com/ciliverse/cilikube/pkg/database"
+	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
 
@@ -172,6 +173,9 @@ func (s *DatabaseStore) createDefaultAdminUser() error {
 // === DatabaseStore Cluster Methods ===
 
 func (s *DatabaseStore) CreateCluster(cluster *Cluster) error {
+	if cluster.ID == "" {
+		cluster.ID = uuid.NewString()
+	}
 	return s.db.Create(cluster).Error
 }
 
@@ -413,6 +417,38 @@ func (s *DatabaseStore) ListAuditLogs(offset, limit int) ([]*AuditLog, int64, er
 
 	// Get paginated results
 	err := s.db.Offset(offset).Limit(limit).
+		Order("created_at DESC").
+		Find(&logs).Error
+	return logs, total, err
+}
+
+func (s *DatabaseStore) QueryAuditLogs(q AuditLogQuery) ([]*AuditLog, int64, error) {
+	var logs []*AuditLog
+	var total int64
+
+	db := s.db.Model(&AuditLog{})
+	if q.UserID != nil {
+		db = db.Where("user_id = ?", *q.UserID)
+	}
+	if q.Action != "" {
+		db = db.Where("action = ?", q.Action)
+	}
+	if q.StartTime != nil {
+		db = db.Where("created_at >= ?", *q.StartTime)
+	}
+	if q.EndTime != nil {
+		db = db.Where("created_at <= ?", *q.EndTime)
+	}
+
+	if err := db.Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
+
+	limit := q.Limit
+	if limit <= 0 {
+		limit = 20
+	}
+	err := db.Offset(q.Offset).Limit(limit).
 		Order("created_at DESC").
 		Find(&logs).Error
 	return logs, total, err

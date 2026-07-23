@@ -1,9 +1,12 @@
+import { Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { motion } from 'framer-motion'
-import dayjs from 'dayjs'
 import { listNodes } from '@/api/cluster'
 import { useCluster } from '@/store/cluster'
-import { Badge, Card, EmptyState, PageHeader } from '@/components/ui'
+import { AgeCell, CreatedCell } from '@/components/AgeCell'
+import { HudTable, HudTablePanel, ListPageFrame } from '@/components/HudTableScroll'
+import { Badge, EmptyState, PageHeader } from '@/components/ui'
+import { metaCreated } from '@/api/resources'
 
 function nodeReady(node: any) {
   const conditions = node?.status?.conditions || []
@@ -20,17 +23,17 @@ export function NodesPage() {
   })
 
   return (
-    <div>
+    <ListPageFrame>
       <PageHeader title="NODES" subtitle="Cluster compute fabric" />
-      <Card className="overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="hud-table">
+      <HudTablePanel>
+          <HudTable>
             <thead>
               <tr>
                 <th>Name</th>
                 <th>Status</th>
                 <th>Roles</th>
                 <th>Version</th>
+                <th>Age</th>
                 <th>Created</th>
               </tr>
             </thead>
@@ -47,37 +50,39 @@ export function NodesPage() {
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: index * 0.03 }}
                   >
-                    <td className="font-semibold text-cyan">{name}</td>
+                    <td>
+                      <Link className="font-semibold text-cyan hover:underline" to={`/nodes/${name}`}>
+                        {name}
+                      </Link>
+                    </td>
                     <td>
                       <Badge tone={nodeReady(node) ? 'ok' : 'danger'}>
                         {nodeReady(node) ? 'Ready' : 'NotReady'}
                       </Badge>
                     </td>
-                    <td className="text-text-dim">
-                      {roles.length ? roles.join(', ') : 'worker'}
-                    </td>
+                    <td>{roles.length ? roles.join(', ') : 'worker'}</td>
                     <td className="font-mono text-xs">
                       {node.status?.nodeInfo?.kubeletVersion || '-'}
                     </td>
-                    <td className="text-text-dim">
-                      {node.metadata?.creationTimestamp
-                        ? dayjs(node.metadata.creationTimestamp).format('YYYY-MM-DD HH:mm')
-                        : '-'}
+                    <td>
+                      <AgeCell value={metaCreated(node)} />
+                    </td>
+                    <td>
+                      <CreatedCell value={metaCreated(node)} />
                     </td>
                   </motion.tr>
                 )
               })}
               {!isLoading && !data.length ? (
                 <tr>
-                  <td colSpan={5}>
+                  <td colSpan={6}>
                     <EmptyState>No nodes found for this cluster.</EmptyState>
                   </td>
                 </tr>
               ) : null}
             </tbody>
-          </table>
-        </div>
-      </Card>
-    </div>
+          </HudTable>
+      </HudTablePanel>
+    </ListPageFrame>
   )
 }

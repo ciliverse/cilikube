@@ -21,6 +21,7 @@ func RegisterAuthRoutes(authGroup *gin.RouterGroup, authService *service.AuthSer
 	// OAuth routes (public)
 	oauth := authGroup.Group("/oauth")
 	{
+		oauth.GET("/providers", oauthHandler.ListProviders)
 		oauth.GET("/:provider/auth", oauthHandler.GetAuthURL)
 		oauth.POST("/callback", oauthHandler.HandleCallback)
 	}

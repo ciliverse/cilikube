@@ -20,6 +20,9 @@ func setupTestAuthService() (*AuthService, store.Store) {
 			ExpireDuration: 24 * time.Hour,
 			Issuer:         "cilikube-test",
 		},
+		OAuth: configs.OAuthConfig{
+			AllowRegistration: true,
+		},
 		Security: configs.SecurityConfig{
 			Password: configs.PasswordConfig{
 				MinLength:        8,

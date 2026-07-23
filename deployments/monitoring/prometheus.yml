@@ -30,10 +30,10 @@ scrape_configs:
     static_configs:
       - targets: ['node-exporter:9100']
 
-  # MySQL Exporter (if MySQL is enabled)
-  - job_name: 'mysql-exporter'
+  # PostgreSQL Exporter (if PostgreSQL is enabled)
+  - job_name: 'postgres-exporter'
     static_configs:
-      - targets: ['mysql-exporter:9104']
+      - targets: ['postgres-exporter:9187']
 
   # Redis Exporter (if Redis is enabled)
   - job_name: 'redis-exporter'

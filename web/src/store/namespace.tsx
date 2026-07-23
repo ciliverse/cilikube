@@ -11,11 +11,15 @@ import { useQuery } from '@tanstack/react-query'
 import { listNamespaces } from '@/api/cluster'
 import { useCluster } from './cluster'
 
+/** Empty string = all namespaces (cluster-wide list). */
+export const ALL_NAMESPACES = ''
+
 type NamespaceContextValue = {
   namespaces: string[]
   namespace: string
   setNamespace: (ns: string) => void
   loading: boolean
+  isAllNamespaces: boolean
 }
 
 const NamespaceContext = createContext<NamespaceContextValue | null>(null)
@@ -23,9 +27,12 @@ const STORAGE_KEY = 'cilikube_namespace'
 
 export function NamespaceProvider({ children }: { children: ReactNode }) {
   const { clusterId } = useCluster()
-  const [namespace, setNamespaceState] = useState(
-    () => localStorage.getItem(STORAGE_KEY) || 'default',
-  )
+  const [namespace, setNamespaceState] = useState(() => {
+    const saved = localStorage.getItem(STORAGE_KEY)
+    if (saved === null) return 'default'
+    // Stored empty string means All namespaces
+    return saved
+  })
 
   const { data = [], isLoading } = useQuery({
     queryKey: ['namespaces', clusterId],
@@ -35,6 +42,8 @@ export function NamespaceProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (!data.length) return
+    // Keep All namespaces selection
+    if (namespace === ALL_NAMESPACES) return
     if (!data.includes(namespace)) {
       const next = data.includes('default') ? 'default' : data[0]
       setNamespaceState(next)
@@ -53,6 +62,7 @@ export function NamespaceProvider({ children }: { children: ReactNode }) {
       namespace,
       setNamespace,
       loading: isLoading,
+      isAllNamespaces: namespace === ALL_NAMESPACES,
     }),
     [data, namespace, setNamespace, isLoading],
   )

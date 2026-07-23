@@ -12,6 +12,10 @@ deployments/
 └── monitoring/      # Monitoring configurations
 ```
 
+## Public / standalone host (viewer + read-only kubeconfig)
+
+Preferred: **Nginx static frontend + Go binary (systemd)**. Personal runbook lives outside this repo (e.g. local `docs/cilikube/public/DEPLOY.md`). Generic prod config template: `configs/config.prod.example.yaml`.
+
 ## Deployment Options
 
 ### 1. Docker Deployment
@@ -57,10 +61,10 @@ helm install cilikube deployments/helm/cilikube
 **Quick Start:**
 ```bash
 # Add Helm repository
-helm repo add cilikube https://charts.cillian.website
+helm repo add ciliverse https://charts.cillian.website
 
 # Install CiliKube
-helm install cilikube cilikube/cilikube
+helm install cilikube ciliverse/cilikube
 ```
 
 **Features:**
@@ -82,7 +86,7 @@ helm install cilikube cilikube/cilikube
 ## Prerequisites
 
 ### Common Requirements
-- **Kubernetes Cluster**: v1.20+ (for K8s/Helm deployments)
+- **Kubernetes Cluster**: v1.36.2+ (for K8s/Helm deployments; tested with 1.36.2)
 - **Docker**: v20.10+ (for Docker deployments)
 - **kubectl**: v1.20+ (for K8s management)
 - **Helm**: v3.0+ (for Helm deployments)

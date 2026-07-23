@@ -74,29 +74,27 @@ services:
         max-size: "5m"
         max-file: "3"
 
-  # MySQL database (optional)
-  mysql:
-    image: mysql:8.0
-    container_name: cilikube-mysql
+  # PostgreSQL database (optional, for production-like setups)
+  postgres:
+    image: postgres:16-alpine
+    container_name: cilikube-postgres
     restart: unless-stopped
     ports:
-      - "3306:3306"
+      - "5432:5432"
     environment:
-      MYSQL_ROOT_PASSWORD: cilikube_root_password
-      MYSQL_DATABASE: cilikube_db
-      MYSQL_USER: cilikube_user
-      MYSQL_PASSWORD: cilikube_password
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: cilikube_password
+      POSTGRES_DB: cilikube
     volumes:
-      - mysql_data:/var/lib/mysql
-      - ./scripts/mysql:/docker-entrypoint-initdb.d:ro
+      - postgres_data:/var/lib/postgresql/data
     networks:
       - cilikube-net
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      test: ["CMD-SHELL", "pg_isready -U postgres -d cilikube"]
       interval: 30s
       timeout: 10s
       retries: 3
-      start_period: 60s
+      start_period: 20s
     logging:
       driver: "json-file"
       options:
@@ -150,7 +148,7 @@ networks:
         - subnet: 172.20.0.0/16
 
 volumes:
-  mysql_data:
+  postgres_data:
     driver: local
   redis_data:
     driver: local

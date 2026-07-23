@@ -60,34 +60,10 @@ func NewClusterManager(clusterStore store.ClusterStore, config *configs.Config) 
 		log.Println("Note: Database storage not initialized, skipping loading clusters from database.")
 	}
 
+	// File clusters in config.yaml are deprecated. Prefer DB registration via UI
+	// paste or "import from local kubeconfig". Keeping the section only logs a hint.
 	if len(config.Clusters) > 0 {
-		for _, clusterInfo := range config.Clusters {
-			// Use cluster ID as unique identifier, not name
-			clusterID := clusterInfo.ID
-			if clusterID == "" {
-				log.Printf("Warning: Cluster '%s' has no ID, skipping loading", clusterInfo.Name)
-				continue
-			}
-
-			if _, exists := manager.clients[clusterID]; exists {
-				continue
-			}
-			if _, nameExists := manager.nameToID[clusterInfo.Name]; nameExists {
-				log.Printf("Warning: File cluster '%s' conflicts with already loaded cluster name, skipping.", clusterInfo.Name)
-				continue
-			}
-
-			manager.addClient(clusterID, clusterInfo.Name, nil, "file", clusterInfo.Environment, clusterInfo.ConfigPath)
-			manager.clientInfo[clusterID] = store.Cluster{
-				ID:          clusterID,
-				Name:        clusterInfo.Name,
-				Provider:    clusterInfo.Provider,
-				Description: clusterInfo.Description,
-				Environment: clusterInfo.Environment,
-				Region:      clusterInfo.Region,
-			}
-			manager.nameToID[clusterInfo.Name] = clusterID
-		}
+		log.Printf("Note: config.yaml lists %d cluster(s) under clusters: — ignored. Add clusters in the UI or import local kubeconfig contexts.", len(config.Clusters))
 	}
 
 	go manager.startStatusUpdater()
@@ -111,6 +87,11 @@ func NewClusterManager(clusterStore store.ClusterStore, config *configs.Config) 
 func (cm *ClusterManager) addClient(id, name string, kubeconfigData []byte, source, environment string, configPath string) {
 	cm.lock.Lock()
 	defer cm.lock.Unlock()
+	cm.addClientLocked(id, name, kubeconfigData, source, environment, configPath)
+}
+
+// addClientLocked registers a client; caller must hold cm.lock.
+func (cm *ClusterManager) addClientLocked(id, name string, kubeconfigData []byte, source, environment string, configPath string) {
 	var client *Client
 	var err error
 	if source == "database" {
@@ -201,20 +182,24 @@ func (cm *ClusterManager) ListClusterInfo() []ClusterInfoResponse {
 
 func (cm *ClusterManager) AddDBCluster(cluster *store.Cluster) error {
 	cm.lock.Lock()
-	defer cm.lock.Unlock()
 	if cm.store == nil {
+		cm.lock.Unlock()
 		return fmt.Errorf("cluster store not initialized, cannot add cluster")
 	}
 	if _, nameExists := cm.nameToID[cluster.Name]; nameExists {
+		cm.lock.Unlock()
 		return fmt.Errorf("cluster name '%s' already exists", cluster.Name)
 	}
 	if err := cm.store.CreateCluster(cluster); err != nil {
+		cm.lock.Unlock()
 		return fmt.Errorf("failed to save cluster: %w", err)
 	}
-	// Use "database" as source even for memory store to distinguish from file-based clusters
-	cm.addClient(cluster.ID, cluster.Name, cluster.KubeconfigData, "database", cluster.Environment, "")
+	// Use locked helper — we already hold cm.lock (addClient would deadlock).
+	cm.addClientLocked(cluster.ID, cluster.Name, cluster.KubeconfigData, "database", cluster.Environment, "")
 	cm.clientInfo[cluster.ID] = *cluster
 	cm.nameToID[cluster.Name] = cluster.ID
+	cm.lock.Unlock()
+	// Refresh outside the write lock so create API is not blocked by status probes.
 	go cm.RefreshAllClusterStatus()
 	return nil
 }
@@ -352,7 +337,7 @@ func (cm *ClusterManager) UpdateDBCluster(id string, req models.UpdateClusterReq
 	if kubeconfigUpdated {
 		delete(cm.clients, id)
 		delete(cm.statusCache, id)
-		cm.addClient(id, cluster.Name, cluster.KubeconfigData, "database", cluster.Environment, "")
+		cm.addClientLocked(id, cluster.Name, cluster.KubeconfigData, "database", cluster.Environment, "")
 		go cm.RefreshAllClusterStatus()
 	}
 	return nil

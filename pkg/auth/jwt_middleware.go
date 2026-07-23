@@ -92,28 +92,33 @@ func JWTAuthUnless(skipPaths ...string) gin.HandlerFunc {
 	}
 }
 
+// extractBearerToken resolves JWT from Authorization header or query (WebSocket clients
+// cannot set custom headers, so ?token= is accepted for upgrade requests).
+func extractBearerToken(c *gin.Context) (string, string) {
+	authHeader := c.GetHeader("Authorization")
+	if strings.HasPrefix(authHeader, "Bearer ") {
+		return strings.TrimSpace(authHeader[7:]), ""
+	}
+	if authHeader != "" {
+		return "", "Invalid authorization header format"
+	}
+	if token := strings.TrimSpace(c.Query("token")); token != "" {
+		return token, ""
+	}
+	if token := strings.TrimSpace(c.Query("access_token")); token != "" {
+		return token, ""
+	}
+	return "", "Authorization header or token query parameter is required"
+}
+
 // JWTAuthMiddleware JWT authentication middleware
 func JWTAuthMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		// Get token from header
-		authHeader := c.GetHeader("Authorization")
-		if authHeader == "" {
+		tokenString, extractErr := extractBearerToken(c)
+		if extractErr != "" {
 			c.JSON(http.StatusUnauthorized, gin.H{
 				"code":    401,
-				"message": "Authorization header is required",
-			})
-			c.Abort()
-			return
-		}
-
-		// Check Bearer prefix
-		tokenString := ""
-		if strings.HasPrefix(authHeader, "Bearer ") {
-			tokenString = authHeader[7:] // Remove "Bearer " prefix
-		} else {
-			c.JSON(http.StatusUnauthorized, gin.H{
-				"code":    401,
-				"message": "Invalid authorization header format",
+				"message": extractErr,
 			})
 			c.Abort()
 			return

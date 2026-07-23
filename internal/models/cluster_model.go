@@ -46,3 +46,32 @@ type ClusterListResponse struct {
 	Source      string `json:"source"`
 	Environment string `json:"environment"`
 }
+
+// LocalKubeContext is a context discovered from the API host kubeconfig.
+type LocalKubeContext struct {
+	Name           string `json:"name"`
+	Cluster        string `json:"cluster"`
+	Server         string `json:"server"`
+	User           string `json:"user"`
+	ConflictName   bool   `json:"conflict_name"`
+	ConflictServer bool   `json:"conflict_server"`
+	ExistingName   string `json:"existing_name,omitempty"`
+}
+
+type LocalKubeContextsResponse struct {
+	Path     string             `json:"path"`
+	Contexts []LocalKubeContext `json:"contexts"`
+}
+
+type ImportLocalClustersRequest struct {
+	// Contexts are kubeconfig context names to import into the DB.
+	Contexts []string `json:"contexts" binding:"required,min=1"`
+	// SkipConflicts skips contexts that collide on name or server (default true).
+	SkipConflicts *bool `json:"skip_conflicts"`
+}
+
+type ImportLocalClustersResult struct {
+	Imported []string          `json:"imported"`
+	Skipped  map[string]string `json:"skipped"`
+	Failed   map[string]string `json:"failed"`
+}

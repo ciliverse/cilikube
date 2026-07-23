@@ -1,10 +1,35 @@
 @import "tailwindcss";
 
-@theme {
-  --font-display: "Orbitron", "JetBrains Mono", ui-monospace, monospace;
-  --font-sans: "JetBrains Mono", "Fira Code", Menlo, Consolas, monospace;
-  --font-mono: "JetBrains Mono", "Fira Code", Menlo, Consolas, monospace;
+@font-face {
+  font-family: "Maple Mono";
+  src: url("/fonts/maple-400.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
 
+@font-face {
+  font-family: "Maple Mono";
+  src: url("/fonts/maple-400i.woff2") format("woff2");
+  font-weight: 400;
+  font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Maple Mono";
+  src: url("/fonts/maple-700.woff2") format("woff2");
+  font-weight: 600 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@theme {
+  --font-display: "Orbitron", "Maple Mono", ui-monospace, monospace;
+  --font-sans: "Maple Mono", ui-monospace, Menlo, Consolas, monospace;
+  --font-mono: "Maple Mono", ui-monospace, Menlo, Consolas, monospace;
+
+  /* Defaults = TRON dark; runtime themes override via documentElement */
   --color-bg: #04070a;
   --color-panel: rgba(8, 18, 24, 0.78);
   --color-panel-solid: #071016;
@@ -26,6 +51,27 @@
   --color-mist: rgba(53, 230, 255, 0.06);
 }
 
+:root {
+  --color-ambient: rgba(53, 230, 255, 0.08);
+  --color-grid-line: rgba(53, 230, 255, 0.06);
+  --color-selection: rgba(53, 230, 255, 0.28);
+  --color-glow: rgba(53, 230, 255, 0.35);
+  --color-scroll-thumb: rgba(53, 230, 255, 0.4);
+  --color-scroll-track: rgba(7, 16, 22, 0.55);
+}
+
+html.theme-switching,
+html.theme-switching body,
+html.theme-switching .hud-panel,
+html.theme-switching header,
+html.theme-switching aside {
+  transition:
+    background-color 220ms ease,
+    color 220ms ease,
+    border-color 220ms ease,
+    box-shadow 220ms ease;
+}
+
 * {
   box-sizing: border-box;
 }
@@ -33,24 +79,57 @@
 html,
 body,
 #root {
+  height: 100%;
   min-height: 100%;
 }
 
 body {
   margin: 0;
+  overflow: hidden;
   color: var(--color-text);
   font-family: var(--font-sans);
   background:
-    radial-gradient(1200px 800px at 70% -10%, rgba(53, 230, 255, 0.08), transparent),
-    linear-gradient(rgba(53, 230, 255, 0.06) 1px, transparent 1px) 0 0 / 100% 28px,
-    linear-gradient(90deg, rgba(53, 230, 255, 0.06) 1px, transparent 1px) 0 0 / 28px 100%,
+    radial-gradient(1200px 800px at 70% -10%, var(--color-ambient), transparent),
+    linear-gradient(var(--color-grid-line) 1px, transparent 1px) 0 0 / 100% 28px,
+    linear-gradient(90deg, var(--color-grid-line) 1px, transparent 1px) 0 0 / 28px 100%,
     var(--color-bg);
   background-attachment: fixed;
   -webkit-font-smoothing: antialiased;
 }
 
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-scroll-thumb) var(--color-scroll-track);
+}
+
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+*::-webkit-scrollbar-track {
+  background: var(--color-scroll-track);
+  border-left: 1px solid var(--color-line);
+}
+
+*::-webkit-scrollbar-thumb {
+  background: var(--color-scroll-thumb);
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: var(--color-cyan);
+  background-clip: padding-box;
+}
+
+*::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
 ::selection {
-  background: rgba(53, 230, 255, 0.28);
+  background: var(--color-selection);
 }
 
 .hud-panel {
@@ -58,7 +137,9 @@ body {
   border: 1px solid var(--color-line);
   background: var(--color-panel);
   backdrop-filter: blur(10px);
-  box-shadow: inset 0 0 0 1px rgba(53, 230, 255, 0.04), 0 0 24px rgba(53, 230, 255, 0.06);
+  box-shadow:
+    inset 0 0 0 1px var(--color-cyan-faint),
+    0 0 24px color-mix(in srgb, var(--color-cyan) 12%, transparent);
 }
 
 .hud-panel::before,
@@ -98,13 +179,14 @@ body {
   font-weight: 700;
   letter-spacing: 0.18em;
   color: var(--color-cyan);
-  text-shadow: 0 0 10px rgba(53, 230, 255, 0.35);
+  text-shadow: 0 0 10px var(--color-glow);
 }
 
 .hud-brand .accent {
   color: var(--color-orange);
 }
 
+.hud-field,
 .hud-select {
   width: 100%;
   border: 1px solid var(--color-line);
@@ -117,38 +199,222 @@ body {
   outline: none;
 }
 
-.hud-select:focus {
+.hud-field:focus,
+.hud-select:focus,
+.hud-select-trigger:focus-visible {
   border-color: var(--color-cyan);
   box-shadow: 0 0 0 3px var(--color-cyan-faint);
 }
 
-.hud-table {
-  width: 100%;
-  min-width: 100%;
-  border-collapse: collapse;
+.hud-select-trigger {
+  appearance: none;
+  cursor: pointer;
   text-align: left;
-  font-size: 0.8125rem;
 }
 
-.hud-table thead {
-  background: rgba(53, 230, 255, 0.06);
+.hud-select-open {
+  border-color: var(--color-cyan);
+  box-shadow: 0 0 0 3px var(--color-cyan-faint);
+}
+
+.hud-select-menu {
+  border-color: var(--color-line) !important;
+  background: var(--color-panel-solid);
+  color: var(--color-text);
+}
+
+.hud-table-scroll {
+  /* Scrollport so thead can stick while rows/columns move */
+  position: relative;
+  min-width: 0;
+  max-width: 100%;
+  background: var(--color-panel-solid);
+  /* clip > hidden: no phantom 1px horizontal scrollbar */
+  overflow-x: clip;
+  overflow-y: auto;
+}
+
+/* Table cards: drop HUD corner ticks — they read as a broken scrollbar */
+.hud-panel.hud-table-scroll::before,
+.hud-panel.hud-table-scroll::after {
+  content: none;
+}
+
+.hud-table-scroll--wide {
+  overflow-x: auto;
+  scrollbar-gutter: stable;
+}
+
+.hud-table {
+  width: 100%;
+  max-width: 100%;
+  table-layout: fixed;
+  /* separate + spacing 0: sticky headers work reliably across browsers */
+  border-collapse: separate;
+  border-spacing: 0;
+  text-align: left;
+  font-size: 0.8125rem;
+  color: var(--color-text);
+}
+
+.hud-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: var(--color-panel-solid);
   color: var(--color-text-dim);
-  font-size: 11px;
-  letter-spacing: 0.12em;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
+  white-space: nowrap;
+  border-bottom: 1px solid var(--color-line);
 }
 
 .hud-table th,
 .hud-table td {
-  padding: 0.75rem 1.25rem;
+  padding: 0.62rem 1rem;
+  background-clip: padding-box;
+  vertical-align: middle;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.hud-table tbody tr {
-  border-top: 1px solid rgba(53, 230, 255, 0.1);
+/* Prefer readable Name column under table-layout: fixed */
+.hud-table th:first-child,
+.hud-table td:first-child {
+  width: 22%;
 }
 
-.hud-table tbody tr:hover {
-  background: rgba(53, 230, 255, 0.04);
+/* Keep action icon buttons from being clipped by ellipsis rules */
+.hud-table td:last-child {
+  width: 1%;
+  overflow: visible;
+  text-overflow: clip;
+}
+
+.hud-table tbody td {
+  /* Uniform solid fill — avoids zebra / pin-column color patches */
+  background: var(--color-panel-solid);
+  border-top: 1px solid color-mix(in srgb, var(--color-line) 75%, transparent);
+  color: var(--color-text);
+}
+
+.hud-table tbody tr:first-child td {
+  border-top: none;
+}
+
+.hud-table tbody tr:hover td {
+  background: color-mix(in srgb, var(--color-panel-solid) 82%, var(--color-mist));
+}
+
+/* Wide metric tables: auto columns; grow past container only when needed */
+.hud-table--wide {
+  table-layout: auto;
+  width: 100%;
+  max-width: none;
+}
+
+.hud-table--wide th,
+.hud-table--wide td {
+  overflow: visible;
+  text-overflow: clip;
+}
+
+/* Pin Name while scrolling sideways */
+.hud-table--pin-first th:first-child,
+.hud-table--pin-first td:first-child {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  background: var(--color-panel-solid);
+  box-shadow: inset -1px 0 0 color-mix(in srgb, var(--color-line) 75%, transparent);
+}
+
+.hud-table--pin-first thead th:first-child {
+  z-index: 3;
+}
+
+.hud-table--pin-first tbody tr:hover td:first-child {
+  background: color-mix(in srgb, var(--color-panel-solid) 82%, var(--color-mist));
+}
+
+html[data-theme-mode='light'] .hud-table thead th,
+html[data-theme-mode='light'] .hud-table tbody td,
+html[data-theme-mode='light'] .hud-table--pin-first th:first-child,
+html[data-theme-mode='light'] .hud-table--pin-first td:first-child {
+  background: var(--color-panel-solid);
+}
+
+html[data-theme-mode='light'] .hud-table tbody tr:hover td,
+html[data-theme-mode='light'] .hud-table--pin-first tbody tr:hover td:first-child {
+  background: color-mix(in srgb, var(--color-panel-solid) 88%, var(--color-mist));
+}
+
+.theme-swatches {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  padding: 0.5rem 0.75rem;
+}
+
+.theme-swatch {
+  width: 1.35rem;
+  height: 1.35rem;
+  border-radius: 999px;
+  border: 2px solid var(--color-line);
+  cursor: pointer;
+  padding: 0;
+  background: linear-gradient(135deg, var(--swatch-bg) 45%, var(--swatch-accent) 55%);
+  transition:
+    transform 120ms ease,
+    border-color 120ms ease;
+}
+
+.theme-swatch:hover {
+  transform: scale(1.08);
+}
+
+.theme-swatch.active {
+  border-color: var(--color-cyan);
+  box-shadow: 0 0 0 2px var(--color-cyan-faint);
+}
+
+/* Light mode: crisper ink, stronger surfaces */
+html[data-theme-mode='light'] body {
+  -webkit-font-smoothing: auto;
+  color: var(--color-text);
+}
+
+html[data-theme-mode='light'] .hud-brand {
+  text-shadow: none;
+}
+
+html[data-theme-mode='light'] .hud-panel {
+  background: var(--color-panel-solid);
+  box-shadow:
+    inset 0 0 0 1px var(--color-line),
+    0 2px 14px rgba(12, 20, 28, 0.1);
+}
+
+html[data-theme-mode='light'] .hud-label,
+html[data-theme-mode='light'] .hud-table thead {
+  color: var(--color-text-dim);
+  font-weight: 700;
+}
+
+html[data-theme-mode='light'] header,
+html[data-theme-mode='light'] aside {
+  background: color-mix(in srgb, var(--color-panel-solid) 92%, white);
+  border-color: var(--color-line);
+}
+
+html[data-font='maple'] body,
+html[data-font='maple'] .hud-field,
+html[data-font='maple'] .hud-label,
+html[data-font='maple'] .hud-table {
+  letter-spacing: 0.01em;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -159,4 +425,170 @@ body {
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
   }
+}
+
+/* ---- CiliTerm-style boot (pre-login) ---- */
+.ck-boot {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background:
+    radial-gradient(900px 600px at 50% 30%, var(--color-cyan-faint), transparent 70%),
+    var(--color-bg);
+  overflow: hidden;
+  animation: ck-boot-in 0.35s ease-out;
+  font-family: var(--font-mono);
+}
+.ck-boot-exit {
+  animation: ck-boot-out 0.55s ease-in forwards;
+}
+@keyframes ck-boot-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes ck-boot-out {
+  to {
+    opacity: 0;
+    transform: scale(1.03);
+    filter: blur(6px);
+  }
+}
+.ck-boot-scan {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: repeating-linear-gradient(
+    0deg,
+    rgba(0, 0, 0, 0) 0px,
+    rgba(0, 0, 0, 0) 2px,
+    rgba(0, 0, 0, 0.28) 3px,
+    rgba(0, 0, 0, 0) 4px
+  );
+  opacity: 0.45;
+  animation: ck-boot-scanmove 8s linear infinite;
+}
+@keyframes ck-boot-scanmove {
+  to {
+    background-position: 0 -400px;
+  }
+}
+.ck-boot-inner {
+  width: min(560px, 86vw);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  z-index: 1;
+}
+.ck-boot-logo {
+  font-family: var(--font-display);
+  font-size: clamp(2rem, 8vw, 3.6rem);
+  font-weight: 700;
+  letter-spacing: 0.28em;
+  padding-left: 0.28em;
+  color: var(--color-cyan);
+  text-shadow:
+    0 0 10px var(--color-glow),
+    0 0 28px var(--color-ambient);
+  animation: ck-boot-flicker 3.5s infinite;
+}
+.ck-boot-logo .accent {
+  color: var(--color-orange);
+}
+@keyframes ck-boot-flicker {
+  0%,
+  19%,
+  21%,
+  55%,
+  57%,
+  100% {
+    opacity: 1;
+  }
+  20%,
+  56% {
+    opacity: 0.65;
+  }
+}
+.ck-boot-sub {
+  margin-top: 0.6rem;
+  color: var(--color-text-dim);
+  font-size: 0.78rem;
+  letter-spacing: 0.14em;
+}
+.ck-boot-log {
+  width: 100%;
+  margin-top: 2rem;
+  min-height: 200px;
+  font-size: 0.82rem;
+  line-height: 1.7;
+}
+.ck-boot-line {
+  display: flex;
+  gap: 0.7rem;
+  align-items: baseline;
+  color: var(--color-text);
+  animation: ck-boot-lineIn 0.3s ease-out;
+}
+@keyframes ck-boot-lineIn {
+  from {
+    opacity: 0;
+    transform: translateX(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+.ck-boot-ts {
+  color: var(--color-text-dim);
+  white-space: pre;
+}
+.ck-boot-ok {
+  color: var(--color-ok);
+  font-weight: 700;
+}
+.ck-boot-msg {
+  color: var(--color-text);
+}
+.ck-boot-ready .ck-boot-msg {
+  color: var(--color-cyan);
+  letter-spacing: 0.12em;
+}
+.ck-boot-cursor {
+  color: var(--color-cyan);
+  animation: ck-boot-blink 1s steps(2, start) infinite;
+}
+@keyframes ck-boot-blink {
+  50% {
+    opacity: 0;
+  }
+}
+.ck-boot-progress {
+  width: 100%;
+  height: 3px;
+  margin-top: 1.6rem;
+  background: var(--color-cyan-faint);
+  border-radius: 2px;
+  overflow: hidden;
+}
+.ck-boot-progress > span {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, var(--color-cyan-dim), var(--color-cyan));
+  box-shadow: 0 0 12px var(--color-glow);
+  transition: width 0.25s ease-out;
+}
+.ck-boot-hint {
+  margin-top: 1rem;
+  color: var(--color-text-dim);
+  font-size: 0.7rem;
+  letter-spacing: 0.16em;
+  opacity: 0.7;
+  text-transform: uppercase;
 }

@@ -24,9 +24,9 @@ func (OAuthProvider) TableName() string {
 
 // OAuthLoginRequest request for OAuth login
 type OAuthLoginRequest struct {
-	Provider string `json:"provider" binding:"required"`
+	Provider string `json:"provider"`
 	Code     string `json:"code" binding:"required"`
-	State    string `json:"state" binding:"required"`
+	State    string `json:"state"`
 }
 
 // OAuthTokenResponse response containing OAuth tokens

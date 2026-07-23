@@ -26,7 +26,11 @@ api.interceptors.request.use((config) => {
   const needsCluster =
     url.includes('/api/v1/') &&
     !url.includes('/auth/') &&
-    !url.includes('/clusters')
+    !url.includes('/clusters') &&
+    !url.includes('/admin/') &&
+    !url.includes('/audit/') &&
+    !url.includes('/settings/') &&
+    !url.includes('/profile')
 
   if (clusterId && needsCluster) {
     config.params = { ...config.params, clusterId }
@@ -64,6 +68,30 @@ export async function apiGet<T>(url: string, params?: Record<string, unknown>) {
 
 export async function apiPost<T>(url: string, data?: unknown) {
   const res = await api.post<ApiEnvelope<T>>(url, data)
+  if (res.data.code !== 0 && res.data.code !== 200) {
+    throw new Error(res.data.message || 'Request failed')
+  }
+  return res.data.data
+}
+
+export async function apiDelete<T>(url: string) {
+  const res = await api.delete<ApiEnvelope<T>>(url)
+  if (res.data.code !== 0 && res.data.code !== 200) {
+    throw new Error(res.data.message || 'Request failed')
+  }
+  return res.data.data
+}
+
+export async function apiPatch<T>(url: string, data?: unknown) {
+  const res = await api.patch<ApiEnvelope<T>>(url, data)
+  if (res.data.code !== 0 && res.data.code !== 200) {
+    throw new Error(res.data.message || 'Request failed')
+  }
+  return res.data.data
+}
+
+export async function apiPut<T>(url: string, data?: unknown) {
+  const res = await api.put<ApiEnvelope<T>>(url, data)
   if (res.data.code !== 0 && res.data.code !== 200) {
     throw new Error(res.data.message || 'Request failed')
   }

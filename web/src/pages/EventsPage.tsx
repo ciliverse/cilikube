@@ -4,7 +4,7 @@ import { motion } from 'framer-motion'
 import dayjs from 'dayjs'
 import { listEvents, listNamespaces } from '@/api/cluster'
 import { useCluster } from '@/store/cluster'
-import { Badge, Card, EmptyState, PageHeader } from '@/components/ui'
+import { Badge, Card, EmptyState, HudSelect, PageHeader } from '@/components/ui'
 
 export function EventsPage() {
   const { clusterId } = useCluster()
@@ -37,27 +37,29 @@ export function EventsPage() {
       />
 
       <Card className="mb-4 flex flex-wrap gap-3 p-4">
-        <select
+        <HudSelect
+          aria-label="Namespace filter"
+          className="w-auto min-w-[160px]"
           value={namespace}
-          onChange={(e) => setNamespace(e.target.value)}
-          className="hud-select w-auto min-w-[160px]"
-        >
-          <option value="">All namespaces</option>
-          {(nsQ.data || []).map((ns) => (
-            <option key={ns} value={ns}>
-              {ns}
-            </option>
-          ))}
-        </select>
-        <select
+          onChange={setNamespace}
+          searchableWhen={0}
+          options={[
+            { value: '', label: 'All namespaces' },
+            ...(nsQ.data || []).map((ns) => ({ value: ns, label: ns })),
+          ]}
+        />
+        <HudSelect
+          aria-label="Event type"
+          className="w-auto min-w-[140px]"
           value={type}
-          onChange={(e) => setType(e.target.value)}
-          className="hud-select w-auto min-w-[140px]"
-        >
-          <option value="">All types</option>
-          <option value="Normal">Normal</option>
-          <option value="Warning">Warning</option>
-        </select>
+          onChange={setType}
+          searchableWhen={99}
+          options={[
+            { value: '', label: 'All types' },
+            { value: 'Normal', label: 'Normal' },
+            { value: 'Warning', label: 'Warning' },
+          ]}
+        />
       </Card>
 
       <div className="space-y-3">

@@ -536,41 +536,49 @@ type AuditReport struct {
 	IPActivity        map[string]int    `json:"ip_activity"`
 }
 
-// GetSecurityMetrics returns security metrics for monitoring
+// GetSecurityMetrics returns security metrics for a relative lookback from now.
 func (s *AuditService) GetSecurityMetrics(period time.Duration) (*SecurityMetrics, error) {
-	since := time.Now().Add(-period)
+	end := time.Now()
+	return s.GetSecurityMetricsInWindow(end.Add(-period), end)
+}
+
+// GetSecurityMetricsInWindow returns security metrics for an absolute time window.
+func (s *AuditService) GetSecurityMetricsInWindow(start, end time.Time) (*SecurityMetrics, error) {
+	if !end.After(start) {
+		return nil, fmt.Errorf("end_time must be after start_time")
+	}
 
 	logs, _, err := s.store.ListAuditLogs(0, 10000)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get audit logs: %w", err)
 	}
 
+	period := end.Sub(start)
 	metrics := &SecurityMetrics{
 		Period:    period,
 		Timestamp: time.Now(),
 	}
 
-	// Analyze logs
 	for _, log := range logs {
-		if log.CreatedAt.After(since) {
-			metrics.TotalEvents++
+		if log.CreatedAt.Before(start) || !log.CreatedAt.Before(end) {
+			continue
+		}
+		metrics.TotalEvents++
 
-			switch log.Action {
-			case "login":
-				metrics.SuccessfulLogins++
-			case "login_failed":
-				metrics.FailedLogins++
-			case "permission_denied":
-				metrics.PermissionDenials++
-			}
+		switch log.Action {
+		case "login":
+			metrics.SuccessfulLogins++
+		case "login_failed":
+			metrics.FailedLogins++
+		case "permission_denied":
+			metrics.PermissionDenials++
+		}
 
-			if strings.Contains(log.Action, "failed") || strings.Contains(log.Action, "denied") {
-				metrics.SecurityViolations++
-			}
+		if strings.Contains(log.Action, "failed") || strings.Contains(log.Action, "denied") {
+			metrics.SecurityViolations++
 		}
 	}
 
-	// Calculate rates
 	hours := period.Hours()
 	if hours > 0 {
 		metrics.EventsPerHour = float64(metrics.TotalEvents) / hours
@@ -651,4 +659,9 @@ func (s *AuditService) GetAuditLogsByAction(action string, offset, limit int) (i
 // GetAllAuditLogs gets all audit logs with pagination
 func (s *AuditService) GetAllAuditLogs(offset, limit int) (interface{}, int64, error) {
 	return s.store.ListAuditLogs(offset, limit)
+}
+
+// QueryAuditLogs lists audit logs with optional user/action/time filters.
+func (s *AuditService) QueryAuditLogs(q store.AuditLogQuery) (interface{}, int64, error) {
+	return s.store.QueryAuditLogs(q)
 }

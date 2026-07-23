@@ -97,27 +97,6 @@ func pathIgnored(pattern, reqPath string) bool {
 	return matched
 }
 
-// addPolicyIfNotExists helper function, checks if policy exists, adds if not
-func addPolicyIfNotExists(e *casbin.Enforcer, sub, obj, act string) {
-	has, err := e.HasPolicy(sub, obj, act)
-	if err != nil {
-		log.Fatalf("Error checking if policy exists (%s, %s, %s): %v", sub, obj, act, err)
-	}
-	if !has {
-		added, err := e.AddPolicy(sub, obj, act)
-		if err != nil {
-			log.Fatalf("Failed to add policy (%s, %s, %s): %v", sub, obj, act, err)
-		}
-		if added {
-			log.Printf("Successfully added default policy: %s, %s, %s", sub, obj, act)
-		} else {
-			log.Printf("Policy already exists, not added: %s, %s, %s", sub, obj, act)
-		}
-	} else {
-		log.Printf("Policy already exists, skipping addition: %s, %s, %s", sub, obj, act)
-	}
-}
-
 // InitCasbin initializes RBAC permission control
 func InitCasbin(db *gorm.DB) (*casbin.Enforcer, error) {
 	if db == nil {
@@ -149,19 +128,11 @@ func InitCasbin(db *gorm.DB) (*casbin.Enforcer, error) {
 		// Should not Fatal here, as having no policies on first run is normal
 	}
 
-	log.Println("Adding or verifying default policies...")
-	// Add default permissions (check if exists)
-	addPolicyIfNotExists(e, "super_admin", "/api/v1/*", "*")   // Admin has all permissions for all v1 interfaces
-	addPolicyIfNotExists(e, "normal_user", "/api/v1/*", "GET") // Normal users only have GET permissions
-
-	// You may also need to add user to role mappings (g rules)
-	// For example: e.AddGroupingPolicy("admin", "super_admin")
-	// This is usually handled during user creation or role assignment, but defaults can be added.
-
-	// Save all possible new policies (if AutoSave is not reliable enough or batch addition is needed)
-	// if err := e.SavePolicy(); err != nil {
-	//     log.Fatalf("Failed to save policies: %v", err)
-	// }
+	// Legacy demo roles — do NOT grant GET /api/v1/* (would allow exec/secrets via keyMatch).
+	// Real permissions are seeded by PermissionService.InitializeDefaultPolicies (admin/editor/viewer).
+	if _, err := e.RemoveFilteredPolicy(0, "normal_user"); err != nil {
+		log.Printf("warning: failed to remove legacy normal_user policies: %v", err)
+	}
 
 	log.Printf("RBAC permission control initialization completed!")
 	return e, nil

@@ -53,12 +53,23 @@ type OAuthStore interface {
 	ListUserOAuthProviders(userID uint) ([]*OAuthProvider, error)
 }
 
+// AuditLogQuery filters audit log listings.
+type AuditLogQuery struct {
+	UserID    *uint
+	Action    string
+	StartTime *time.Time
+	EndTime   *time.Time
+	Offset    int
+	Limit     int
+}
+
 // AuditLogStore defines all methods required for managing audit logs.
 type AuditLogStore interface {
 	CreateAuditLog(log *AuditLog) error
 	GetAuditLogsByUserID(userID uint, offset, limit int) ([]*AuditLog, int64, error)
 	GetAuditLogsByAction(action string, offset, limit int) ([]*AuditLog, int64, error)
 	ListAuditLogs(offset, limit int) ([]*AuditLog, int64, error)
+	QueryAuditLogs(q AuditLogQuery) ([]*AuditLog, int64, error)
 }
 
 // LoginAttemptStore defines all methods required for managing login attempts.

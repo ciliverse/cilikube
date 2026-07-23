@@ -7,9 +7,9 @@ import {
   useState,
   type ReactNode,
 } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { listClusters, type ClusterItem } from '@/api/cluster'
-import { getClusterId, setClusterId as persistClusterId } from '@/lib/api'
+import { apiPost, getClusterId, setClusterId as persistClusterId } from '@/lib/api'
 import { useAuth } from './auth'
 
 type ClusterContextValue = {
@@ -17,6 +17,7 @@ type ClusterContextValue = {
   clusterId: string
   setClusterId: (id: string) => void
   loading: boolean
+  switching: boolean
   activeCluster?: ClusterItem
 }
 
@@ -24,7 +25,9 @@ const ClusterContext = createContext<ClusterContextValue | null>(null)
 
 export function ClusterProvider({ children }: { children: ReactNode }) {
   const { isAuthenticated } = useAuth()
+  const queryClient = useQueryClient()
   const [clusterId, setClusterIdState] = useState(() => getClusterId())
+  const [switching, setSwitching] = useState(false)
 
   const { data = [], isLoading } = useQuery({
     queryKey: ['clusters'],
@@ -42,10 +45,34 @@ export function ClusterProvider({ children }: { children: ReactNode }) {
     }
   }, [data, clusterId])
 
-  const setClusterId = useCallback((id: string) => {
-    setClusterIdState(id)
-    persistClusterId(id)
-  }, [])
+  const setClusterId = useCallback(
+    (id: string) => {
+      if (!id || id === clusterId) return
+      setClusterIdState(id)
+      persistClusterId(id)
+      setSwitching(true)
+
+      void (async () => {
+        try {
+          // Keep server "active" cluster in sync (informers / fallbacks)
+          await apiPost('/api/v1/clusters/active', { id })
+        } catch {
+          /* still switch client-side; resource APIs carry ?clusterId= */
+        } finally {
+          // Drop cached K8s views so lists refetch for the new cluster
+          await queryClient.invalidateQueries({
+            predicate: (q) => {
+              const key = q.queryKey[0]
+              return key !== 'clusters' && key !== 'settings-system' && key !== 'settings-oauth'
+            },
+          })
+          void queryClient.invalidateQueries({ queryKey: ['clusters'] })
+          setSwitching(false)
+        }
+      })()
+    },
+    [clusterId, queryClient],
+  )
 
   const activeCluster = data.find((c) => c.id === clusterId || c.name === clusterId)
 
@@ -55,9 +82,10 @@ export function ClusterProvider({ children }: { children: ReactNode }) {
       clusterId,
       setClusterId,
       loading: isLoading,
+      switching,
       activeCluster,
     }),
-    [data, clusterId, setClusterId, isLoading, activeCluster],
+    [data, clusterId, setClusterId, isLoading, switching, activeCluster],
   )
 
   return <ClusterContext.Provider value={value}>{children}</ClusterContext.Provider>

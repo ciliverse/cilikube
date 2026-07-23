@@ -823,29 +823,50 @@ func (s *MemoryStore) GetAuditLogsByAction(action string, offset, limit int) ([]
 
 // ListAuditLogs implements AuditLogStore interface
 func (s *MemoryStore) ListAuditLogs(offset, limit int) ([]*AuditLog, int64, error) {
+	return s.QueryAuditLogs(AuditLogQuery{Offset: offset, Limit: limit})
+}
+
+// QueryAuditLogs implements AuditLogStore interface
+func (s *MemoryStore) QueryAuditLogs(q AuditLogQuery) ([]*AuditLog, int64, error) {
 	s.mutex.RLock()
 	defer s.mutex.RUnlock()
 
-	total := int64(len(s.auditLogs))
+	filtered := make([]*AuditLog, 0, len(s.auditLogs))
+	for _, log := range s.auditLogs {
+		if q.UserID != nil && (log.UserID == nil || *log.UserID != *q.UserID) {
+			continue
+		}
+		if q.Action != "" && log.Action != q.Action {
+			continue
+		}
+		if q.StartTime != nil && log.CreatedAt.Before(*q.StartTime) {
+			continue
+		}
+		if q.EndTime != nil && log.CreatedAt.After(*q.EndTime) {
+			continue
+		}
+		logCopy := *log
+		filtered = append(filtered, &logCopy)
+	}
 
-	// Apply pagination
-	start := offset
-	end := offset + limit
-	if start > len(s.auditLogs) {
+	// Newest first
+	for i, j := 0, len(filtered)-1; i < j; i, j = i+1, j-1 {
+		filtered[i], filtered[j] = filtered[j], filtered[i]
+	}
+
+	total := int64(len(filtered))
+	start := q.Offset
+	end := q.Offset + q.Limit
+	if q.Limit <= 0 {
+		end = start + 20
+	}
+	if start > len(filtered) {
 		return []*AuditLog{}, total, nil
 	}
-	if end > len(s.auditLogs) {
-		end = len(s.auditLogs)
+	if end > len(filtered) {
+		end = len(filtered)
 	}
-
-	// Create copies of logs
-	logs := make([]*AuditLog, 0, end-start)
-	for i := start; i < end; i++ {
-		logCopy := *s.auditLogs[i]
-		logs = append(logs, &logCopy)
-	}
-
-	return logs, total, nil
+	return filtered[start:end], total, nil
 }
 
 // === MemoryStore Management Methods ===

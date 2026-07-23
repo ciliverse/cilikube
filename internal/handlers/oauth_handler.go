@@ -21,13 +21,22 @@ func NewOAuthHandler(oauthService *service.OAuthService) *OAuthHandler {
 	}
 }
 
+// ListProviders returns public OAuth provider status for the login page.
+func (h *OAuthHandler) ListProviders(c *gin.Context) {
+	c.JSON(http.StatusOK, gin.H{
+		"code":    200,
+		"data":    h.oauthService.ListPublicProviders(),
+		"message": "ok",
+	})
+}
+
 // GetAuthURL generates OAuth authorization URL
 func (h *OAuthHandler) GetAuthURL(c *gin.Context) {
 	provider := c.Param("provider")
 	state := c.Query("state")
 
 	if state == "" {
-		state = "default_state" // In production, generate a secure random state
+		state = "cilikube_login"
 	}
 
 	authURL, err := h.oauthService.GetAuthURL(provider, state)
@@ -60,6 +69,9 @@ func (h *OAuthHandler) HandleCallback(c *gin.Context) {
 			"error":   err.Error(),
 		})
 		return
+	}
+	if req.Provider == "" {
+		req.Provider = "github"
 	}
 
 	// Handle OAuth login

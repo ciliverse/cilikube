@@ -4,8 +4,11 @@ import (
 	"context"
 
 	appsv1 "k8s.io/api/apps/v1"
+	autoscalingv2 "k8s.io/api/autoscaling/v2"
+	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
+	policyv1 "k8s.io/api/policy/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/watch"
@@ -274,4 +277,158 @@ func (c *NamespaceClient) Delete(ctx context.Context, clientset kubernetes.Inter
 }
 func (c *NamespaceClient) Watch(ctx context.Context, clientset kubernetes.Interface, _ string, opts metav1.ListOptions) (watch.Interface, error) {
 	return clientset.CoreV1().Namespaces().Watch(ctx, opts)
+}
+
+// --- JobClient (Namespaced) ---
+type JobClient struct{}
+
+func (c *JobClient) Get(ctx context.Context, clientset kubernetes.Interface, namespace, name string, opts metav1.GetOptions) (*batchv1.Job, error) {
+	return clientset.BatchV1().Jobs(namespace).Get(ctx, name, opts)
+}
+func (c *JobClient) List(ctx context.Context, clientset kubernetes.Interface, namespace string, opts metav1.ListOptions) (runtime.Object, error) {
+	return clientset.BatchV1().Jobs(namespace).List(ctx, opts)
+}
+func (c *JobClient) Create(ctx context.Context, clientset kubernetes.Interface, namespace string, obj *batchv1.Job, opts metav1.CreateOptions) (*batchv1.Job, error) {
+	return clientset.BatchV1().Jobs(namespace).Create(ctx, obj, opts)
+}
+func (c *JobClient) Update(ctx context.Context, clientset kubernetes.Interface, namespace string, obj *batchv1.Job, opts metav1.UpdateOptions) (*batchv1.Job, error) {
+	return clientset.BatchV1().Jobs(namespace).Update(ctx, obj, opts)
+}
+func (c *JobClient) Delete(ctx context.Context, clientset kubernetes.Interface, namespace, name string, opts metav1.DeleteOptions) error {
+	return clientset.BatchV1().Jobs(namespace).Delete(ctx, name, opts)
+}
+func (c *JobClient) Watch(ctx context.Context, clientset kubernetes.Interface, namespace string, opts metav1.ListOptions) (watch.Interface, error) {
+	return clientset.BatchV1().Jobs(namespace).Watch(ctx, opts)
+}
+
+// --- CronJobClient (Namespaced) ---
+type CronJobClient struct{}
+
+func (c *CronJobClient) Get(ctx context.Context, clientset kubernetes.Interface, namespace, name string, opts metav1.GetOptions) (*batchv1.CronJob, error) {
+	return clientset.BatchV1().CronJobs(namespace).Get(ctx, name, opts)
+}
+func (c *CronJobClient) List(ctx context.Context, clientset kubernetes.Interface, namespace string, opts metav1.ListOptions) (runtime.Object, error) {
+	return clientset.BatchV1().CronJobs(namespace).List(ctx, opts)
+}
+func (c *CronJobClient) Create(ctx context.Context, clientset kubernetes.Interface, namespace string, obj *batchv1.CronJob, opts metav1.CreateOptions) (*batchv1.CronJob, error) {
+	return clientset.BatchV1().CronJobs(namespace).Create(ctx, obj, opts)
+}
+func (c *CronJobClient) Update(ctx context.Context, clientset kubernetes.Interface, namespace string, obj *batchv1.CronJob, opts metav1.UpdateOptions) (*batchv1.CronJob, error) {
+	return clientset.BatchV1().CronJobs(namespace).Update(ctx, obj, opts)
+}
+func (c *CronJobClient) Delete(ctx context.Context, clientset kubernetes.Interface, namespace, name string, opts metav1.DeleteOptions) error {
+	return clientset.BatchV1().CronJobs(namespace).Delete(ctx, name, opts)
+}
+func (c *CronJobClient) Watch(ctx context.Context, clientset kubernetes.Interface, namespace string, opts metav1.ListOptions) (watch.Interface, error) {
+	return clientset.BatchV1().CronJobs(namespace).Watch(ctx, opts)
+}
+
+// --- NetworkPolicyClient (Namespaced) ---
+type NetworkPolicyClient struct{}
+
+func (c *NetworkPolicyClient) Get(ctx context.Context, clientset kubernetes.Interface, namespace, name string, opts metav1.GetOptions) (*networkingv1.NetworkPolicy, error) {
+	return clientset.NetworkingV1().NetworkPolicies(namespace).Get(ctx, name, opts)
+}
+func (c *NetworkPolicyClient) List(ctx context.Context, clientset kubernetes.Interface, namespace string, opts metav1.ListOptions) (runtime.Object, error) {
+	return clientset.NetworkingV1().NetworkPolicies(namespace).List(ctx, opts)
+}
+func (c *NetworkPolicyClient) Create(ctx context.Context, clientset kubernetes.Interface, namespace string, obj *networkingv1.NetworkPolicy, opts metav1.CreateOptions) (*networkingv1.NetworkPolicy, error) {
+	return clientset.NetworkingV1().NetworkPolicies(namespace).Create(ctx, obj, opts)
+}
+func (c *NetworkPolicyClient) Update(ctx context.Context, clientset kubernetes.Interface, namespace string, obj *networkingv1.NetworkPolicy, opts metav1.UpdateOptions) (*networkingv1.NetworkPolicy, error) {
+	return clientset.NetworkingV1().NetworkPolicies(namespace).Update(ctx, obj, opts)
+}
+func (c *NetworkPolicyClient) Delete(ctx context.Context, clientset kubernetes.Interface, namespace, name string, opts metav1.DeleteOptions) error {
+	return clientset.NetworkingV1().NetworkPolicies(namespace).Delete(ctx, name, opts)
+}
+func (c *NetworkPolicyClient) Watch(ctx context.Context, clientset kubernetes.Interface, namespace string, opts metav1.ListOptions) (watch.Interface, error) {
+	return clientset.NetworkingV1().NetworkPolicies(namespace).Watch(ctx, opts)
+}
+
+// --- HPAClient (Namespaced) ---
+type HPAClient struct{}
+
+func (c *HPAClient) Get(ctx context.Context, clientset kubernetes.Interface, namespace, name string, opts metav1.GetOptions) (*autoscalingv2.HorizontalPodAutoscaler, error) {
+	return clientset.AutoscalingV2().HorizontalPodAutoscalers(namespace).Get(ctx, name, opts)
+}
+func (c *HPAClient) List(ctx context.Context, clientset kubernetes.Interface, namespace string, opts metav1.ListOptions) (runtime.Object, error) {
+	return clientset.AutoscalingV2().HorizontalPodAutoscalers(namespace).List(ctx, opts)
+}
+func (c *HPAClient) Create(ctx context.Context, clientset kubernetes.Interface, namespace string, obj *autoscalingv2.HorizontalPodAutoscaler, opts metav1.CreateOptions) (*autoscalingv2.HorizontalPodAutoscaler, error) {
+	return clientset.AutoscalingV2().HorizontalPodAutoscalers(namespace).Create(ctx, obj, opts)
+}
+func (c *HPAClient) Update(ctx context.Context, clientset kubernetes.Interface, namespace string, obj *autoscalingv2.HorizontalPodAutoscaler, opts metav1.UpdateOptions) (*autoscalingv2.HorizontalPodAutoscaler, error) {
+	return clientset.AutoscalingV2().HorizontalPodAutoscalers(namespace).Update(ctx, obj, opts)
+}
+func (c *HPAClient) Delete(ctx context.Context, clientset kubernetes.Interface, namespace, name string, opts metav1.DeleteOptions) error {
+	return clientset.AutoscalingV2().HorizontalPodAutoscalers(namespace).Delete(ctx, name, opts)
+}
+func (c *HPAClient) Watch(ctx context.Context, clientset kubernetes.Interface, namespace string, opts metav1.ListOptions) (watch.Interface, error) {
+	return clientset.AutoscalingV2().HorizontalPodAutoscalers(namespace).Watch(ctx, opts)
+}
+
+// --- PDBClient (Namespaced) ---
+type PDBClient struct{}
+
+func (c *PDBClient) Get(ctx context.Context, clientset kubernetes.Interface, namespace, name string, opts metav1.GetOptions) (*policyv1.PodDisruptionBudget, error) {
+	return clientset.PolicyV1().PodDisruptionBudgets(namespace).Get(ctx, name, opts)
+}
+func (c *PDBClient) List(ctx context.Context, clientset kubernetes.Interface, namespace string, opts metav1.ListOptions) (runtime.Object, error) {
+	return clientset.PolicyV1().PodDisruptionBudgets(namespace).List(ctx, opts)
+}
+func (c *PDBClient) Create(ctx context.Context, clientset kubernetes.Interface, namespace string, obj *policyv1.PodDisruptionBudget, opts metav1.CreateOptions) (*policyv1.PodDisruptionBudget, error) {
+	return clientset.PolicyV1().PodDisruptionBudgets(namespace).Create(ctx, obj, opts)
+}
+func (c *PDBClient) Update(ctx context.Context, clientset kubernetes.Interface, namespace string, obj *policyv1.PodDisruptionBudget, opts metav1.UpdateOptions) (*policyv1.PodDisruptionBudget, error) {
+	return clientset.PolicyV1().PodDisruptionBudgets(namespace).Update(ctx, obj, opts)
+}
+func (c *PDBClient) Delete(ctx context.Context, clientset kubernetes.Interface, namespace, name string, opts metav1.DeleteOptions) error {
+	return clientset.PolicyV1().PodDisruptionBudgets(namespace).Delete(ctx, name, opts)
+}
+func (c *PDBClient) Watch(ctx context.Context, clientset kubernetes.Interface, namespace string, opts metav1.ListOptions) (watch.Interface, error) {
+	return clientset.PolicyV1().PodDisruptionBudgets(namespace).Watch(ctx, opts)
+}
+
+// --- ResourceQuotaClient (Namespaced) ---
+type ResourceQuotaClient struct{}
+
+func (c *ResourceQuotaClient) Get(ctx context.Context, clientset kubernetes.Interface, namespace, name string, opts metav1.GetOptions) (*corev1.ResourceQuota, error) {
+	return clientset.CoreV1().ResourceQuotas(namespace).Get(ctx, name, opts)
+}
+func (c *ResourceQuotaClient) List(ctx context.Context, clientset kubernetes.Interface, namespace string, opts metav1.ListOptions) (runtime.Object, error) {
+	return clientset.CoreV1().ResourceQuotas(namespace).List(ctx, opts)
+}
+func (c *ResourceQuotaClient) Create(ctx context.Context, clientset kubernetes.Interface, namespace string, obj *corev1.ResourceQuota, opts metav1.CreateOptions) (*corev1.ResourceQuota, error) {
+	return clientset.CoreV1().ResourceQuotas(namespace).Create(ctx, obj, opts)
+}
+func (c *ResourceQuotaClient) Update(ctx context.Context, clientset kubernetes.Interface, namespace string, obj *corev1.ResourceQuota, opts metav1.UpdateOptions) (*corev1.ResourceQuota, error) {
+	return clientset.CoreV1().ResourceQuotas(namespace).Update(ctx, obj, opts)
+}
+func (c *ResourceQuotaClient) Delete(ctx context.Context, clientset kubernetes.Interface, namespace, name string, opts metav1.DeleteOptions) error {
+	return clientset.CoreV1().ResourceQuotas(namespace).Delete(ctx, name, opts)
+}
+func (c *ResourceQuotaClient) Watch(ctx context.Context, clientset kubernetes.Interface, namespace string, opts metav1.ListOptions) (watch.Interface, error) {
+	return clientset.CoreV1().ResourceQuotas(namespace).Watch(ctx, opts)
+}
+
+// --- LimitRangeClient (Namespaced) ---
+type LimitRangeClient struct{}
+
+func (c *LimitRangeClient) Get(ctx context.Context, clientset kubernetes.Interface, namespace, name string, opts metav1.GetOptions) (*corev1.LimitRange, error) {
+	return clientset.CoreV1().LimitRanges(namespace).Get(ctx, name, opts)
+}
+func (c *LimitRangeClient) List(ctx context.Context, clientset kubernetes.Interface, namespace string, opts metav1.ListOptions) (runtime.Object, error) {
+	return clientset.CoreV1().LimitRanges(namespace).List(ctx, opts)
+}
+func (c *LimitRangeClient) Create(ctx context.Context, clientset kubernetes.Interface, namespace string, obj *corev1.LimitRange, opts metav1.CreateOptions) (*corev1.LimitRange, error) {
+	return clientset.CoreV1().LimitRanges(namespace).Create(ctx, obj, opts)
+}
+func (c *LimitRangeClient) Update(ctx context.Context, clientset kubernetes.Interface, namespace string, obj *corev1.LimitRange, opts metav1.UpdateOptions) (*corev1.LimitRange, error) {
+	return clientset.CoreV1().LimitRanges(namespace).Update(ctx, obj, opts)
+}
+func (c *LimitRangeClient) Delete(ctx context.Context, clientset kubernetes.Interface, namespace, name string, opts metav1.DeleteOptions) error {
+	return clientset.CoreV1().LimitRanges(namespace).Delete(ctx, name, opts)
+}
+func (c *LimitRangeClient) Watch(ctx context.Context, clientset kubernetes.Interface, namespace string, opts metav1.ListOptions) (watch.Interface, error) {
+	return clientset.CoreV1().LimitRanges(namespace).Watch(ctx, opts)
 }

@@ -8,14 +8,14 @@ This directory contains Helm charts for deploying CiliKube in Kubernetes cluster
 
 ```bash
 # Add CiliKube Helm repository
-helm repo add cilikube https://charts.cillian.website
+helm repo add ciliverse https://charts.cillian.website
 helm repo update
 
 # Install CiliKube
-helm install cilikube cilikube/cilikube -n cilikube --create-namespace
+helm install cilikube ciliverse/cilikube -n cilikube --create-namespace
 
 # Upgrade CiliKube
-helm upgrade cilikube cilikube/cilikube -n cilikube
+helm upgrade cilikube ciliverse/cilikube -n cilikube
 ```
 
 ### Using Local Charts
@@ -30,7 +30,7 @@ helm install cilikube ./deployments/helm/cilikube -f custom-values.yaml -n cilik
 
 ## Prerequisites
 
-- Kubernetes cluster v1.20+
+- Kubernetes cluster v1.36.2+ (tested with 1.36.2)
 - Helm v3.0+
 - kubectl configured to access your cluster
 
@@ -72,7 +72,7 @@ app:
 backend:
   image:
     repository: cilliantech/cilikube
-    tag: latest
+    tag: v0.8.0
     pullPolicy: IfNotPresent
   replicas: 2
   resources:
@@ -87,7 +87,7 @@ backend:
 frontend:
   image:
     repository: cilliantech/cilikube-web
-    tag: latest
+    tag: v0.8.0
     pullPolicy: IfNotPresent
   replicas: 2
   resources:
@@ -229,7 +229,7 @@ security:
 ### Minimal Installation
 
 ```bash
-helm install cilikube cilikube/cilikube \
+helm install cilikube ciliverse/cilikube \
   --set backend.replicas=1 \
   --set frontend.replicas=1 \
   --set monitoring.prometheus.enabled=false \
@@ -239,7 +239,7 @@ helm install cilikube cilikube/cilikube \
 ### Production Installation
 
 ```bash
-helm install cilikube cilikube/cilikube \
+helm install cilikube ciliverse/cilikube \
   --set backend.replicas=3 \
   --set frontend.replicas=2 \
   --set autoscaling.enabled=true \
@@ -253,7 +253,7 @@ helm install cilikube cilikube/cilikube \
 ### High Availability Installation
 
 ```bash
-helm install cilikube cilikube/cilikube \
+helm install cilikube ciliverse/cilikube \
   --set backend.replicas=5 \
   --set frontend.replicas=3 \
   --set autoscaling.enabled=true \
@@ -274,14 +274,14 @@ helm install cilikube cilikube/cilikube \
 helm repo update
 
 # Upgrade to latest version
-helm upgrade cilikube cilikube/cilikube -n cilikube
+helm upgrade cilikube ciliverse/cilikube -n cilikube
 ```
 
 ### Upgrade with New Values
 
 ```bash
 # Upgrade with custom values
-helm upgrade cilikube cilikube/cilikube \
+helm upgrade cilikube ciliverse/cilikube \
   -f new-values.yaml \
   -n cilikube
 ```

@@ -49,6 +49,31 @@ func (h *ClusterHandler) CreateCluster(c *gin.Context) {
 	utils.ApiSuccess(c, nil, "cluster created successfully")
 }
 
+// ListLocalKubeContexts lists contexts from the API host kubeconfig.
+func (h *ClusterHandler) ListLocalKubeContexts(c *gin.Context) {
+	data, err := h.service.ListLocalKubeContexts()
+	if err != nil {
+		utils.ApiError(c, http.StatusBadRequest, "failed to list local kubeconfig contexts", err.Error())
+		return
+	}
+	utils.ApiSuccess(c, data, "local kubeconfig contexts retrieved")
+}
+
+// ImportLocalClusters imports selected local contexts into the database.
+func (h *ClusterHandler) ImportLocalClusters(c *gin.Context) {
+	var req models.ImportLocalClustersRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		utils.ApiError(c, http.StatusBadRequest, "request parameter error", err.Error())
+		return
+	}
+	data, err := h.service.ImportLocalClusters(req)
+	if err != nil {
+		utils.ApiError(c, http.StatusInternalServerError, "failed to import local contexts", err.Error())
+		return
+	}
+	utils.ApiSuccess(c, data, "local contexts import finished")
+}
+
 // UpdateCluster updates an existing cluster
 func (h *ClusterHandler) UpdateCluster(c *gin.Context) {
 	clusterID := c.Param("id")

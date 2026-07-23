@@ -1,0 +1,73 @@
+# Standalone production Compose (localhost binds only).
+# Usage:
+#   1. cp configs/config.prod.example.yaml configs/config.prod.yaml  # fill secrets (gitignored)
+#   2. ./docs/cilikube/public/generate-readonly-kubeconfig.sh ./readonly.kubeconfig
+#   3. docker compose -f docker-compose.prod.yaml up -d --build
+#
+# Host reverse proxy terminates TLS:
+#   /     → 127.0.0.1:8088
+#   /api  → 127.0.0.1:8080
+
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: cilikube-backend:local
+    container_name: cilikube-backend
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8080:8080"
+    environment:
+      - GIN_MODE=release
+      - CILIKUBE_CONFIG_PATH=/app/configs/config.prod.yaml
+    volumes:
+      - ./configs/config.prod.yaml:/app/configs/config.prod.yaml:ro
+      - ./readonly.kubeconfig:/app/kube/config:ro
+      - cilikube_data:/app/data
+    networks:
+      - cilikube-net
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://127.0.0.1:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  frontend:
+    build:
+      context: ./web
+      dockerfile: Dockerfile
+    image: cilikube-web:local
+    container_name: cilikube-frontend
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8088:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+    networks:
+      - cilikube-net
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    logging:
+      driver: json-file
+      options:
+        max-size: "5m"
+        max-file: "3"
+
+networks:
+  cilikube-net:
+    driver: bridge
+
+volumes:
+  cilikube_data:

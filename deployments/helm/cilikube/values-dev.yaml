@@ -1,7 +1,7 @@
 backend:
   replicas: 1
   image:
-    tag: latest
+    tag: v0.8.0
 
 frontend:
   replicas: 1

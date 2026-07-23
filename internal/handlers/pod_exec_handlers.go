@@ -86,7 +86,7 @@ func (h *PodExecHandler) ExecPod(c *gin.Context) {
 		TTY:       true,
 	}
 
-	err = h.service.Exec(k8sClient.Clientset, namespace, podName, options, wsStreamHandler, wsStreamHandler)
+	err = h.service.Exec(k8sClient.Config, k8sClient.Clientset, namespace, podName, options, wsStreamHandler, wsStreamHandler)
 	if err != nil {
 		errmsg := []byte(fmt.Sprintf("\r\n--- Command Execution Failed ---\r\nError: %v\r\n", err))
 		wsStreamHandler.WriteMessage(websocket.TextMessage, errmsg)
@@ -95,6 +95,56 @@ func (h *PodExecHandler) ExecPod(c *gin.Context) {
 	}
 
 	log.Println("Exec finished without error.")
+}
+
+// AttachPod handles WebSocket requests for attaching to a pod container
+func (h *PodExecHandler) AttachPod(c *gin.Context) {
+	ws, err := h.upgrader.Upgrade(c.Writer, c.Request, nil)
+	if err != nil {
+		log.Printf("Failed to upgrade to websocket: %v", err)
+		return
+	}
+	defer ws.Close()
+
+	k8sClient, ok := k8s.GetClientFromQuery(c, h.clusterManager)
+	if !ok {
+		ws.WriteMessage(websocket.TextMessage, []byte("Failed to get Kubernetes client"))
+		return
+	}
+
+	namespace := c.Param("namespace")
+	podName := c.Param("name")
+	container := c.Query("container")
+
+	wsStreamHandler := &WebSocketStreamHandler{
+		conn:        ws,
+		stdinChan:   make(chan []byte, 100),
+		stdoutChan:  make(chan []byte, 100),
+		closeChan:   make(chan struct{}),
+		stdinClosed: false,
+	}
+	defer wsStreamHandler.Close()
+
+	go wsStreamHandler.readMessages()
+	go wsStreamHandler.writeMessages()
+
+	options := &service.ExecOptions{
+		Container: container,
+		Stdin:     true,
+		Stdout:    true,
+		Stderr:    true,
+		TTY:       true,
+	}
+
+	err = h.service.Attach(k8sClient.Config, k8sClient.Clientset, namespace, podName, options, wsStreamHandler, wsStreamHandler)
+	if err != nil {
+		errmsg := []byte(fmt.Sprintf("\r\n--- Attach Failed ---\r\nError: %v\r\n", err))
+		wsStreamHandler.WriteMessage(websocket.TextMessage, errmsg)
+		log.Printf("Attach error: %v", err)
+		return
+	}
+
+	log.Println("Attach finished without error.")
 }
 
 // WebSocketStreamHandler implements io.Reader and io.Writer for WebSocket data
