@@ -157,7 +157,7 @@ export function PodTerminal({ namespace, podName, containers, mode = 'exec' }: P
     status === 'open' ? 'ok' : status === 'connecting' ? 'warn' : status === 'error' ? 'danger' : 'neutral'
 
   return (
-    <div className="flex h-[62vh] min-h-[360px] flex-col">
+    <div className="flex h-[min(62vh,70dvh)] min-h-[240px] flex-col sm:min-h-[360px]">
       <div className="flex flex-wrap items-center gap-3 border-b border-line px-4 py-3">
         <label className="flex items-center gap-2 text-xs">
           <span className="hud-label">Container</span>

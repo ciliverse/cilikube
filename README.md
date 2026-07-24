@@ -47,29 +47,51 @@ CiliKube is an enterprise-grade, open-source Kubernetes multi-cluster management
 ### v0.8.0 React UI (current)
 
 <div align="center">
-  <img src="docs/v0.8/overview.png" alt="React Overview" width="100%">
+  <img src="docs/v0.8/overview.png" alt="Cluster Overview" width="100%">
   <p><strong>Cluster Overview</strong></p>
 </div>
 
 <div align="center">
-  <img src="docs/v0.8/nodes.png" alt="React Nodes" width="100%">
-  <p><strong>Nodes</strong></p>
+  <img src="docs/v0.8/admin-users.png" alt="Admin Users" width="100%">
+  <p><strong>Admin · Users</strong></p>
 </div>
 
 <div align="center">
-  <img src="docs/v0.8/pods.png" alt="React Pods" width="100%">
-  <p><strong>Pods</strong></p>
+  <img src="docs/v0.8/admin-settings.png" alt="System Settings" width="100%">
+  <p><strong>Admin · Settings</strong></p>
+</div>
+
+<details>
+<summary>Cluster overview across themes (TRON / Paper / Matrix / Amber / Nord)</summary>
+
+<br>
+
+<div align="center">
+  <img src="docs/v0.8/overview-tron.png" alt="TRON theme overview" width="100%">
+  <p><strong>TRON</strong></p>
 </div>
 
 <div align="center">
-  <img src="docs/v0.8/clusters.png" alt="React Clusters" width="100%">
-  <p><strong>Clusters</strong></p>
+  <img src="docs/v0.8/overview-paper.png" alt="Paper theme overview" width="100%">
+  <p><strong>Paper</strong></p>
 </div>
 
 <div align="center">
-  <img src="docs/v0.8/login.png" alt="React Login" width="100%">
-  <p><strong>Sign In</strong></p>
+  <img src="docs/v0.8/overview-matrix.png" alt="Matrix theme overview" width="100%">
+  <p><strong>Matrix</strong></p>
 </div>
+
+<div align="center">
+  <img src="docs/v0.8/overview-amber.png" alt="Amber theme overview" width="100%">
+  <p><strong>Amber</strong></p>
+</div>
+
+<div align="center">
+  <img src="docs/v0.8/overview-nord.png" alt="Nord theme overview" width="100%">
+  <p><strong>Nord</strong></p>
+</div>
+
+</details>
 
 
 ## ✨ Key Differentiators
@@ -95,13 +117,10 @@ CiliKube emerged from a comprehensive full-stack development learning initiative
 ## 🌐 Online Demo
 
 - Online Demo: https://cilikube.cillian.website
-- Demo Credentials (read-only viewer):
-  - Username: `guest`
-  - Password: `CiliKubeGuest2026!`
 
 ## 📚 Documentation
 
-- Official Documentation: [cilikube.cillian.website](https://cilikube.cillian.website)
+- Online demo / product site: [cilikube.cillian.website](https://cilikube.cillian.website)
 
 ## 🚀 Technology Stack
 
@@ -128,60 +147,25 @@ CiliKube leverages industry-standard technologies and frameworks to ensure relia
 - **Configuration**: `Viper`
 - **Logging**: `Zap Logger`
 
-## ✨ Core Features
+## ✨ Current Features
 
-- **Enterprise Authentication**: Secure JWT-based authentication and role-based authorization
-- **Comprehensive Dashboard**: Real-time cluster metrics and resource utilization overview
-- **Multi-Cluster Operations**: Centralized management across multiple Kubernetes environments
-- **Resource Management Suite**:
-  - **Infrastructure**: Node monitoring and management
-  - **Workspaces**: Namespace lifecycle management
-  - **Workloads**: Complete Pod lifecycle with integrated logging and terminal access
-  - **Storage**: Persistent Volume and Persistent Volume Claim administration
-  - **Configuration**: Secure ConfigMap and Secret management
-  - **Networking**: Service discovery and Ingress configuration
-  - **Deployments**: Advanced workload management (Deployment/StatefulSet/DaemonSet)
-- **User Experience**: Customizable themes and comprehensive internationalization support
-
-## 🛠️ Development Roadmap
-
-**Frontend**
-- [x] Login Page
-- [x] Basic Layout (Sidebar, Topbar, Tabs)
-- [x] Notifications
-- [x] Workload Resource Pages (Deployment, StatefulSet, DaemonSet, etc.)
-- [x] Configuration Management Pages (ConfigMap, Secret)
-- [x] Network Resource Pages (Service, Ingress)
-- [x] Storage Resource Pages (StorageClass, PV, PVC)
-- [x] Access Control Pages (RBAC - ServiceAccount, Role, ClusterRoleBinding, etc.)
-- [x] Log Viewer Enhancements
-- [x] Web Shell Terminal Integration
-- [ ] Events Viewer
-- [ ] Basic CRD Resource Management
-- [ ] Monitoring Integration (Display data from Prometheus/Grafana)
-
-**Backend**
-- [x] Kubernetes Client Initialization
-- [x] Basic Routing Setup (Gin)
-- [x] CORS Configuration
-- [x] JWT Authentication Middleware
-- [x] WebSocket Endpoint (for Logs and Web Shell)
-- [x] Multi-cluster Support
-- [x] Node Resource API
-- [x] Pod Resource API (List, Get, Delete, Logs, Exec)
-- [x] PV/PVC Resource API
-- [x] Namespace Resource API
-- [x] Deployment / StatefulSet / DaemonSet Resource API
-- [x] Service / Ingress Resource API
-- [x] ConfigMap / Secret Resource API
-- [x] RBAC Related Resource API
-- [x] Event Resource API
+- **Auth & RBAC**: JWT login, optional GitHub OAuth, Casbin roles; user / role / settings admin; security audit log
+- **Multi-cluster**: Import and switch clusters, local kubeconfig context import, active cluster selection
+- **Overview & search**: Cluster overview dashboard, global resource search, Events stream
+- **Cluster resources**:
+  - Nodes / Namespaces / CRDs
+  - Workloads: Pods (logs / web terminal), Deployments, StatefulSets, DaemonSets, Jobs, CronJobs, HPA, PDB
+  - Network: Services, Ingress, GatewayClasses, Gateways, HTTPRoutes, NetworkPolicies
+  - Config: ConfigMaps, Secrets, ServiceAccounts, ResourceQuotas, LimitRanges
+  - Storage: PV / PVC / StorageClass
+  - Access: Roles, RoleBindings, ClusterRoles, ClusterRoleBindings
+- **Observe & ops**: Monitoring (Prometheus metrics), Helm releases, API Proxy console, resource YAML view / edit
 
 ## 💻 Local Development
 
 ### Environment Preparation
-1. Install [Node.js](https://nodejs.org/) (>=18) and [pnpm](https://pnpm.io/)
-2. Install [Go](https://go.dev/) (>=1.20)
+1. Install [Node.js](https://nodejs.org/) (>=20) and [pnpm](https://pnpm.io/) (>=10)
+2. Install [Go](https://go.dev/) (>=1.26)
 3. Have a Kubernetes cluster and configure the kubeconfig file (defaults to reading `~/.kube/config`)
 
 ### Running the Frontend
@@ -329,7 +313,7 @@ Please follow the Conventional Commits specification:
 
 - Email: cilliantech@gmail.com
 - Website: https://www.cillian.website
-- WeChat: Cillian
+- WeChat: cillianoffical
 
 <img src="docs/wechat400x400.png" width="100" height="100" />
 

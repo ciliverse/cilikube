@@ -843,6 +843,145 @@ export function IngressPage() {
 
 }
 
+export function GatewayClassesPage() {
+  const { yamlButton, yamlModal } = useYamlModal('gatewayclasses', false)
+  return (
+    <>
+    <ResourceListPage
+      title="GATEWAY CLASSES"
+      resourceKey="gatewayclasses"
+      queryFn={() => listClusterResource('gatewayclasses')}
+      columns={[
+        {
+          key: 'name',
+          header: 'Name',
+          render: (item) => nameLink('gatewayclasses', item, false),
+        },
+        {
+          key: 'controller',
+          header: 'Controller',
+          render: (item) => (
+            <span className="font-mono text-xs">{item.spec?.controllerName || '-'}</span>
+          ),
+        },
+        {
+          key: 'accepted',
+          header: 'Accepted',
+          render: (item) => {
+            const cond = (item.status?.conditions || []).find((c: any) => c.type === 'Accepted')
+            const ok = cond?.status === 'True'
+            return <ReadyBadge ok={ok} okText="Yes" badText={cond ? 'No' : '-'} />
+          },
+        },
+        { key: 'age', header: 'Age', render: ageCell },
+        { key: 'created', header: 'Created', render: createdCell },
+      ]}
+      actions={(item) => yamlButton(item)}
+    />
+    {yamlModal}
+    </>
+  )
+}
+
+export function GatewaysPage() {
+  const { namespace } = useNamespace()
+  const { yamlButton, yamlModal } = useYamlModal('gateways', true)
+  return (
+    <>
+    <ResourceListPage
+      title="GATEWAYS"
+      namespaced
+      resourceKey="gateways"
+      queryFn={() => listNamespacedResource(namespace, 'gateways')}
+      columns={[
+        {
+          key: 'name',
+          header: 'Name',
+          render: (item) => nameLink('gateways', item),
+        },
+        { key: 'ns', header: 'Namespace', render: (item) => metaNamespace(item) },
+        {
+          key: 'class',
+          header: 'Class',
+          render: (item) => item.spec?.gatewayClassName || '-',
+        },
+        {
+          key: 'listeners',
+          header: 'Listeners',
+          render: (item) =>
+            (item.spec?.listeners || [])
+              .map((l: any) => `${l.name}:${l.port}/${l.protocol}`)
+              .join(', ') || '-',
+        },
+        {
+          key: 'addresses',
+          header: 'Addresses',
+          render: (item) =>
+            (item.status?.addresses || []).map((a: any) => a.value).filter(Boolean).join(', ') ||
+            '-',
+        },
+        { key: 'age', header: 'Age', render: ageCell },
+        { key: 'created', header: 'Created', render: createdCell },
+      ]}
+      actions={(item) => yamlButton(item)}
+    />
+    {yamlModal}
+    </>
+  )
+}
+
+export function HTTPRoutesPage() {
+  const { namespace } = useNamespace()
+  const { yamlButton, yamlModal } = useYamlModal('httproutes', true)
+  return (
+    <>
+    <ResourceListPage
+      title="HTTP ROUTES"
+      namespaced
+      resourceKey="httproutes"
+      queryFn={() => listNamespacedResource(namespace, 'httproutes')}
+      columns={[
+        {
+          key: 'name',
+          header: 'Name',
+          render: (item) => nameLink('httproutes', item),
+        },
+        { key: 'ns', header: 'Namespace', render: (item) => metaNamespace(item) },
+        {
+          key: 'hostnames',
+          header: 'Hostnames',
+          render: (item) => (item.spec?.hostnames || []).join(', ') || '-',
+        },
+        {
+          key: 'parents',
+          header: 'Parents',
+          render: (item) =>
+            (item.spec?.parentRefs || [])
+              .map((p: any) => (p.namespace ? `${p.namespace}/` : '') + p.name)
+              .join(', ') || '-',
+        },
+        {
+          key: 'backends',
+          header: 'Backends',
+          render: (item) => {
+            const refs = (item.spec?.rules || []).flatMap((r: any) => r.backendRefs || [])
+            return (
+              refs
+                .map((b: any) => `${b.name}${b.port != null ? `:${b.port}` : ''}`)
+                .join(', ') || '-'
+            )
+          },
+        },
+        { key: 'age', header: 'Age', render: ageCell },
+        { key: 'created', header: 'Created', render: createdCell },
+      ]}
+      actions={(item) => yamlButton(item)}
+    />
+    {yamlModal}
+    </>
+  )
+}
+
 export function ConfigMapsPage() {
   const { namespace } = useNamespace()
   const { yamlButton, yamlModal } = useYamlModal('configmaps', true)

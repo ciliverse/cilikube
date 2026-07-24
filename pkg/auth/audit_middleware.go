@@ -62,7 +62,7 @@ func AuditMiddleware(auditLogger APIAuditLogger) gin.HandlerFunc {
 		_ = auditLogger.LogAPIRequest(
 			getUserIDForAudit(userID, hasAuth),
 			username,
-			c.ClientIP(),
+			AuditClientIP(c),
 			c.GetHeader("User-Agent"),
 			resource,
 			action,

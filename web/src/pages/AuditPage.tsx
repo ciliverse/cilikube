@@ -289,26 +289,47 @@ export function AuditPage() {
                 <th>Action</th>
                 <th>Resource</th>
                 <th>IP</th>
+                <th>Client</th>
               </tr>
             </thead>
             <tbody>
-              {(logs as any[]).map((log: any, i: number) => (
-                <tr key={log.id || i}>
-                  <td className="text-text-dim">{log.created_at || log.timestamp || '-'}</td>
-                  <td>{log.user_id ?? log.username ?? '-'}</td>
-                  <td>
-                    <Badge tone="accent">{log.action || '-'}</Badge>
-                  </td>
-                  <td className="max-w-xs truncate">
-                    {log.resource || log.path || '-'}
-                    {log.resource_id ? `/${log.resource_id}` : ''}
-                  </td>
-                  <td className="text-text-dim">{log.ip_address || log.ip || '-'}</td>
-                </tr>
-              ))}
+              {(logs as any[]).map((log: any, i: number) => {
+                let details: any = log.details
+                if (typeof details === 'string' && details) {
+                  try {
+                    details = JSON.parse(details)
+                  } catch {
+                    details = null
+                  }
+                }
+                const username =
+                  log.username ||
+                  details?.username ||
+                  (log.user_id != null ? `#${log.user_id}` : '-')
+                const ua = log.user_agent || details?.user_agent || ''
+                return (
+                  <tr key={log.id || i}>
+                    <td className="text-text-dim">{log.created_at || log.timestamp || '-'}</td>
+                    <td className="font-mono text-xs">{username}</td>
+                    <td>
+                      <Badge tone="accent">{log.action || '-'}</Badge>
+                    </td>
+                    <td className="max-w-xs truncate">
+                      {log.resource || log.path || '-'}
+                      {log.resource_id ? `/${log.resource_id}` : ''}
+                    </td>
+                    <td className="font-mono text-xs text-cyan">
+                      {log.ip_address || log.ip || details?.ip || '-'}
+                    </td>
+                    <td className="max-w-[10rem] truncate text-[11px] text-text-dim" title={ua}>
+                      {ua || '-'}
+                    </td>
+                  </tr>
+                )
+              })}
               {!logsQ.isLoading && !(logs as any[]).length ? (
                 <tr>
-                  <td colSpan={5}>
+                  <td colSpan={6}>
                     <EmptyState>
                       {logsQ.isError
                         ? 'Failed to load audit logs (is /api/v1/audit registered?)'

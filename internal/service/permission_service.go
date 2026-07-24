@@ -67,6 +67,8 @@ func systemViewerPolicies() []rolePolicy {
 		{"viewer", "/api/v1/persistentvolumes/:name", "GET"},
 		{"viewer", "/api/v1/storageclasses", "GET"},
 		{"viewer", "/api/v1/storageclasses/:name", "GET"},
+		{"viewer", "/api/v1/gatewayclasses", "GET"},
+		{"viewer", "/api/v1/gatewayclasses/:name", "GET"},
 		{"viewer", "/api/v1/clusterroles", "GET"},
 		{"viewer", "/api/v1/clusterroles/:name", "GET"},
 		{"viewer", "/api/v1/clusterrolebindings", "GET"},
@@ -102,7 +104,7 @@ func systemViewerPolicies() []rolePolicy {
 	readResources := []string{
 		"pods", "deployments", "statefulsets", "daemonsets", "jobs", "cronjobs",
 		"services", "configmaps", "serviceaccounts", "persistentvolumeclaims",
-		"ingresses", "networkpolicies", "horizontalpodautoscalers",
+		"ingresses", "networkpolicies", "gateways", "httproutes", "horizontalpodautoscalers",
 		"poddisruptionbudgets", "resourcequotas", "limitranges",
 		"roles", "rolebindings",
 	}
@@ -138,6 +140,8 @@ func systemEditorPolicies() []rolePolicy {
 		{"editor", "/api/v1/persistentvolumes/:name", "*"},
 		{"editor", "/api/v1/storageclasses", "*"},
 		{"editor", "/api/v1/storageclasses/:name", "*"},
+		{"editor", "/api/v1/gatewayclasses", "*"},
+		{"editor", "/api/v1/gatewayclasses/:name", "*"},
 		{"editor", "/api/v1/clusterroles", "GET"},
 		{"editor", "/api/v1/clusterroles/:name", "GET"},
 		{"editor", "/api/v1/clusterrolebindings", "GET"},
@@ -173,7 +177,7 @@ func systemEditorPolicies() []rolePolicy {
 	writeResources := []string{
 		"pods", "deployments", "statefulsets", "daemonsets", "jobs", "cronjobs",
 		"services", "configmaps", "serviceaccounts", "persistentvolumeclaims",
-		"ingresses", "networkpolicies", "horizontalpodautoscalers",
+		"ingresses", "networkpolicies", "gateways", "httproutes", "horizontalpodautoscalers",
 		"poddisruptionbudgets", "resourcequotas", "limitranges",
 	}
 	for _, res := range writeResources {

@@ -28,7 +28,7 @@ export function ResourceListPage({
   extraAction,
   actions,
   creatable = true,
-  pinFirstColumn = false,
+  pinFirstColumn: _pinFirstColumn = false,
 }: {
   title: string
   subtitle?: string
@@ -40,9 +40,10 @@ export function ResourceListPage({
   actions?: (item: any, helpers: { refetch: () => void }) => ReactNode
   /** Show Create YAML button when user can mutate this resource */
   creatable?: boolean
-  /** Wide metric tables only: pin Name + allow horizontal scroll */
+  /** Kept for call-site compatibility; lists always pin Name + scroll wide on mobile */
   pinFirstColumn?: boolean
 }) {
+  void _pinFirstColumn
   const { clusterId } = useCluster()
   const { namespace, isAllNamespaces } = useNamespace()
   const { canMutate } = useAuth()
@@ -79,12 +80,12 @@ export function ResourceListPage({
             : 'Cluster-scoped resources')
         }
         action={
-          <div className="flex items-center gap-3">
+          <>
             {showCreate ? (
               <Button
                 type="button"
                 variant="outline"
-                className="px-3 py-1.5 text-xs"
+                className="min-h-9 px-3 py-1.5 text-xs"
                 onClick={() => setCreateOpen(true)}
               >
                 Create YAML
@@ -92,7 +93,7 @@ export function ResourceListPage({
             ) : null}
             {extraAction}
             <Badge tone="accent">{data.length}</Badge>
-          </div>
+          </>
         }
       />
 
@@ -103,8 +104,8 @@ export function ResourceListPage({
         onClose={() => setCreateOpen(false)}
       />
 
-      <HudTablePanel pinFirst={pinFirstColumn} wide={pinFirstColumn}>
-        <HudTable pinFirst={pinFirstColumn} wide={pinFirstColumn}>
+      <HudTablePanel pinFirst wide>
+        <HudTable pinFirst wide>
           <thead>
             <tr>
               {cols.map((col) => (

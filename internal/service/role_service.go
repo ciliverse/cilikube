@@ -232,10 +232,18 @@ func (s *RoleService) ListRoles() ([]models.RoleResponse, error) {
 	return responses, nil
 }
 
+// SyncPermissions refreshes Casbin groupings for a user from DB roles.
+func (s *RoleService) SyncPermissions(userID uint) error {
+	if s.permissionService == nil {
+		return nil
+	}
+	return s.permissionService.SyncUserRoles(userID)
+}
+
 // AssignRoleToUser assigns a role to a user
 func (s *RoleService) AssignRoleToUser(userID, roleID uint, assignedBy uint) error {
 	// Check if user exists
-	_, err := s.store.GetUserByID(userID)
+	user, err := s.store.GetUserByID(userID)
 	if err != nil {
 		return errors.New("user not found")
 	}
@@ -244,6 +252,10 @@ func (s *RoleService) AssignRoleToUser(userID, roleID uint, assignedBy uint) err
 	role, err := s.store.GetRoleByID(roleID)
 	if err != nil {
 		return errors.New("role not found")
+	}
+
+	if err := ValidateRoleChange(user.Username, role.Name, true); err != nil {
+		return err
 	}
 
 	// Check if user already has this role
@@ -279,7 +291,7 @@ func (s *RoleService) AssignRoleToUser(userID, roleID uint, assignedBy uint) err
 // RemoveRoleFromUser removes a role from a user
 func (s *RoleService) RemoveRoleFromUser(userID, roleID uint, removedBy uint) error {
 	// Check if user exists
-	_, err := s.store.GetUserByID(userID)
+	user, err := s.store.GetUserByID(userID)
 	if err != nil {
 		return errors.New("user not found")
 	}
@@ -288,6 +300,10 @@ func (s *RoleService) RemoveRoleFromUser(userID, roleID uint, removedBy uint) er
 	role, err := s.store.GetRoleByID(roleID)
 	if err != nil {
 		return errors.New("role not found")
+	}
+
+	if err := ValidateRoleChange(user.Username, role.Name, false); err != nil {
+		return err
 	}
 
 	// Check if user has this role
@@ -323,16 +339,22 @@ func (s *RoleService) RemoveRoleFromUser(userID, roleID uint, removedBy uint) er
 // AssignRolesToUser assigns multiple roles to a user (replaces existing roles)
 func (s *RoleService) AssignRolesToUser(userID uint, roleIDs []uint, assignedBy uint) error {
 	// Check if user exists
-	_, err := s.store.GetUserByID(userID)
+	user, err := s.store.GetUserByID(userID)
 	if err != nil {
 		return errors.New("user not found")
 	}
+	if IsProtectedUsername(user.Username) {
+		return fmt.Errorf("cannot change roles for protected account %q", user.Username)
+	}
 
-	// Validate all roles exist
+	// Validate all roles exist and are allowed for this user
 	for _, roleID := range roleIDs {
-		_, err := s.store.GetRoleByID(roleID)
+		role, err := s.store.GetRoleByID(roleID)
 		if err != nil {
 			return fmt.Errorf("role with ID %d not found", roleID)
+		}
+		if err := ValidateRoleChange(user.Username, role.Name, true); err != nil {
+			return err
 		}
 	}
 

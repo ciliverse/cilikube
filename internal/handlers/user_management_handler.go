@@ -9,8 +9,24 @@ import (
 
 	"github.com/ciliverse/cilikube/internal/models"
 	"github.com/ciliverse/cilikube/internal/service"
+	"github.com/ciliverse/cilikube/pkg/auth"
 	"github.com/ciliverse/cilikube/pkg/utils"
 )
+
+func parseRoleCSV(roles string) []string {
+	if strings.TrimSpace(roles) == "" {
+		return nil
+	}
+	parts := strings.Split(roles, ",")
+	out := make([]string, 0, len(parts))
+	for _, p := range parts {
+		p = strings.TrimSpace(p)
+		if p != "" {
+			out = append(out, p)
+		}
+	}
+	return out
+}
 
 // UserManagementHandler handles user management operations for administrators
 type UserManagementHandler struct {
@@ -179,38 +195,58 @@ func (h *UserManagementHandler) CreateUser(c *gin.Context) {
 		return
 	}
 
-	// Create user using auth service register functionality
 	registerReq := models.RegisterRequest{
 		Username: req.Username,
 		Email:    req.Email,
 		Password: req.Password,
 	}
 
-	createdUser, err := h.authService.Register(&registerReq)
+	createdUser, err := h.authService.AdminCreateUser(&registerReq, req.DisplayName, auth.AuditClientIP(c), c.GetHeader("User-Agent"))
 	if err != nil {
 		utils.ApiError(c, http.StatusBadRequest, "Failed to create user", err.Error())
 		return
 	}
 
-	// Update display name if provided
-	if req.DisplayName != "" {
-		updateReq := models.UpdateProfileRequest{
-			Email:       req.Email,
-			DisplayName: req.DisplayName,
-			AvatarURL:   "",
+	// Optional non-admin roles from the request (viewer/editor only).
+	// Admin role is never granted to created users.
+	roleNames := parseRoleCSV(req.Roles)
+	safeRoles := make([]string, 0, len(roleNames))
+	for _, name := range roleNames {
+		if strings.EqualFold(name, "admin") {
+			continue
 		}
-
-		_, err = h.authService.UpdateProfile(createdUser.ID, &updateReq)
-		if err != nil {
-			utils.ApiError(c, http.StatusInternalServerError, "User created but failed to update display name", err.Error())
-			return
+		if name == "" {
+			continue
 		}
+		safeRoles = append(safeRoles, name)
 	}
+	if len(safeRoles) > 0 {
+		currentUserID, _, _, _ := auth.GetCurrentUser(c)
+		// Replace default viewer with requested safe roles
+		existing, _ := h.roleService.GetUserRoles(createdUser.ID)
+		for _, role := range existing {
+			_ = h.roleService.RemoveRoleFromUser(createdUser.ID, role.ID, currentUserID)
+		}
+		for _, roleName := range safeRoles {
+			role, rErr := h.roleService.GetRoleByName(roleName)
+			if rErr != nil {
+				utils.ApiError(c, http.StatusBadRequest, "Invalid role: "+roleName, rErr.Error())
+				return
+			}
+			if err := h.roleService.AssignRoleToUser(createdUser.ID, role.ID, currentUserID); err != nil {
+				utils.ApiError(c, http.StatusBadRequest, "Failed to assign role", err.Error())
+				return
+			}
+		}
+	} else {
+		safeRoles = []string{"viewer"}
+	}
+	_ = h.roleService.SyncPermissions(createdUser.ID)
 
 	response := models.CreateUserResponse{
 		Username: createdUser.Username,
 		Email:    createdUser.Email,
-		Roles:    req.Roles,
+		Roles:    strings.Join(safeRoles, ","),
 		Status:   "created",
 	}
 
@@ -235,13 +271,15 @@ func (h *UserManagementHandler) UpdateUser(c *gin.Context) {
 	uid := uint(userID)
 
 	// Check if user exists
-	_, err = h.authService.GetProfile(uid)
+	profile, err := h.authService.GetProfile(uid)
 	if err != nil {
 		utils.ApiError(c, http.StatusNotFound, "User not found", err.Error())
 		return
 	}
 
-	// Update user profile
+	protected := service.IsProtectedUsername(profile.Username)
+
+	// Update user profile (allowed even for protected accounts)
 	updateProfileReq := models.UpdateProfileRequest{
 		Email:       req.Email,
 		DisplayName: req.DisplayName,
@@ -254,40 +292,52 @@ func (h *UserManagementHandler) UpdateUser(c *gin.Context) {
 		return
 	}
 
-	// Update user status if provided
+	// Update user status if provided — blocked for admin/guest
 	if req.IsActive != nil {
+		if protected {
+			utils.ApiError(c, http.StatusBadRequest, "Cannot change status of protected account")
+			return
+		}
 		err = h.authService.UpdateUserStatus(uid, *req.IsActive)
 		if err != nil {
-			utils.ApiError(c, http.StatusInternalServerError, "Failed to update user status", err.Error())
+			utils.ApiError(c, http.StatusBadRequest, "Failed to update user status", err.Error())
 			return
 		}
 	}
 
-	// Update user roles if provided
+	// Update user roles if provided — blocked for admin/guest; never grant admin to others
 	if len(req.Roles) > 0 {
-		// Remove all existing roles
+		if protected {
+			utils.ApiError(c, http.StatusBadRequest, "Cannot change roles of protected account")
+			return
+		}
+		for _, roleName := range req.Roles {
+			if err := service.ValidateRoleChange(profile.Username, roleName, true); err != nil {
+				utils.ApiError(c, http.StatusBadRequest, err.Error())
+				return
+			}
+		}
+
 		existingRoles, err := h.roleService.GetUserRoles(uid)
 		if err != nil {
 			utils.ApiError(c, http.StatusInternalServerError, "Failed to get existing roles", err.Error())
 			return
 		}
 
-		// Get current admin user ID for audit
-		currentUserID := uint(1) // Default admin ID, should be extracted from JWT context
-		if userID, exists := c.Get("userID"); exists {
-			if uid, ok := userID.(uint); ok {
-				currentUserID = uid
+		currentUserID := uint(0)
+		if v, exists := c.Get("user_id"); exists {
+			if id, ok := v.(uint); ok {
+				currentUserID = id
 			}
 		}
 
 		for _, role := range existingRoles {
 			if err := h.roleService.RemoveRoleFromUser(uid, role.ID, currentUserID); err != nil {
-				utils.ApiError(c, http.StatusInternalServerError, "Failed to remove existing role", err.Error())
+				utils.ApiError(c, http.StatusBadRequest, "Failed to remove existing role", err.Error())
 				return
 			}
 		}
 
-		// Assign new roles
 		for _, roleName := range req.Roles {
 			role, err := h.roleService.GetRoleByName(roleName)
 			if err != nil {
@@ -296,7 +346,7 @@ func (h *UserManagementHandler) UpdateUser(c *gin.Context) {
 			}
 
 			if err := h.roleService.AssignRoleToUser(uid, role.ID, currentUserID); err != nil {
-				utils.ApiError(c, http.StatusInternalServerError, "Failed to assign role", err.Error())
+				utils.ApiError(c, http.StatusBadRequest, "Failed to assign role", err.Error())
 				return
 			}
 		}
@@ -354,7 +404,11 @@ func (h *UserManagementHandler) UpdateUserStatus(c *gin.Context) {
 
 	err = h.authService.UpdateUserStatus(uint(userID), req.IsActive)
 	if err != nil {
-		utils.ApiError(c, http.StatusInternalServerError, "Failed to update user status", err.Error())
+		status := http.StatusInternalServerError
+		if strings.Contains(err.Error(), "cannot disable protected") || strings.Contains(err.Error(), "user not found") {
+			status = http.StatusBadRequest
+		}
+		utils.ApiError(c, status, "Failed to update user status", err.Error())
 		return
 	}
 
@@ -400,7 +454,11 @@ func (h *UserManagementHandler) DeleteUser(c *gin.Context) {
 	// Delete user
 	err = h.authService.DeleteUser(uid)
 	if err != nil {
-		utils.ApiError(c, http.StatusInternalServerError, "Failed to delete user", err.Error())
+		status := http.StatusInternalServerError
+		if strings.Contains(err.Error(), "cannot delete protected") || strings.Contains(err.Error(), "user not found") {
+			status = http.StatusBadRequest
+		}
+		utils.ApiError(c, status, "Failed to delete user", err.Error())
 		return
 	}
 

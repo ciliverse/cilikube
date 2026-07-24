@@ -169,6 +169,44 @@ spec:
   policyTypes:
     - Ingress
 `,
+    gatewayclasses: `apiVersion: gateway.networking.k8s.io/v1
+kind: GatewayClass
+metadata:
+  name: example-gatewayclass
+spec:
+  controllerName: example.com/gateway-controller
+`,
+    gateways: `apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: example-gateway
+  namespace: ${ns}
+spec:
+  gatewayClassName: example-gatewayclass
+  listeners:
+    - name: http
+      protocol: HTTP
+      port: 80
+`,
+    httproutes: `apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: example-httproute
+  namespace: ${ns}
+spec:
+  parentRefs:
+    - name: example-gateway
+  hostnames:
+    - example.local
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      backendRefs:
+        - name: example-svc
+          port: 80
+`,
     serviceaccounts: `apiVersion: v1
 kind: ServiceAccount
 metadata:

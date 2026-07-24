@@ -11,6 +11,7 @@ import (
 	policyv1 "k8s.io/api/policy/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	storagev1 "k8s.io/api/storage/v1"
+	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 )
 
 // ResourceServiceFactory resource service factory
@@ -56,6 +57,9 @@ func (f *ResourceServiceFactory) InitializeDefaultServices() {
 	f.RegisterService("jobs", NewBaseResourceService[*batchv1.Job](new(JobClient)))
 	f.RegisterService("cronjobs", NewBaseResourceService[*batchv1.CronJob](new(CronJobClient)))
 	f.RegisterService("networkpolicies", NewBaseResourceService[*networkingv1.NetworkPolicy](new(NetworkPolicyClient)))
+	f.RegisterService("gatewayclasses", NewBaseResourceService[*gatewayv1.GatewayClass](new(GatewayClassClient)))
+	f.RegisterService("gateways", NewBaseResourceService[*gatewayv1.Gateway](new(GatewayClient)))
+	f.RegisterService("httproutes", NewBaseResourceService[*gatewayv1.HTTPRoute](new(HTTPRouteClient)))
 	f.RegisterService("namespaces", NewBaseResourceService[*corev1.Namespace](new(NamespaceClient)))
 	f.RegisterService("storageclasses", NewBaseResourceService[*storagev1.StorageClass](new(StorageClassClient)))
 	f.RegisterService("serviceaccounts", NewBaseResourceService[*corev1.ServiceAccount](new(ServiceAccountClient)))

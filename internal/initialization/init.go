@@ -56,6 +56,9 @@ func InitializeServices(k8sManager *k8s.ClusterManager, store store.Store, cfg *
 	initializeResourceService(resourceFactory, "jobs", &appServices.JobService)
 	initializeResourceService(resourceFactory, "cronjobs", &appServices.CronJobService)
 	initializeResourceService(resourceFactory, "networkpolicies", &appServices.NetworkPolicyService)
+	initializeResourceService(resourceFactory, "gatewayclasses", &appServices.GatewayClassService)
+	initializeResourceService(resourceFactory, "gateways", &appServices.GatewayService)
+	initializeResourceService(resourceFactory, "httproutes", &appServices.HTTPRouteService)
 	initializeResourceService(resourceFactory, "namespaces", &appServices.NamespaceService)
 	initializeResourceService(resourceFactory, "storageclasses", &appServices.StorageClassService)
 	initializeResourceService(resourceFactory, "serviceaccounts", &appServices.ServiceAccountService)
@@ -133,6 +136,9 @@ func InitializeHandlers(router *gin.RouterGroup, services *service.AppServices, 
 	jobsHandler := handlers.NewResourceHandler(services.JobService, k8sManager, "jobs")
 	cronJobsHandler := handlers.NewResourceHandler(services.CronJobService, k8sManager, "cronjobs")
 	networkPoliciesHandler := handlers.NewResourceHandler(services.NetworkPolicyService, k8sManager, "networkpolicies")
+	gatewayClassesHandler := handlers.NewResourceHandler(services.GatewayClassService, k8sManager, "gatewayclasses")
+	gatewaysHandler := handlers.NewResourceHandler(services.GatewayService, k8sManager, "gateways")
+	httpRoutesHandler := handlers.NewResourceHandler(services.HTTPRouteService, k8sManager, "httproutes")
 	storageClassHandler := handlers.NewResourceHandler(services.StorageClassService, k8sManager, "storageclasses")
 	serviceAccountHandler := handlers.NewResourceHandler(services.ServiceAccountService, k8sManager, "serviceaccounts")
 	k8sRoleHandler := handlers.NewResourceHandler(services.RoleResourceService, k8sManager, "roles")
@@ -182,6 +188,7 @@ func InitializeHandlers(router *gin.RouterGroup, services *service.AppServices, 
 	}
 
 	registerClusterScopedResource(router, "storageclasses", storageClassHandler)
+	registerClusterScopedResource(router, "gatewayclasses", gatewayClassesHandler)
 	registerClusterScopedResource(router, "clusterroles", clusterRoleHandler)
 	registerClusterScopedResource(router, "clusterrolebindings", clusterRoleBindingHandler)
 
@@ -201,6 +208,8 @@ func InitializeHandlers(router *gin.RouterGroup, services *service.AppServices, 
 	registerNamespacedResourceClusterList(router, "jobs", jobsHandler)
 	registerNamespacedResourceClusterList(router, "cronjobs", cronJobsHandler)
 	registerNamespacedResourceClusterList(router, "networkpolicies", networkPoliciesHandler)
+	registerNamespacedResourceClusterList(router, "gateways", gatewaysHandler)
+	registerNamespacedResourceClusterList(router, "httproutes", httpRoutesHandler)
 	registerNamespacedResourceClusterList(router, "serviceaccounts", serviceAccountHandler)
 	registerNamespacedResourceClusterList(router, "roles", k8sRoleHandler)
 	registerNamespacedResourceClusterList(router, "rolebindings", roleBindingHandler)
@@ -246,6 +255,8 @@ func InitializeHandlers(router *gin.RouterGroup, services *service.AppServices, 
 			registerResourceInNamespace(nsMemberRoutes, "jobs", jobsHandler)
 			registerResourceInNamespace(nsMemberRoutes, "cronjobs", cronJobsHandler)
 			registerResourceInNamespace(nsMemberRoutes, "networkpolicies", networkPoliciesHandler)
+			registerResourceInNamespace(nsMemberRoutes, "gateways", gatewaysHandler)
+			registerResourceInNamespace(nsMemberRoutes, "httproutes", httpRoutesHandler)
 			registerResourceInNamespace(nsMemberRoutes, "serviceaccounts", serviceAccountHandler)
 			registerResourceInNamespace(nsMemberRoutes, "roles", k8sRoleHandler)
 			registerResourceInNamespace(nsMemberRoutes, "rolebindings", roleBindingHandler)
@@ -313,6 +324,8 @@ func registerResourceInNamespace[T runtime.Object](nsRouter *gin.RouterGroup, re
 // SetupRouter sets up and returns Gin engine
 func SetupRouter(cfg *configs.Config, services *service.AppServices, k8sManager *k8s.ClusterManager, e *casbin.Enforcer) *gin.Engine {
 	router := gin.New()
+	// Trust local reverse proxies so c.ClientIP() uses X-Forwarded-For / X-Real-IP
+	_ = router.SetTrustedProxies([]string{"127.0.0.1", "::1"})
 	router.Use(gin.Recovery(), gin.Logger())
 	router.Use(metrics.PromMiddleware())
 
@@ -347,6 +360,8 @@ func SetupRouter(cfg *configs.Config, services *service.AppServices, k8sManager 
 	router.GET("/live", handlers.LivenessCheck)
 	router.GET("/metrics", metrics.PromHandler())
 	router.GET("/version", handlers.GetVersion)
+	// Public: credentials only when CILIKUBE_SHOWCASE=1 (empty otherwise).
+	router.GET("/api/v1/showcase/info", handlers.GetShowcaseInfo)
 
 	// Serve static files for uploaded avatars
 	router.Static("/uploads", "./uploads")
@@ -358,6 +373,7 @@ func SetupRouter(cfg *configs.Config, services *service.AppServices, k8sManager 
 		"/api/v1/auth/register",
 		"/api/v1/auth/oauth/",
 		"/api/v1/system/healthz",
+		"/api/v1/showcase/info",
 	))
 	// Enforce Casbin policies when available
 	if e != nil {
@@ -366,6 +382,7 @@ func SetupRouter(cfg *configs.Config, services *service.AppServices, k8sManager 
 			IgnorePath("/api/v1/auth/register").
 			IgnorePath("/api/v1/auth/oauth/*").
 			IgnorePath("/api/v1/system/healthz").
+			IgnorePath("/api/v1/showcase/info").
 			CasbinMiddleware(e))
 	}
 	{

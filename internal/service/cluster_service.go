@@ -86,6 +86,9 @@ func (s *ClusterService) GetClusterByID(id string) (*models.ClusterResponse, err
 
 // CreateCluster handles the logic for creating a new cluster.
 func (s *ClusterService) CreateCluster(req models.CreateClusterRequest) error {
+	if k8s.IsShowcase() {
+		return fmt.Errorf("showcase mode: importing real clusters is disabled")
+	}
 	// 1. Validate kubeconfig
 	config, err := s.validateKubeconfig(req.KubeconfigData)
 	if err != nil {
@@ -115,11 +118,17 @@ func (s *ClusterService) CreateCluster(req models.CreateClusterRequest) error {
 
 // UpdateCluster updates cluster information.
 func (s *ClusterService) UpdateCluster(id string, req models.UpdateClusterRequest) error {
+	if k8s.IsShowcase() {
+		return fmt.Errorf("showcase mode: cluster updates are disabled")
+	}
 	return s.k8sManager.UpdateDBCluster(id, req)
 }
 
 // DeleteClusterByID handles the logic for deleting a cluster.
 func (s *ClusterService) DeleteClusterByID(id string) error {
+	if k8s.IsShowcase() {
+		return fmt.Errorf("showcase mode: cluster deletion is disabled")
+	}
 	return s.k8sManager.RemoveDBClusterByID(id)
 }
 
@@ -190,6 +199,9 @@ func (s *ClusterService) resolveLocalKubeconfigPath() (string, error) {
 
 // ListLocalKubeContexts lists contexts from the API host kubeconfig.
 func (s *ClusterService) ListLocalKubeContexts() (*models.LocalKubeContextsResponse, error) {
+	if k8s.IsShowcase() {
+		return nil, fmt.Errorf("showcase mode: local kubeconfig access is disabled")
+	}
 	path, err := s.resolveLocalKubeconfigPath()
 	if err != nil {
 		return nil, err
@@ -240,6 +252,9 @@ func (s *ClusterService) ListLocalKubeContexts() (*models.LocalKubeContextsRespo
 
 // ImportLocalClusters imports selected local contexts into the DB as clusters.
 func (s *ClusterService) ImportLocalClusters(req models.ImportLocalClustersRequest) (*models.ImportLocalClustersResult, error) {
+	if k8s.IsShowcase() {
+		return nil, fmt.Errorf("showcase mode: importing local kubeconfig is disabled")
+	}
 	path, err := s.resolveLocalKubeconfigPath()
 	if err != nil {
 		return nil, err

@@ -114,12 +114,25 @@ func (s *AuditService) LogSecurityEvent(event SecurityEvent) error {
 		event.Timestamp = time.Now()
 	}
 
-	// Serialize details to JSON
-	detailsJSON := ""
-	if event.Details != nil {
-		if jsonBytes, err := json.Marshal(event.Details); err == nil {
-			detailsJSON = string(jsonBytes)
+	// Merge username into details so list UIs can show who acted without a join
+	details := event.Details
+	if details == nil {
+		details = map[string]interface{}{}
+	}
+	if event.Username != "" {
+		if _, ok := details["username"]; !ok {
+			details["username"] = event.Username
 		}
+	}
+	if event.Result != "" {
+		if _, ok := details["result"]; !ok {
+			details["result"] = event.Result
+		}
+	}
+
+	detailsJSON := ""
+	if jsonBytes, err := json.Marshal(details); err == nil {
+		detailsJSON = string(jsonBytes)
 	}
 
 	// Create audit log entry

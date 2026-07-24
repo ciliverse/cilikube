@@ -14,7 +14,13 @@ import { Badge, Button, EmptyState, Modal, PageHeader } from '@/components/ui'
 import { HudTable, HudTablePanel, ListPageFrame } from '@/components/HudTableScroll'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
 
-const ROLE_CHOICES = ['viewer', 'editor', 'admin'] as const
+/** Assignable roles for created/edited users — never includes admin. */
+const ROLE_CHOICES = ['viewer', 'editor'] as const
+
+function isProtectedUser(username: string) {
+  const u = username.trim().toLowerCase()
+  return u === 'admin' || u === 'guest'
+}
 
 export function AdminUsersPage() {
   const { isAdmin } = useAuth()
@@ -96,27 +102,21 @@ export function AdminUsersPage() {
       if (!form.username || !form.email || !form.password) {
         throw new Error('Username, email and password are required')
       }
+      if (isProtectedUser(form.username)) {
+        throw new Error('Username is reserved for a protected system account')
+      }
       if (form.password !== form.confirmPassword) {
         throw new Error('Password confirmation does not match')
       }
+      const safeRoles = form.roles.filter((r) => r !== 'admin')
       await createAdminUser({
         username: form.username.trim(),
         email: form.email.trim(),
         password: form.password,
         confirmPassword: form.confirmPassword,
         display_name: form.display_name.trim(),
-        roles: form.roles.join(','),
+        roles: (safeRoles.length ? safeRoles : ['viewer']).join(','),
       })
-      // Assign roles via update (create API stores roles string but assignment is on update)
-      const fresh = await listAdminUsers()
-      const created = fresh.find((u) => u.username === form.username.trim())
-      if (created && form.roles.length) {
-        await updateAdminUser(created.id, {
-          email: form.email.trim(),
-          display_name: form.display_name.trim(),
-          roles: form.roles,
-        })
-      }
       setCreating(false)
       resetForm()
       void queryClient.invalidateQueries({ queryKey: ['admin-users'] })
@@ -129,32 +129,41 @@ export function AdminUsersPage() {
 
   const saveEdit = async () => {
     if (!editTarget) return
+    if (isProtectedUser(editTarget.username)) {
+      setErr(`Cannot change permissions for protected account "${editTarget.username}"`)
+      return
+    }
     setBusy(true)
     setErr('')
     try {
+      const safeRoles = form.roles.filter((r) => r !== 'admin')
       await updateAdminUser(editTarget.id, {
         email: form.email.trim(),
         display_name: form.display_name.trim(),
-        roles: form.roles.length ? form.roles : ['viewer'],
+        roles: safeRoles.length ? safeRoles : ['viewer'],
         is_active: editTarget.is_active,
       })
       setEditTarget(null)
       void queryClient.invalidateQueries({ queryKey: ['admin-users'] })
     } catch (e: any) {
-      setErr(e?.message || 'Update failed')
+      setErr(e?.response?.data?.message || e?.message || 'Update failed')
     } finally {
       setBusy(false)
     }
   }
 
   const toggle = async (user: AdminUser) => {
+    if (isProtectedUser(user.username)) {
+      setErr(`Cannot disable protected account "${user.username}"`)
+      return
+    }
     setBusy(true)
     setErr('')
     try {
       await updateAdminUserStatus(user.id, !(user.is_active ?? true))
       await usersQ.refetch()
     } catch (e: any) {
-      setErr(e?.message || 'Update failed')
+      setErr(e?.response?.data?.message || e?.message || 'Update failed')
     } finally {
       setBusy(false)
     }
@@ -162,13 +171,18 @@ export function AdminUsersPage() {
 
   const remove = async () => {
     if (!deleteTarget) return
+    if (isProtectedUser(deleteTarget.username)) {
+      setErr(`Cannot delete protected account "${deleteTarget.username}"`)
+      setDeleteTarget(null)
+      return
+    }
     setBusy(true)
     try {
       await deleteAdminUser(deleteTarget.id)
       setDeleteTarget(null)
       void queryClient.invalidateQueries({ queryKey: ['admin-users'] })
     } catch (e: any) {
-      setErr(e?.message || 'Delete failed')
+      setErr(e?.response?.data?.message || e?.message || 'Delete failed')
     } finally {
       setBusy(false)
     }
@@ -234,6 +248,12 @@ export function AdminUsersPage() {
                         variant="outline"
                         className="px-2 py-1 text-xs"
                         type="button"
+                        disabled={isProtectedUser(u.username)}
+                        title={
+                          isProtectedUser(u.username)
+                            ? 'Protected: cannot delete or change permissions'
+                            : undefined
+                        }
                         onClick={() => {
                           resetForm(u)
                           setErr('')
@@ -246,7 +266,12 @@ export function AdminUsersPage() {
                         variant="outline"
                         className="px-2 py-1 text-xs"
                         type="button"
-                        disabled={busy}
+                        disabled={busy || isProtectedUser(u.username)}
+                        title={
+                          isProtectedUser(u.username)
+                            ? 'Protected system account'
+                            : undefined
+                        }
                         onClick={() => void toggle(u)}
                       >
                         Toggle
@@ -255,6 +280,12 @@ export function AdminUsersPage() {
                         variant="danger"
                         className="px-2 py-1 text-xs"
                         type="button"
+                        disabled={isProtectedUser(u.username)}
+                        title={
+                          isProtectedUser(u.username)
+                            ? 'Protected system account'
+                            : undefined
+                        }
                         onClick={() => setDeleteTarget(u)}
                       >
                         Delete
@@ -334,24 +365,29 @@ export function AdminUsersPage() {
           ) : null}
           <div>
             <div className="hud-label mb-2">Roles</div>
+            <p className="mb-2 text-[11px] text-text-dim">
+              Management (admin) is reserved for the built-in admin account.
+            </p>
             <div className="flex flex-wrap gap-2">
-              {roleNames.map((name) => {
-                const on = form.roles.includes(name)
-                return (
-                  <button
-                    key={name}
-                    type="button"
-                    className={
-                      on
-                        ? 'rounded border border-cyan/40 bg-cyan/15 px-2 py-1 text-xs text-cyan'
-                        : 'rounded border border-line px-2 py-1 text-xs text-text-dim hover:border-cyan/40'
-                    }
-                    onClick={() => toggleRole(name)}
-                  >
-                    {name}
-                  </button>
-                )
-              })}
+              {roleNames
+                .filter((name) => name !== 'admin')
+                .map((name) => {
+                  const on = form.roles.includes(name)
+                  return (
+                    <button
+                      key={name}
+                      type="button"
+                      className={
+                        on
+                          ? 'rounded border border-cyan/40 bg-cyan/15 px-2 py-1 text-xs text-cyan'
+                          : 'rounded border border-line px-2 py-1 text-xs text-text-dim hover:border-cyan/40'
+                      }
+                      onClick={() => toggleRole(name)}
+                    >
+                      {name}
+                    </button>
+                  )
+                })}
             </div>
           </div>
           <div className="flex justify-end gap-2 pt-2">

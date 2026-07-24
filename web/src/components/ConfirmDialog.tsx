@@ -38,7 +38,7 @@ export function ConfirmDialog({
 
   return (
     <Modal open={open} title={title} onClose={onClose}>
-      <div className="space-y-4 px-5 py-4">
+      <div className="space-y-4 px-4 py-4 sm:px-5">
         {description ? <div className="text-sm text-text-dim">{description}</div> : null}
         {needMatch ? (
           <label className="block space-y-2">
@@ -46,7 +46,7 @@ export function ConfirmDialog({
               Type <span className="text-cyan">{confirmText}</span> to confirm
             </span>
             <input
-              className="hud-field"
+              className="hud-field text-base sm:text-[13px]"
               value={typed}
               autoFocus
               spellCheck={false}
@@ -55,13 +55,20 @@ export function ConfirmDialog({
             />
           </label>
         ) : null}
-        <div className="flex justify-end gap-2 pt-2">
-          <Button variant="ghost" type="button" disabled={busy} onClick={onClose}>
+        <div className="flex flex-col-reverse gap-2 pt-2 sm:flex-row sm:justify-end">
+          <Button
+            variant="ghost"
+            type="button"
+            className="min-h-11 w-full sm:min-h-0 sm:w-auto"
+            disabled={busy}
+            onClick={onClose}
+          >
             {cancelLabel}
           </Button>
           <Button
             variant={danger ? 'danger' : 'primary'}
             type="button"
+            className="min-h-11 w-full sm:min-h-0 sm:w-auto"
             disabled={!matched || busy}
             onClick={() => void onConfirm()}
           >

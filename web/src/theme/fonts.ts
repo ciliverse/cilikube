@@ -1,4 +1,4 @@
-/** UI font packs — HUD (Orbitron) or Maple Mono. */
+/** UI font packs — self-hosted Maple Mono (no Google Fonts). */
 
 export type FontPack = {
   id: string
@@ -10,22 +10,22 @@ export type FontPack = {
 
 export const FONT_PACKS: FontPack[] = [
   {
-    id: 'hud',
-    name: 'HUD (Orbitron)',
-    display: '"Orbitron", "Maple Mono", ui-monospace, monospace',
+    id: 'maple',
+    name: 'Maple Mono',
+    display: '"Maple Mono", ui-monospace, Menlo, Consolas, monospace',
     sans: '"Maple Mono", ui-monospace, Menlo, Consolas, monospace',
     mono: '"Maple Mono", ui-monospace, Menlo, Consolas, monospace',
   },
   {
-    id: 'maple',
-    name: 'Maple Mono',
-    display: '"Maple Mono", ui-monospace, monospace',
+    id: 'hud',
+    name: 'HUD (Maple)',
+    display: '"Maple Mono", ui-monospace, Menlo, Consolas, monospace',
     sans: '"Maple Mono", ui-monospace, Menlo, Consolas, monospace',
     mono: '"Maple Mono", ui-monospace, Menlo, Consolas, monospace',
   },
 ]
 
-export const DEFAULT_FONT_ID = 'hud'
+export const DEFAULT_FONT_ID = 'maple'
 export const FONT_STORAGE_KEY = 'cilikube_font'
 
 const listeners = new Set<() => void>()

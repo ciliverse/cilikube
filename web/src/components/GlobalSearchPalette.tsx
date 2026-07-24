@@ -1,7 +1,7 @@
 import { useEffect, useId, useRef, useState, type KeyboardEvent } from 'react'
 import { createPortal } from 'react-dom'
 import { useNavigate } from 'react-router-dom'
-import { Search } from 'lucide-react'
+import { Search, X } from 'lucide-react'
 import { useGlobalSearchHits } from '@/hooks/useGlobalSearchHits'
 import { ALL_NAMESPACES } from '@/store/namespace'
 import { Badge } from '@/components/ui'
@@ -47,7 +47,6 @@ export function GlobalSearchPalette() {
     const t = window.setTimeout(() => inputRef.current?.focus(), 0)
     const onDoc = (e: MouseEvent) => {
       if (panelRef.current?.contains(e.target as Node)) return
-      // allow clicking the trigger (handled separately)
       const trigger = document.getElementById('hud-global-search-trigger')
       if (trigger?.contains(e.target as Node)) return
       close()
@@ -90,31 +89,43 @@ export function GlobalSearchPalette() {
   const panel =
     open &&
     createPortal(
-      <div className="fixed inset-0 z-[220] flex items-start justify-center bg-black/50 px-4 pt-[12vh] backdrop-blur-[2px]">
+      <div className="fixed inset-0 z-[220] flex items-stretch justify-center bg-black/55 p-0 backdrop-blur-[2px] sm:items-start sm:px-4 sm:pt-[12vh]">
         <div
           ref={panelRef}
           role="dialog"
           aria-modal="true"
           aria-label="Global search"
-          className="w-full max-w-xl overflow-hidden rounded border border-line bg-panel-solid shadow-[0_16px_48px_rgba(0,0,0,0.55)]"
+          className="flex h-full w-full max-w-xl flex-col overflow-hidden rounded-none border-0 border-line bg-panel-solid shadow-none sm:h-auto sm:max-h-[min(70vh,36rem)] sm:rounded sm:border sm:shadow-[0_16px_48px_rgba(0,0,0,0.55)]"
         >
-          <div className="flex items-center gap-2 border-b border-line px-3 py-2.5">
+          <div className="flex items-center gap-2 border-b border-line px-3 py-3 pt-[max(0.75rem,env(safe-area-inset-top))] sm:py-2.5 sm:pt-2.5">
             <Search className="h-4 w-4 shrink-0 text-cyan" />
             <input
               ref={inputRef}
-              className="hud-field min-w-0 flex-1 border-0 bg-transparent px-0 shadow-none focus:ring-0"
+              className="hud-field min-w-0 flex-1 border-0 bg-transparent px-0 text-base shadow-none focus:ring-0 sm:text-[13px]"
               value={q}
               onChange={(e) => setQ(e.target.value)}
               onKeyDown={onListKey}
-              placeholder={`Search pods, deployments, services… (${nsLabel})`}
+              placeholder={`Search… (${nsLabel})`}
               aria-controls={listId}
               aria-autocomplete="list"
             />
+            <button
+              type="button"
+              className="inline-flex h-9 w-9 items-center justify-center rounded border border-line text-text-dim sm:hidden"
+              aria-label="Close search"
+              onClick={close}
+            >
+              <X className="h-4 w-4" />
+            </button>
             <kbd className="hidden rounded border border-line px-1.5 py-0.5 font-mono text-[10px] text-text-dim sm:inline">
               Esc
             </kbd>
           </div>
-          <div id={listId} role="listbox" className="max-h-[50vh] overflow-y-auto overscroll-contain py-1">
+          <div
+            id={listId}
+            role="listbox"
+            className="min-h-0 flex-1 overflow-y-auto overscroll-contain py-1 sm:max-h-[50vh] sm:flex-none"
+          >
             {loading && !hits.length ? (
               <div className="px-4 py-6 text-center text-xs text-text-dim">Loading resources…</div>
             ) : null}
@@ -133,7 +144,7 @@ export function GlobalSearchPalette() {
                 role="option"
                 aria-selected={idx === highlight}
                 className={cn(
-                  'flex w-full items-center gap-3 px-4 py-2 text-left font-mono text-[12px] transition',
+                  'flex min-h-12 w-full items-center gap-3 px-4 py-3 text-left font-mono text-[13px] transition sm:min-h-0 sm:py-2 sm:text-[12px]',
                   idx === highlight ? 'bg-cyan/15 text-cyan' : 'text-text hover:bg-mist',
                 )}
                 onMouseEnter={() => setHighlight(idx)}
@@ -141,7 +152,9 @@ export function GlobalSearchPalette() {
               >
                 <Badge tone="neutral">{h.kind}</Badge>
                 <span className="min-w-0 flex-1 truncate font-semibold">{h.name}</span>
-                <span className="shrink-0 text-text-dim">{h.namespace || 'cluster'}</span>
+                <span className="max-w-[30%] shrink-0 truncate text-text-dim">
+                  {h.namespace || 'cluster'}
+                </span>
               </button>
             ))}
           </div>
@@ -155,12 +168,14 @@ export function GlobalSearchPalette() {
       <button
         id="hud-global-search-trigger"
         type="button"
-        className="hud-select hud-select-trigger flex min-w-0 max-w-md flex-1 items-center gap-2 text-left text-text-dim"
+        className="hud-select hud-select-trigger flex h-9 w-9 shrink-0 items-center justify-center p-0 text-text-dim sm:h-auto sm:w-auto sm:min-w-0 sm:max-w-md sm:flex-1 sm:justify-start sm:gap-2 sm:px-3 sm:py-2 sm:text-left"
         onClick={() => setOpen(true)}
         aria-label="Open global search"
       >
-        <Search className="h-3.5 w-3.5 shrink-0 text-cyan/80" />
-        <span className="min-w-0 flex-1 truncate text-[12px]">Search resources…</span>
+        <Search className="h-4 w-4 shrink-0 text-cyan/80 sm:h-3.5 sm:w-3.5" />
+        <span className="hidden min-w-0 flex-1 truncate text-[12px] sm:inline">
+          Search resources…
+        </span>
         <kbd className="hidden shrink-0 rounded border border-line px-1.5 py-0.5 font-mono text-[10px] text-text-dim md:inline">
           {shortcutLabel()}
         </kbd>

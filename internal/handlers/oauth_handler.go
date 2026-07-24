@@ -75,7 +75,7 @@ func (h *OAuthHandler) HandleCallback(c *gin.Context) {
 	}
 
 	// Handle OAuth login
-	loginResp, err := h.oauthService.LoginWithOAuth(req.Provider, req.Code)
+	loginResp, err := h.oauthService.LoginWithOAuth(req.Provider, req.Code, auth.AuditClientIP(c), c.GetHeader("User-Agent"))
 	if err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{
 			"code":    401,

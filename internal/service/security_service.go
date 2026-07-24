@@ -170,6 +170,11 @@ func (s *SecurityService) RecordFailedLogin(userID *uint, username, ipAddress, u
 
 // RecordSuccessfulLogin records a successful login
 func (s *SecurityService) RecordSuccessfulLogin(userID uint, ipAddress, userAgent string) error {
+	username := ""
+	if u, err := s.store.GetUserByID(userID); err == nil && u != nil {
+		username = u.Username
+	}
+	details := fmt.Sprintf(`{"username":%q,"ip":%q,"user_agent":%q,"result":"success"}`, username, ipAddress, userAgent)
 	auditLog := &store.AuditLog{
 		UserID:     &userID,
 		Action:     "login",
@@ -177,7 +182,7 @@ func (s *SecurityService) RecordSuccessfulLogin(userID uint, ipAddress, userAgen
 		ResourceID: fmt.Sprintf("%d", userID),
 		IPAddress:  ipAddress,
 		UserAgent:  userAgent,
-		Details:    "Successful login",
+		Details:    details,
 	}
 
 	return s.store.CreateAuditLog(auditLog)

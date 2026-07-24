@@ -2,6 +2,7 @@ import { useEffect, useState, type FormEvent } from 'react'
 import { Navigate, useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { fetchOAuthProviders, register, type OAuthProviderInfo } from '@/api/auth'
+import { fetchShowcaseInfo, type ShowcaseInfo } from '@/api/showcase'
 import { useAuth } from '@/store/auth'
 import { Button, Input } from '@/components/ui'
 
@@ -28,19 +29,28 @@ export function LoginPage() {
     'loading',
   )
   const [oauthHint, setOauthHint] = useState('')
+  const [showcase, setShowcase] = useState<ShowcaseInfo | null>(null)
 
   useEffect(() => {
     let cancelled = false
     ;(async () => {
       try {
-        const data = await fetchOAuthProviders()
+        const [oauthData, showcaseData] = await Promise.all([
+          fetchOAuthProviders(),
+          fetchShowcaseInfo(),
+        ])
         if (cancelled) return
-        const list = data.providers || []
+        setShowcase(showcaseData.showcase ? showcaseData : null)
+        const list = oauthData.providers || []
         setProviders(list)
-        setAllowRegistration(Boolean(data.allow_registration))
+        // Never offer self-registration on the public showcase.
+        setAllowRegistration(Boolean(oauthData.allow_registration) && !showcaseData.showcase)
         const ready = list.filter((p) => p.login_ready && p.auth_url)
         const enabledOnly = list.filter((p) => p.enabled && !p.configured)
-        if (ready.length) {
+        if (showcaseData.showcase) {
+          setOauthStatus('off')
+          setOauthHint('')
+        } else if (ready.length) {
           setOauthStatus('ready')
           setOauthHint('')
         } else if (enabledOnly.length) {
@@ -88,10 +98,10 @@ export function LoginPage() {
   }
 
   return (
-    <div className="relative flex h-full min-h-full items-center justify-center overflow-y-auto px-4 py-8">
+    <div className="relative flex min-h-dvh w-full items-start justify-center overflow-y-auto px-4 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-[max(1.5rem,env(safe-area-inset-top))] sm:items-center sm:py-8">
       <motion.div
         aria-hidden
-        className="pointer-events-none absolute inset-0"
+        className="pointer-events-none absolute inset-0 hidden sm:block"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
       >
@@ -100,34 +110,64 @@ export function LoginPage() {
       </motion.div>
 
       <motion.div
-        initial={{ opacity: 0, y: 18 }}
+        initial={{ opacity: 0, y: 14 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.45, ease: 'easeOut' }}
+        transition={{ duration: 0.4, ease: 'easeOut' }}
         className="relative w-full max-w-md"
       >
-        <div className="mb-10 text-center">
-          <div className="hud-brand text-3xl md:text-4xl">
+        <div className="mb-6 text-center sm:mb-10">
+          <div className="hud-brand text-2xl sm:text-3xl md:text-4xl">
             CILI<span className="accent">KUBE</span>
           </div>
-          <p className="mt-3 text-sm tracking-[0.18em] text-text-dim uppercase">
+          <p className="mt-2 text-xs tracking-[0.18em] text-text-dim uppercase sm:mt-3 sm:text-sm">
             Multi-cluster control plane
           </p>
         </div>
 
-        <form className="hud-panel space-y-4 rounded p-6 md:p-8" onSubmit={onSubmit}>
+        <form
+          className="hud-panel space-y-3.5 rounded p-5 sm:space-y-4 sm:p-6 md:p-8"
+          onSubmit={onSubmit}
+        >
           <div className="hud-label">Authenticate</div>
-          <h1 className="font-display text-xl font-bold tracking-[0.14em] text-text">
+          <h1 className="font-display text-lg font-bold tracking-[0.14em] text-text sm:text-xl">
             {mode === 'login' ? 'SIGN IN' : 'REGISTER'}
           </h1>
-          <p className="text-sm text-text-dim">
+          <p className="text-[13px] text-text-dim sm:text-sm">
             {mode === 'login'
               ? 'Enter credentials to open the operator console.'
               : 'Create an account (registration must be enabled by an admin).'}
           </p>
 
+          {showcase?.accounts?.length ? (
+            <div className="space-y-2 rounded border border-cyan/30 bg-cyan/5 px-3 py-3 text-sm">
+              <div className="hud-label text-cyan">Accounts</div>
+              {showcase.accounts.map((a) => (
+                <button
+                  key={a.username}
+                  type="button"
+                  className="flex w-full flex-col gap-0.5 rounded border border-line/60 bg-bg/40 px-3 py-2 text-left transition hover:border-cyan/50"
+                  onClick={() => {
+                    setUsername(a.username)
+                    setPassword(a.password)
+                    setMode('login')
+                    setError('')
+                  }}
+                >
+                  <span className="font-mono text-xs tracking-wide text-text">
+                    {a.username}
+                    <span className="mx-2 text-text-dim">/</span>
+                    {a.password}
+                  </span>
+                  <span className="text-[11px] text-text-dim">role: {a.role}</span>
+                </button>
+              ))}
+            </div>
+          ) : null}
+
           <label className="block space-y-1.5">
             <span className="hud-label">Username</span>
             <Input
+              className="h-11 text-base sm:h-auto sm:text-sm"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
               autoComplete="username"
@@ -138,6 +178,7 @@ export function LoginPage() {
             <label className="block space-y-1.5">
               <span className="hud-label">Email</span>
               <Input
+                className="h-11 text-base sm:h-auto sm:text-sm"
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
@@ -149,6 +190,7 @@ export function LoginPage() {
           <label className="block space-y-1.5">
             <span className="hud-label">Password</span>
             <Input
+              className="h-11 text-base sm:h-auto sm:text-sm"
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
@@ -163,7 +205,11 @@ export function LoginPage() {
             </div>
           ) : null}
 
-          <Button type="submit" className="w-full tracking-[0.14em] uppercase" disabled={loading}>
+          <Button
+            type="submit"
+            className="h-11 w-full tracking-[0.14em] uppercase"
+            disabled={loading}
+          >
             {loading ? 'Connecting…' : mode === 'login' ? 'Enter' : 'Create account'}
           </Button>
 
@@ -198,7 +244,7 @@ export function LoginPage() {
                   key={p.name}
                   type="button"
                   variant="outline"
-                  className="inline-flex w-full items-center justify-center gap-2 tracking-[0.14em] uppercase"
+                  className="inline-flex h-11 w-full items-center justify-center gap-2 tracking-[0.14em] uppercase"
                   onClick={() => {
                     window.location.href = p.auth_url!
                   }}
@@ -222,7 +268,7 @@ export function LoginPage() {
           ) : null}
         </form>
 
-        <p className="mt-6 text-center text-[11px] tracking-[0.16em] text-text-dim uppercase">
+        <p className="mt-5 text-center text-[10px] tracking-[0.14em] text-text-dim uppercase sm:mt-6 sm:text-[11px] sm:tracking-[0.16em]">
           React · Vite · TanStack Query · Tailwind
         </p>
       </motion.div>

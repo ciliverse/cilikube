@@ -45,7 +45,11 @@ func NewClusterManager(clusterStore store.ClusterStore, config *configs.Config) 
 	}
 	log.Println("initializing cluster manager...")
 
-	if clusterStore != nil {
+	if IsShowcase() {
+		// Public exhibit: in-memory fake cluster only — never dial a real apiserver / k3s.
+		log.Println("CILIKUBE_SHOWCASE=1 — registering simulated demo cluster (no real kubeconfig)")
+		manager.registerShowcaseCluster()
+	} else if clusterStore != nil {
 		dbClusters, err := clusterStore.GetAllClusters()
 		if err != nil {
 			log.Printf("warning: failed to load clusters from database: %v", err)
@@ -68,7 +72,9 @@ func NewClusterManager(clusterStore store.ClusterStore, config *configs.Config) 
 
 	go manager.startStatusUpdater()
 
-	if config.Server.ActiveClusterID != "" {
+	if IsShowcase() {
+		// already set active to demo
+	} else if config.Server.ActiveClusterID != "" {
 		if err := manager.SetActiveClusterByID(config.Server.ActiveClusterID); err != nil {
 			log.Printf("Warning: Unable to set active cluster ID '%s' from config file as active: %v", config.Server.ActiveClusterID, err)
 		}
@@ -144,8 +150,10 @@ func (cm *ClusterManager) RefreshAllClusterStatus() {
 		go func(id string, client *Client) {
 			defer wg.Done()
 			var status, version string
-			serverVersion, err := client.Clientset.Discovery().ServerVersion()
-			if err != nil {
+			if IsShowcaseConfig(client.Config) {
+				status = "Available"
+				version = ShowcaseVersion
+			} else if serverVersion, err := client.Clientset.Discovery().ServerVersion(); err != nil {
 				status = fmt.Sprintf("Unavailable: %v", err)
 				version = "N/A"
 			} else {

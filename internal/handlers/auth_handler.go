@@ -3,6 +3,7 @@ package handlers
 import (
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/ciliverse/cilikube/internal/models"
 	"github.com/ciliverse/cilikube/internal/service"
@@ -41,8 +42,8 @@ func (h *AuthHandler) Login(c *gin.Context) {
 		return
 	}
 
-	// Get client IP and user agent
-	ipAddress := c.ClientIP()
+	// Get client IP and user agent (privacy IPs masked in showcase audit)
+	ipAddress := auth.AuditClientIP(c)
 	userAgent := c.GetHeader("User-Agent")
 
 	response, err := h.authService.Login(&req, ipAddress, userAgent)
@@ -81,7 +82,7 @@ func (h *AuthHandler) Register(c *gin.Context) {
 		return
 	}
 
-	response, err := h.authService.Register(&req)
+	response, err := h.authService.Register(&req, auth.AuditClientIP(c), c.GetHeader("User-Agent"))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"code":    400,
@@ -325,7 +326,7 @@ func (h *AuthHandler) Logout(c *gin.Context) {
 	userID, _, _, ok := auth.GetCurrentUser(c)
 	if ok {
 		// Invalidate user sessions
-		if err := h.authService.Logout(userID); err != nil {
+		if err := h.authService.Logout(userID, auth.AuditClientIP(c), c.GetHeader("User-Agent")); err != nil {
 			// Log error but don't fail logout
 			// Frontend will clear token regardless
 		}
@@ -576,8 +577,12 @@ func (h *AuthHandler) UpdateUserStatus(c *gin.Context) {
 
 	err = h.authService.UpdateUserStatus(uint(userID), req.IsActive)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"code":    500,
+		status := http.StatusInternalServerError
+		if strings.Contains(err.Error(), "cannot disable protected") || strings.Contains(err.Error(), "user not found") {
+			status = http.StatusBadRequest
+		}
+		c.JSON(status, gin.H{
+			"code":    status,
 			"message": "failed to update user status: " + err.Error(),
 		})
 		return
@@ -624,8 +629,12 @@ func (h *AuthHandler) DeleteUser(c *gin.Context) {
 
 	err = h.authService.DeleteUser(uint(userID))
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"code":    500,
+		status := http.StatusInternalServerError
+		if strings.Contains(err.Error(), "cannot delete protected") || strings.Contains(err.Error(), "user not found") {
+			status = http.StatusBadRequest
+		}
+		c.JSON(status, gin.H{
+			"code":    status,
 			"message": "failed to delete user: " + err.Error(),
 		})
 		return

@@ -12,6 +12,7 @@ import (
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/util/homedir"
+	gatewayclientset "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned"
 )
 
 type ClusterInfo struct {
@@ -126,6 +127,13 @@ func newClientFromConfig(config *rest.Config) (*Client, error) {
 	discoveryClient, err := discovery.NewDiscoveryClientForConfig(&clientConfig)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create discovery client: %w", err)
+	}
+
+	gwClientset, err := gatewayclientset.NewForConfig(&clientConfig)
+	if err != nil {
+		fmt.Printf("warning: failed to create Gateway API clientset: %v\n", err)
+	} else {
+		RegisterGatewayClient(clientset, gwClientset)
 	}
 
 	client := &Client{

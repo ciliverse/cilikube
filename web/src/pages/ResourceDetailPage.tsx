@@ -40,6 +40,9 @@ const KIND_MAP: Record<string, string> = {
   cronjobs: 'CronJob',
   ingresses: 'Ingress',
   networkpolicies: 'NetworkPolicy',
+  gatewayclasses: 'GatewayClass',
+  gateways: 'Gateway',
+  httproutes: 'HTTPRoute',
   serviceaccounts: 'ServiceAccount',
   persistentvolumeclaims: 'PersistentVolumeClaim',
   persistentvolumes: 'PersistentVolume',
@@ -296,7 +299,7 @@ export function ResourceDetailPage({
         }
       />
 
-      <div className="flex flex-wrap gap-2 border-b border-line pb-2">
+      <div className="-mx-0.5 flex gap-1.5 overflow-x-auto overscroll-x-contain border-b border-line pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:flex-wrap sm:gap-2">
         {tabs.map((t) => (
           <button
             key={t.id}
@@ -307,8 +310,8 @@ export function ResourceDetailPage({
             }}
             className={
               tab === t.id
-                ? 'rounded border border-cyan/40 bg-cyan/15 px-3 py-1.5 text-xs font-semibold text-cyan'
-                : 'rounded border border-transparent px-3 py-1.5 text-xs font-semibold text-text-dim hover:border-line'
+                ? 'shrink-0 rounded border border-cyan/40 bg-cyan/15 px-3 py-2 text-xs font-semibold text-cyan sm:py-1.5'
+                : 'shrink-0 rounded border border-transparent px-3 py-2 text-xs font-semibold text-text-dim hover:border-line sm:py-1.5'
             }
           >
             {t.label}
@@ -514,13 +517,13 @@ export function ResourceDetailPage({
           </div>
           {editing ? (
             <textarea
-              className="m-0 h-[60vh] w-full resize-none bg-[#040a0e] px-4 py-3 font-mono text-[12px] text-text outline-none"
+              className="m-0 h-[min(60vh,55dvh)] w-full resize-none bg-[#040a0e] px-3 py-3 font-mono text-[12px] text-text outline-none sm:h-[60vh] sm:px-4"
               value={draft}
               onChange={(e) => setDraft(e.target.value)}
               spellCheck={false}
             />
           ) : (
-            <pre className="m-0 h-[60vh] overflow-auto bg-[#040a0e] px-4 py-3 font-mono text-[12px] text-text whitespace-pre">
+            <pre className="m-0 h-[min(60vh,55dvh)] overflow-auto bg-[#040a0e] px-3 py-3 font-mono text-[12px] text-text whitespace-pre sm:h-[60vh] sm:px-4">
               {detailQ.isLoading ? '# loading…' : yamlText}
             </pre>
           )}

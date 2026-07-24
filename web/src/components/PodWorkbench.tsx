@@ -216,7 +216,7 @@ export function PodWorkbench({ pod, open, initialTab = 'logs', onClose, onDelete
           <PodTerminal namespace={namespace} podName={name} containers={containers} mode="attach" />
         ) : null}
         {tab === 'yaml' ? (
-          <div className="flex h-[62vh] min-h-[360px] flex-col">
+          <div className="flex h-[min(62vh,70dvh)] min-h-[240px] flex-col sm:min-h-[360px]">
             <div className="flex flex-wrap justify-end gap-2 border-b border-line px-4 py-2">
               <Button
                 variant="outline"

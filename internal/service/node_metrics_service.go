@@ -7,6 +7,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"github.com/ciliverse/cilikube/pkg/k8s"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/metrics/pkg/client/clientset/versioned"
@@ -49,6 +50,9 @@ func NewNodeMetricsService() *NodeMetricsService {
 // GetNodeMetrics gets real-time metrics of a single node through metrics-server.
 // It requires passing the target cluster's rest.Config to create a dedicated metrics client.
 func (s *NodeMetricsService) GetNodeMetrics(config *rest.Config, nodeName string) (*NodeMetrics, error) {
+	if k8s.IsShowcaseConfig(config) {
+		return showcaseSingleNodeMetrics(config, nodeName)
+	}
 	// Create Metrics API client and Kubernetes client
 	metricsClientset, err := versioned.NewForConfig(config)
 	if err != nil {
@@ -142,6 +146,9 @@ func (s *NodeMetricsService) GetNodeMetrics(config *rest.Config, nodeName string
 // GetAllNodesMetrics gets real-time metrics of all nodes through metrics-server.
 // It requires passing the target cluster's rest.Config to create a dedicated metrics client.
 func (s *NodeMetricsService) GetAllNodesMetrics(config *rest.Config) (*NodesMetricsResponse, error) {
+	if k8s.IsShowcaseConfig(config) {
+		return showcaseNodeMetrics(config)
+	}
 	// Create Metrics API client and Kubernetes client
 	metricsClientset, err := versioned.NewForConfig(config)
 	if err != nil {

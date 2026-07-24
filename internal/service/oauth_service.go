@@ -14,6 +14,7 @@ import (
 	"github.com/ciliverse/cilikube/internal/models"
 	"github.com/ciliverse/cilikube/internal/store"
 	"github.com/ciliverse/cilikube/pkg/auth"
+	"github.com/ciliverse/cilikube/pkg/k8s"
 )
 
 // OAuthService provides OAuth authentication functionality
@@ -87,8 +88,8 @@ func (s *OAuthService) ListPublicProviders() map[string]interface{} {
 				"auth_url":     authURL,
 			},
 		},
-		"allow_registration":  s.config.OAuth.AllowRegistration,
-		"auto_link_accounts":  s.config.OAuth.AutoLinkAccounts,
+		"allow_registration":  s.config.OAuth.AllowRegistration && !k8s.IsShowcase(),
+		"auto_link_accounts":  s.config.OAuth.AutoLinkAccounts && !k8s.IsShowcase(),
 		"default_oauth_role":  "viewer",
 	}
 }
@@ -114,7 +115,10 @@ func (s *OAuthService) GetUserInfo(provider, token string) (*OAuthUserInfo, erro
 }
 
 // LoginWithOAuth handles OAuth login flow
-func (s *OAuthService) LoginWithOAuth(provider, code string) (*models.LoginResponse, error) {
+func (s *OAuthService) LoginWithOAuth(provider, code, ipAddress, userAgent string) (*models.LoginResponse, error) {
+	if k8s.IsShowcase() {
+		return nil, errors.New("OAuth login is disabled in showcase mode")
+	}
 	// Exchange code for token
 	tokenResp, err := s.ExchangeToken(provider, code)
 	if err != nil {
@@ -131,14 +135,14 @@ func (s *OAuthService) LoginWithOAuth(provider, code string) (*models.LoginRespo
 	oauthProvider, err := s.store.GetOAuthProviderByProviderUserID(provider, userInfo.ProviderUserID)
 	if err == nil {
 		// Existing OAuth account, login the associated user
-		return s.loginExistingOAuthUser(oauthProvider, tokenResp)
+		return s.loginExistingOAuthUser(oauthProvider, tokenResp, ipAddress, userAgent)
 	}
 
 	// New OAuth account: optionally auto-link by email
 	if s.config.OAuth.AutoLinkAccounts && userInfo.Email != "" {
 		existingUser, emailErr := s.store.GetUserByEmail(userInfo.Email)
 		if emailErr == nil {
-			return s.linkOAuthToExistingUser(existingUser, provider, userInfo, tokenResp)
+			return s.linkOAuthToExistingUser(existingUser, provider, userInfo, tokenResp, ipAddress, userAgent)
 		}
 	}
 
@@ -147,11 +151,14 @@ func (s *OAuthService) LoginWithOAuth(provider, code string) (*models.LoginRespo
 	}
 
 	// Create new user with OAuth account
-	return s.createNewOAuthUser(provider, userInfo, tokenResp)
+	return s.createNewOAuthUser(provider, userInfo, tokenResp, ipAddress, userAgent)
 }
 
 // LinkAccount links an OAuth provider to an existing user account
 func (s *OAuthService) LinkAccount(userID uint, provider, code string) error {
+	if k8s.IsShowcase() {
+		return errors.New("OAuth account linking is disabled in showcase mode")
+	}
 	// Exchange code for token
 	tokenResp, err := s.ExchangeToken(provider, code)
 	if err != nil {
@@ -388,7 +395,7 @@ func (s *OAuthService) getGitHubUserEmail(token string) (string, error) {
 
 // Helper methods for OAuth login flow
 
-func (s *OAuthService) loginExistingOAuthUser(oauthProvider *store.OAuthProvider, tokenResp *OAuthTokenResponse) (*models.LoginResponse, error) {
+func (s *OAuthService) loginExistingOAuthUser(oauthProvider *store.OAuthProvider, tokenResp *OAuthTokenResponse, ipAddress, userAgent string) (*models.LoginResponse, error) {
 	// Get the associated user
 	storeUser, err := s.store.GetUserByID(oauthProvider.UserID)
 	if err != nil {
@@ -434,18 +441,18 @@ func (s *OAuthService) loginExistingOAuthUser(oauthProvider *store.OAuthProvider
 	}
 
 	if len(roles) > 0 {
-		user.Role = roles[0].Name
+		user.Role = primaryRoleName(roles)
 	} else {
 		user.Role = "viewer"
 	}
 
-	token, expiresAtJWT, err := s.issueTokenWithSession(&user, storeUser.ID)
+	token, expiresAtJWT, err := s.issueTokenWithSession(&user, storeUser.ID, ipAddress, userAgent)
 	if err != nil {
 		return nil, err
 	}
 
 	// Create audit log
-	s.createAuditLog(&storeUser.ID, "oauth_login", "user", fmt.Sprintf("%d", storeUser.ID), "", "", fmt.Sprintf("User logged in via OAuth: %s", oauthProvider.Provider))
+	s.createAuditLog(&storeUser.ID, "oauth_login", "user", fmt.Sprintf("%d", storeUser.ID), ipAddress, userAgent, fmt.Sprintf(`{"username":%q,"provider":%q,"ip":%q,"result":"success"}`, storeUser.Username, oauthProvider.Provider, ipAddress))
 
 	return &models.LoginResponse{
 		Token:     token,
@@ -454,7 +461,7 @@ func (s *OAuthService) loginExistingOAuthUser(oauthProvider *store.OAuthProvider
 	}, nil
 }
 
-func (s *OAuthService) linkOAuthToExistingUser(existingUser *store.User, provider string, userInfo *OAuthUserInfo, tokenResp *OAuthTokenResponse) (*models.LoginResponse, error) {
+func (s *OAuthService) linkOAuthToExistingUser(existingUser *store.User, provider string, userInfo *OAuthUserInfo, tokenResp *OAuthTokenResponse, ipAddress, userAgent string) (*models.LoginResponse, error) {
 	// Check if user is active
 	if !existingUser.IsActive {
 		return nil, errors.New("account is disabled")
@@ -507,18 +514,18 @@ func (s *OAuthService) linkOAuthToExistingUser(existingUser *store.User, provide
 	}
 
 	if len(roles) > 0 {
-		user.Role = roles[0].Name
+		user.Role = primaryRoleName(roles)
 	} else {
 		user.Role = "viewer"
 	}
 
-	token, expiresAtJWT, err := s.issueTokenWithSession(&user, existingUser.ID)
+	token, expiresAtJWT, err := s.issueTokenWithSession(&user, existingUser.ID, ipAddress, userAgent)
 	if err != nil {
 		return nil, err
 	}
 
 	// Create audit log
-	s.createAuditLog(&existingUser.ID, "oauth_login_link", "user", fmt.Sprintf("%d", existingUser.ID), "", "", fmt.Sprintf("User logged in and linked OAuth: %s", provider))
+	s.createAuditLog(&existingUser.ID, "oauth_login_link", "user", fmt.Sprintf("%d", existingUser.ID), ipAddress, userAgent, fmt.Sprintf(`{"username":%q,"provider":%q,"ip":%q,"result":"success"}`, existingUser.Username, provider, ipAddress))
 
 	return &models.LoginResponse{
 		Token:     token,
@@ -527,7 +534,7 @@ func (s *OAuthService) linkOAuthToExistingUser(existingUser *store.User, provide
 	}, nil
 }
 
-func (s *OAuthService) createNewOAuthUser(provider string, userInfo *OAuthUserInfo, tokenResp *OAuthTokenResponse) (*models.LoginResponse, error) {
+func (s *OAuthService) createNewOAuthUser(provider string, userInfo *OAuthUserInfo, tokenResp *OAuthTokenResponse, ipAddress, userAgent string) (*models.LoginResponse, error) {
 	if !s.config.OAuth.AllowRegistration {
 		return nil, errors.New("OAuth registration is disabled")
 	}
@@ -581,13 +588,13 @@ func (s *OAuthService) createNewOAuthUser(provider string, userInfo *OAuthUserIn
 	user := s.convertStoreUserToModelsUser(storeUser)
 	user.Role = "viewer"
 
-	token, expiresAtJWT, err := s.issueTokenWithSession(&user, storeUser.ID)
+	token, expiresAtJWT, err := s.issueTokenWithSession(&user, storeUser.ID, ipAddress, userAgent)
 	if err != nil {
 		return nil, err
 	}
 
 	// Create audit log
-	s.createAuditLog(&storeUser.ID, "oauth_register", "user", fmt.Sprintf("%d", storeUser.ID), "", "", fmt.Sprintf("New user registered via OAuth: %s", provider))
+	s.createAuditLog(&storeUser.ID, "oauth_register", "user", fmt.Sprintf("%d", storeUser.ID), ipAddress, userAgent, fmt.Sprintf(`{"username":%q,"email":%q,"provider":%q,"ip":%q,"result":"success"}`, storeUser.Username, storeUser.Email, provider, ipAddress))
 
 	return &models.LoginResponse{
 		Token:     token,
@@ -597,8 +604,11 @@ func (s *OAuthService) createNewOAuthUser(provider string, userInfo *OAuthUserIn
 	}, nil
 }
 
-func (s *OAuthService) issueTokenWithSession(user *models.User, userID uint) (string, time.Time, error) {
-	sessionID, err := s.securityService.CreateSession(userID, "", "oauth")
+func (s *OAuthService) issueTokenWithSession(user *models.User, userID uint, ipAddress, userAgent string) (string, time.Time, error) {
+	if userAgent == "" {
+		userAgent = "oauth"
+	}
+	sessionID, err := s.securityService.CreateSession(userID, ipAddress, userAgent)
 	if err != nil {
 		return "", time.Time{}, fmt.Errorf("failed to create session: %w", err)
 	}

@@ -1,15 +1,69 @@
 package service
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/ciliverse/cilikube/configs"
 	"github.com/ciliverse/cilikube/internal/models"
 	"github.com/ciliverse/cilikube/internal/store"
 	"github.com/ciliverse/cilikube/pkg/auth"
+	"github.com/ciliverse/cilikube/pkg/k8s"
 )
+
+// IsProtectedUsername reports built-in accounts that must never be deleted,
+// disabled, or have their roles changed.
+func IsProtectedUsername(username string) bool {
+	switch strings.ToLower(strings.TrimSpace(username)) {
+	case "admin", "guest":
+		return true
+	default:
+		return false
+	}
+}
+
+// CanHoldAdminRole is true only for the built-in admin username.
+// Registered / created users must never receive management (admin) privileges.
+func CanHoldAdminRole(username string) bool {
+	return strings.EqualFold(strings.TrimSpace(username), "admin")
+}
+
+// ValidateRoleChange enforces protected-account and admin-role rules.
+func ValidateRoleChange(username, roleName string, assigning bool) error {
+	if IsProtectedUsername(username) {
+		return fmt.Errorf("cannot change roles for protected account %q", username)
+	}
+	if assigning && strings.EqualFold(roleName, "admin") && !CanHoldAdminRole(username) {
+		return errors.New("admin role can only be held by the built-in admin account")
+	}
+	return nil
+}
+
+// primaryRoleName picks the highest-privilege role for JWT / API compatibility.
+// Users may hold multiple roles (e.g. viewer+admin); embedding only the first
+// row from the DB would incorrectly deny admin routes.
+func primaryRoleName(roles []*store.Role) string {
+	priority := map[string]int{"admin": 100, "editor": 50, "viewer": 10}
+	best := "viewer"
+	bestP := -1
+	for _, r := range roles {
+		if r == nil {
+			continue
+		}
+		p, ok := priority[r.Name]
+		if !ok {
+			p = 0
+		}
+		if p > bestP {
+			bestP = p
+			best = r.Name
+		}
+	}
+	return best
+}
 
 // AuthService provides authentication and user management functionality
 type AuthService struct {
@@ -61,12 +115,18 @@ func (s *AuthService) Login(req *models.LoginRequest, ipAddress, userAgent strin
 	// Check if user is active
 	if !storeUser.IsActive {
 		s.securityService.RecordFailedLogin(&storeUser.ID, req.Username, ipAddress, userAgent)
+		s.auditService.LogAuthenticationEvent(AuditEventType("login_failed"), &storeUser.ID, req.Username, ipAddress, userAgent, false, map[string]interface{}{
+			"reason": "account_disabled",
+		})
 		return nil, errors.New("account is disabled")
 	}
 
 	// Verify password
 	if !storeUser.CheckPassword(req.Password) {
 		s.securityService.RecordFailedLogin(&storeUser.ID, req.Username, ipAddress, userAgent)
+		s.auditService.LogAuthenticationEvent(AuditEventType("login_failed"), &storeUser.ID, req.Username, ipAddress, userAgent, false, map[string]interface{}{
+			"reason": "invalid_password",
+		})
 		return nil, errors.New("invalid username or password")
 	}
 
@@ -92,9 +152,9 @@ func (s *AuthService) Login(req *models.LoginRequest, ipAddress, userAgent strin
 		return nil, fmt.Errorf("failed to get user roles: %w", err)
 	}
 
-	// Set primary role (for backward compatibility)
+	// Set primary role (highest privilege — JWT AdminRequired checks this field)
 	if len(roles) > 0 {
-		user.Role = roles[0].Name
+		user.Role = primaryRoleName(roles)
 	} else {
 		user.Role = "viewer" // Default role
 	}
@@ -111,8 +171,15 @@ func (s *AuthService) Login(req *models.LoginRequest, ipAddress, userAgent strin
 		return nil, fmt.Errorf("failed to generate token: %w", err)
 	}
 
-	// Create audit log
-	s.createAuditLog(&storeUser.ID, "login", "user", fmt.Sprintf("%d", storeUser.ID), ipAddress, userAgent, fmt.Sprintf("User logged in successfully, session: %s", sessionID))
+	// Create audit log (always record client IP + registered username)
+	loginDetails, _ := json.Marshal(map[string]interface{}{
+		"username":   storeUser.Username,
+		"ip":         ipAddress,
+		"user_agent": userAgent,
+		"session_id": sessionID,
+		"result":     "success",
+	})
+	s.createAuditLog(&storeUser.ID, "login", "user", fmt.Sprintf("%d", storeUser.ID), ipAddress, userAgent, string(loginDetails))
 
 	return &models.LoginResponse{
 		Token:     token,
@@ -154,7 +221,7 @@ func (s *AuthService) RefreshToken(tokenString string) (*models.TokenResponse, e
 	}
 
 	if len(roles) > 0 {
-		user.Role = roles[0].Name
+		user.Role = primaryRoleName(roles)
 	} else {
 		user.Role = "viewer"
 	}
@@ -175,13 +242,17 @@ func (s *AuthService) RefreshToken(tokenString string) (*models.TokenResponse, e
 }
 
 // Logout invalidates a user session
-func (s *AuthService) Logout(userID uint) error {
+func (s *AuthService) Logout(userID uint, ipAddress, userAgent string) error {
 	if err := s.securityService.InvalidateAllUserSessions(userID); err != nil {
 		fmt.Printf("Failed to invalidate sessions on logout: %v\n", err)
 	}
 
-	// Create audit log
-	s.createAuditLog(&userID, "logout", "user", fmt.Sprintf("%d", userID), "", "", "User logged out")
+	details, _ := json.Marshal(map[string]interface{}{
+		"ip":         ipAddress,
+		"user_agent": userAgent,
+		"result":     "success",
+	})
+	s.createAuditLog(&userID, "logout", "user", fmt.Sprintf("%d", userID), ipAddress, userAgent, string(details))
 
 	return nil
 }
@@ -191,10 +262,34 @@ func (s *AuthService) GetUserActivityLog(userID uint, offset, limit int) ([]*sto
 	return s.store.GetAuditLogsByUserID(userID, offset, limit)
 }
 
-// Register creates a new user account
-func (s *AuthService) Register(req *models.RegisterRequest) (*models.UserResponse, error) {
+// Register creates a new user account (public self-registration).
+// Always grants viewer only — never management privileges.
+func (s *AuthService) Register(req *models.RegisterRequest, ipAddress, userAgent string) (*models.UserResponse, error) {
+	if k8s.IsShowcase() {
+		return nil, errors.New("registration is disabled in showcase mode")
+	}
 	if s.config != nil && !s.config.OAuth.AllowRegistration {
 		return nil, errors.New("registration is disabled")
+	}
+	return s.createNonAdminUser(req, req.Username, ipAddress, userAgent, "user_register")
+}
+
+// AdminCreateUser creates a user from the admin console.
+// Bypasses public registration toggles but still never grants the admin role.
+func (s *AuthService) AdminCreateUser(req *models.RegisterRequest, displayName, ipAddress, userAgent string) (*models.UserResponse, error) {
+	if IsProtectedUsername(req.Username) {
+		return nil, fmt.Errorf("username %q is reserved for a protected system account", req.Username)
+	}
+	dn := displayName
+	if dn == "" {
+		dn = req.Username
+	}
+	return s.createNonAdminUser(req, dn, ipAddress, userAgent, "user_create")
+}
+
+func (s *AuthService) createNonAdminUser(req *models.RegisterRequest, displayName, ipAddress, userAgent, auditAction string) (*models.UserResponse, error) {
+	if IsProtectedUsername(req.Username) {
+		return nil, fmt.Errorf("username %q is reserved", req.Username)
 	}
 
 	// Validate password against security policy
@@ -214,36 +309,40 @@ func (s *AuthService) Register(req *models.RegisterRequest) (*models.UserRespons
 		return nil, errors.New("email already exists")
 	}
 
-	// Create new store user
 	storeUser := &store.User{
 		Username:      req.Username,
 		Email:         req.Email,
 		PasswordHash:  req.Password, // Will be hashed by store
-		DisplayName:   req.Username,
+		DisplayName:   displayName,
 		IsActive:      true,
 		EmailVerified: false,
 	}
 
-	// Create user in store
 	if err := s.store.CreateUser(storeUser); err != nil {
 		return nil, fmt.Errorf("failed to create user: %w", err)
 	}
 
-	// Assign default viewer role
+	// Registered / created users: viewer only (no management privileges)
 	viewerRole, err := s.store.GetRoleByName("viewer")
 	if err != nil {
 		return nil, fmt.Errorf("failed to get viewer role: %w", err)
 	}
-
 	if err := s.store.AssignRole(storeUser.ID, viewerRole.ID); err != nil {
 		return nil, fmt.Errorf("failed to assign default role: %w", err)
 	}
 
-	// Create audit log
-	s.createAuditLog(nil, "user_register", "user", fmt.Sprintf("%d", storeUser.ID), "", "", "New user registered")
+	regDetails, _ := json.Marshal(map[string]interface{}{
+		"username":   storeUser.Username,
+		"email":      storeUser.Email,
+		"ip":         ipAddress,
+		"user_agent": userAgent,
+		"role":       "viewer",
+		"result":     "success",
+	})
+	s.createAuditLog(&storeUser.ID, auditAction, "user", fmt.Sprintf("%d", storeUser.ID), ipAddress, userAgent, string(regDetails))
 
-	// Convert to response
 	user := s.convertStoreUserToModelsUser(storeUser)
+	user.Role = "viewer"
 	response := user.ToResponse()
 	return &response, nil
 }
@@ -272,7 +371,7 @@ func (s *AuthService) GetProfile(userID uint) (*models.UserProfileResponse, erro
 	}
 
 	if len(roles) > 0 {
-		user.Role = roles[0].Name
+		user.Role = primaryRoleName(roles)
 	} else {
 		user.Role = "viewer"
 		roleNames = []string{"viewer"}
@@ -415,7 +514,7 @@ func (s *AuthService) GetUserList(page, pageSize int) ([]models.UserResponse, in
 		// Get user roles for primary role
 		roles, err := s.store.GetUserRoles(storeUser.ID)
 		if err == nil && len(roles) > 0 {
-			user.Role = roles[0].Name
+			user.Role = primaryRoleName(roles)
 		} else {
 			user.Role = "viewer"
 		}
@@ -431,6 +530,10 @@ func (s *AuthService) UpdateUserStatus(userID uint, isActive bool) error {
 	storeUser, err := s.store.GetUserByID(userID)
 	if err != nil {
 		return errors.New("user not found")
+	}
+
+	if !isActive && IsProtectedUsername(storeUser.Username) {
+		return fmt.Errorf("cannot disable protected account %q", storeUser.Username)
 	}
 
 	storeUser.IsActive = isActive
@@ -450,12 +553,24 @@ func (s *AuthService) UpdateUserStatus(userID uint, isActive bool) error {
 
 // DeleteUser deletes a user (admin function)
 func (s *AuthService) DeleteUser(userID uint) error {
+	storeUser, err := s.store.GetUserByID(userID)
+	if err != nil {
+		return errors.New("user not found")
+	}
+	if IsProtectedUsername(storeUser.Username) {
+		return fmt.Errorf("cannot delete protected account %q", storeUser.Username)
+	}
+
 	if err := s.store.DeleteUser(userID); err != nil {
 		return fmt.Errorf("failed to delete user: %w", err)
 	}
 
 	// Create audit log
-	s.createAuditLog(nil, "user_delete", "user", fmt.Sprintf("%d", userID), "", "", "User deleted")
+	details, _ := json.Marshal(map[string]interface{}{
+		"username": storeUser.Username,
+		"result":   "deleted",
+	})
+	s.createAuditLog(nil, "user_delete", "user", fmt.Sprintf("%d", userID), "", "", string(details))
 
 	return nil
 }

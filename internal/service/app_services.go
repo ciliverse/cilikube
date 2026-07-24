@@ -9,6 +9,7 @@ import (
 	policyv1 "k8s.io/api/policy/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	storagev1 "k8s.io/api/storage/v1"
+	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 )
 
 // AppServices serves as a collection of all application services, defined here uniformly
@@ -55,6 +56,9 @@ type AppServices struct {
 	JobService                ResourceService[*batchv1.Job]
 	CronJobService            ResourceService[*batchv1.CronJob]
 	NetworkPolicyService      ResourceService[*networkingv1.NetworkPolicy]
+	GatewayClassService       ResourceService[*gatewayv1.GatewayClass]
+	GatewayService            ResourceService[*gatewayv1.Gateway]
+	HTTPRouteService          ResourceService[*gatewayv1.HTTPRoute]
 	StorageClassService       ResourceService[*storagev1.StorageClass]
 	ServiceAccountService     ResourceService[*corev1.ServiceAccount]
 	RoleResourceService       ResourceService[*rbacv1.Role]

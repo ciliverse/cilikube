@@ -24,6 +24,20 @@ var logicalPermissionMap = map[string][]casbinPolicy{
 	"write:services": {{Object: "/api/v1/services/*", Action: "*"}, {Object: "/api/v1/namespaces/*/services/*", Action: "*"}},
 	"read:ingress":   {{Object: "/api/v1/ingresses/*", Action: "GET"}, {Object: "/api/v1/namespaces/*/ingresses/*", Action: "GET"}},
 	"write:ingress":  {{Object: "/api/v1/ingresses/*", Action: "*"}, {Object: "/api/v1/namespaces/*/ingresses/*", Action: "*"}},
+	"read:gateway": {
+		{Object: "/api/v1/gatewayclasses/*", Action: "GET"},
+		{Object: "/api/v1/gateways/*", Action: "GET"},
+		{Object: "/api/v1/namespaces/*/gateways/*", Action: "GET"},
+		{Object: "/api/v1/httproutes/*", Action: "GET"},
+		{Object: "/api/v1/namespaces/*/httproutes/*", Action: "GET"},
+	},
+	"write:gateway": {
+		{Object: "/api/v1/gatewayclasses/*", Action: "*"},
+		{Object: "/api/v1/gateways/*", Action: "*"},
+		{Object: "/api/v1/namespaces/*/gateways/*", Action: "*"},
+		{Object: "/api/v1/httproutes/*", Action: "*"},
+		{Object: "/api/v1/namespaces/*/httproutes/*", Action: "*"},
+	},
 	"read:configmaps": {
 		{Object: "/api/v1/configmaps/*", Action: "GET"},
 		{Object: "/api/v1/namespaces/*/configmaps/*", Action: "GET"},
@@ -85,6 +99,7 @@ func KnownLogicalPermissions() []string {
 		"read:pods", "write:pods", "exec:pods",
 		"read:deployments", "write:deployments",
 		"read:services", "write:services", "read:ingress", "write:ingress",
+		"read:gateway", "write:gateway",
 		"read:configmaps", "write:configmaps", "read:secrets", "write:secrets",
 		"read:pv", "write:pv",
 		"read:storageclasses", "write:storageclasses",

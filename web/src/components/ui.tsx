@@ -100,15 +100,17 @@ export function PageHeader({
   action?: ReactNode
 }) {
   return (
-    <div className="mb-3 flex w-full shrink-0 flex-wrap items-end justify-between gap-3">
+    <div className="mb-2.5 flex w-full shrink-0 flex-col gap-2.5 sm:mb-3 sm:flex-row sm:flex-wrap sm:items-end sm:justify-between sm:gap-3">
       <div className="min-w-0">
-        <div className="hud-label mb-1">Control plane</div>
-        <h1 className="font-display text-2xl font-bold tracking-[0.12em] text-text md:text-3xl">
+        <div className="hud-label mb-0.5 sm:mb-1">Control plane</div>
+        <h1 className="font-display text-xl font-bold tracking-[0.1em] break-all text-text sm:text-2xl sm:tracking-[0.12em] md:text-3xl">
           {title}
         </h1>
-        {subtitle ? <p className="mt-1 text-sm text-text-dim">{subtitle}</p> : null}
+        {subtitle ? (
+          <p className="mt-1 line-clamp-2 text-xs text-text-dim sm:text-sm">{subtitle}</p>
+        ) : null}
       </div>
-      {action}
+      {action ? <div className="flex w-full min-w-0 flex-wrap items-center gap-2 sm:w-auto">{action}</div> : null}
     </div>
   )
 }
@@ -123,16 +125,16 @@ export function StatCard({
   icon?: ReactNode
 }) {
   return (
-    <Card className="h-full min-w-0 p-5">
-      <div className="flex items-start justify-between gap-3">
+    <Card className="h-full min-w-0 p-3 sm:p-5">
+      <div className="flex items-start justify-between gap-2 sm:gap-3">
         <div className="min-w-0">
-          <div className="hud-label">{label}</div>
-          <div className="mt-2 font-display text-3xl font-bold tracking-wide text-cyan">
+          <div className="hud-label text-[10px] sm:text-[11px]">{label}</div>
+          <div className="mt-1.5 font-display text-2xl font-bold tracking-wide text-cyan sm:mt-2 sm:text-3xl">
             {value}
           </div>
         </div>
         {icon ? (
-          <div className="grid h-10 w-10 shrink-0 place-items-center rounded border border-line bg-cyan-faint text-cyan">
+          <div className="grid h-8 w-8 shrink-0 place-items-center rounded border border-line bg-cyan-faint text-cyan sm:h-10 sm:w-10">
             {icon}
           </div>
         ) : null}
@@ -177,7 +179,7 @@ export function Modal({
 }) {
   if (!open) return null
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 md:p-6">
+    <div className="fixed inset-0 z-50 flex items-end justify-center p-0 sm:items-center sm:p-4 md:p-6">
       <button
         type="button"
         aria-label="Close overlay"
@@ -186,23 +188,25 @@ export function Modal({
       />
       <div
         className={cn(
-          'relative flex max-h-[88vh] w-full flex-col overflow-hidden rounded border border-line bg-panel-solid shadow-[0_0_40px_rgba(53,230,255,0.12)]',
+          'relative flex max-h-[92dvh] w-full flex-col overflow-hidden rounded-t-xl border border-line bg-panel-solid shadow-[0_0_40px_rgba(53,230,255,0.12)] sm:max-h-[88vh] sm:rounded',
           wide ? 'max-w-6xl' : 'max-w-3xl',
         )}
       >
-        <div className="flex items-start justify-between gap-4 border-b border-line px-5 py-4">
+        <div className="flex items-start justify-between gap-3 border-b border-line px-4 py-3 sm:gap-4 sm:px-5 sm:py-4">
           <div className="min-w-0">
             <div className="hud-label">Action</div>
-            <h2 className="mt-1 truncate font-display text-lg font-bold tracking-[0.12em] text-text">
+            <h2 className="mt-1 truncate font-display text-base font-bold tracking-[0.12em] text-text sm:text-lg">
               {title}
             </h2>
             {subtitle ? <p className="mt-1 truncate text-xs text-text-dim">{subtitle}</p> : null}
           </div>
-          <Button variant="ghost" className="px-2" onClick={onClose} type="button">
+          <Button variant="ghost" className="h-9 w-9 shrink-0 px-0" onClick={onClose} type="button">
             ✕
           </Button>
         </div>
-        <div className="min-h-0 flex-1 overflow-auto">{children}</div>
+        <div className="min-h-0 flex-1 overflow-auto overscroll-contain pb-[env(safe-area-inset-bottom)]">
+          {children}
+        </div>
       </div>
     </div>
   )

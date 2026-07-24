@@ -82,6 +82,18 @@ func New(configPath string) (*Application, error) {
 
 	slog.Info("storage system initialized successfully", "type", cfg.GetStorageType())
 
+	// Showcase: pin public demo usernames/passwords (no-op unless CILIKUBE_SHOWCASE=1)
+	if err := service.EnsureShowcaseAccounts(mainStore); err != nil {
+		return nil, fmt.Errorf("failed to ensure showcase accounts: %w", err)
+	}
+
+	// Redact CILIKUBE_PRIVACY_IPS from historical audit/session rows (env-only; no IPs in source)
+	if cfg.Database.Enabled && database.DB != nil {
+		if err := auth.ScrubPrivacyIPs(database.DB); err != nil {
+			slog.Warn("failed to scrub privacy IPs from audit history", "error", err)
+		}
+	}
+
 	// --- 5. Initialize ClusterManager ---
 	k8sManager, err := k8s.NewClusterManager(mainStore, cfg)
 	if err != nil {
@@ -120,6 +132,11 @@ func New(configPath string) (*Application, error) {
 		return nil, fmt.Errorf("failed to initialize default policies: %w", err)
 	}
 	slog.Info("default policies initialized successfully")
+
+	// Showcase: sync Casbin groupings so admin/guest match DB roles (JWT primary ≠ Casbin)
+	if err := service.SyncShowcaseAccountPermissions(mainStore, services.PermissionService); err != nil {
+		return nil, fmt.Errorf("failed to sync showcase casbin roles: %w", err)
+	}
 
 	// --- 8. Gin router setup ---
 	router := initialization.SetupRouter(cfg, services, k8sManager, e)

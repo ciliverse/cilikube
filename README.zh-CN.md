@@ -47,29 +47,51 @@ CiliKube 是一个企业级开源 Kubernetes 多集群管理平台，采用现�
 ### v0.8.0 React UI（当前）
 
 <div align="center">
-  <img src="docs/v0.8/overview.png" alt="React Overview" width="100%">
+  <img src="docs/v0.8/overview.png" alt="集群概览" width="100%">
   <p><strong>集群概览</strong></p>
 </div>
 
 <div align="center">
-  <img src="docs/v0.8/nodes.png" alt="React Nodes" width="100%">
-  <p><strong>节点</strong></p>
+  <img src="docs/v0.8/admin-users.png" alt="用户管理" width="100%">
+  <p><strong>管理 · 用户</strong></p>
 </div>
 
 <div align="center">
-  <img src="docs/v0.8/pods.png" alt="React Pods" width="100%">
-  <p><strong>Pods</strong></p>
+  <img src="docs/v0.8/admin-settings.png" alt="系统设置" width="100%">
+  <p><strong>管理 · 设置</strong></p>
+</div>
+
+<details>
+<summary>不同主题下的集群概览（TRON / Paper / Matrix / Amber / Nord）</summary>
+
+<br>
+
+<div align="center">
+  <img src="docs/v0.8/overview-tron.png" alt="TRON 主题概览" width="100%">
+  <p><strong>TRON</strong></p>
 </div>
 
 <div align="center">
-  <img src="docs/v0.8/clusters.png" alt="React Clusters" width="100%">
-  <p><strong>集群管理</strong></p>
+  <img src="docs/v0.8/overview-paper.png" alt="Paper 主题概览" width="100%">
+  <p><strong>Paper</strong></p>
 </div>
 
 <div align="center">
-  <img src="docs/v0.8/login.png" alt="React Login" width="100%">
-  <p><strong>登录</strong></p>
+  <img src="docs/v0.8/overview-matrix.png" alt="Matrix 主题概览" width="100%">
+  <p><strong>Matrix</strong></p>
 </div>
+
+<div align="center">
+  <img src="docs/v0.8/overview-amber.png" alt="Amber 主题概览" width="100%">
+  <p><strong>Amber</strong></p>
+</div>
+
+<div align="center">
+  <img src="docs/v0.8/overview-nord.png" alt="Nord 主题概览" width="100%">
+  <p><strong>Nord</strong></p>
+</div>
+
+</details>
 
 ## ✨ 核心优势
 
@@ -94,13 +116,10 @@ CiliKube 源于一个全面的全栈开发学习计划，将实用的 Web 开发
 ## 🌐 在线预览
 
 - 在线演示: https://cilikube.cillian.website
-- 演示账号（只读 viewer）:
-  - 用户名: `guest`
-  - 密码: `CiliKubeGuest2026!`
 
 ## 📚 文档
 
-- 官方文档: [cilikube.cillian.website](https://cilikube.cillian.website)
+- 在线演示 / 产品站点: [cilikube.cillian.website](https://cilikube.cillian.website)
 
 ## 🚀 技术架构
 
@@ -111,7 +130,6 @@ CiliKube 采用行业标准技术和框架，确保可靠性、可维护性和�
 - Go >= 1.26.0 (开发和测试版本 v1.26.4)
 - PNPM >= 10.x
 - Kubernetes / kubectl 1.36.2（与 client-go 对齐）
-- PNPM >= 8.x (包管理工具)
 
 **前端架构**: 
 - **核心技术**: `React 19` `TypeScript 7` `Vite 8` `Tailwind CSS 4`
@@ -129,60 +147,25 @@ CiliKube 采用行业标准技术和框架，确保可靠性、可维护性和�
 - **配置管理**: `Viper`
 - **日志系统**: `Zap Logger`
 
-## ✨ 核心功能
+## ✨ 现有功能
 
-- **企业级身份认证**: 安全的 JWT 身份验证和基于角色的授权机制
-- **综合仪表板**: 实时集群指标和资源利用率概览
-- **多集群运维**: 跨多个 Kubernetes 环境的集中化管理
-- **资源管理套件**:
-  - **基础设施**: 节点监控和管理
-  - **工作空间**: 命名空间生命周期管理
-  - **工作负载**: 完整的 Pod 生命周期管理，集成日志和终端访问
-  - **存储**: 持久卷和持久卷声明管理
-  - **配置**: 安全的 ConfigMap 和 Secret 管理
-  - **网络**: 服务发现和 Ingress 配置
-  - **部署**: 高级工作负载管理 (Deployment/StatefulSet/DaemonSet)
-- **用户体验**: 可定制主题和全面的国际化支持
-
-## 🛠️ 开发计划
-
-**前端**
-- [x] 登录界面
-- [x] 基础布局 (侧边栏, 顶部导航, 标签栏)
-- [x] 消息通知
-- [x] 工作负载资源页面 (Deployment, StatefulSet, DaemonSet 等)
-- [x] 配置管理页面 (ConfigMap, Secret)
-- [x] 网络资源页面 (Service, Ingress)
-- [x] 存储资源页面 (StorageClass, PV, PVC)
-- [x] 访问控制页面 (RBAC - ServiceAccount, Role, ClusterRoleBinding 等)
-- [x] 日志查看页面优化
-- [x] Web Shell 终端集成
-- [ ] 事件 (Events) 查看
-- [ ] CRD 资源管理 (基础)
-- [ ] 监控集成 (集成 Prometheus/Grafana 数据展示)
-
-**后端**
-- [x] Kubernetes 客户端初始化
-- [x] 基础路由设置 (Gin)
-- [x] CORS 跨域配置
-- [x] JWT 认证中间件
-- [x] WebSocket 接口 (用于日志和 Web Shell)
-- [x] 多集群支持
-- [x] Node (节点) 资源接口
-- [x] Pod 资源接口 (列表, 详情, 删除, 日志, Exec)
-- [x] PV/PVC 资源接口
-- [x] Namespace 资源接口
-- [x] Deployment / StatefulSet / DaemonSet 资源接口
-- [x] Service / Ingress 资源接口
-- [x] ConfigMap / Secret 资源接口
-- [x] RBAC 相关资源接口
-- [x] Event 资源接口
+- **认证与权限**: JWT 登录、GitHub OAuth（可选）、Casbin RBAC；用户 / 角色 / 系统设置管理；安全审计日志
+- **多集群**: 集群导入与切换、本地 kubeconfig 上下文导入、活动集群切换
+- **概览与检索**: 集群概览仪表盘、全局资源搜索、Events 事件流
+- **集群资源**:
+  - Nodes / Namespaces / CRDs
+  - Workloads：Pods（日志 / Web 终端）、Deployments、StatefulSets、DaemonSets、Jobs、CronJobs、HPA、PDB
+  - Network：Services、Ingress、GatewayClasses、Gateways、HTTPRoutes、NetworkPolicies
+  - Config：ConfigMaps、Secrets、ServiceAccounts、ResourceQuotas、LimitRanges
+  - Storage：PV / PVC / StorageClass
+  - Access：Roles、RoleBindings、ClusterRoles、ClusterRoleBindings
+- **可观测与运维**: Monitoring（Prometheus 指标）、Helm Release 管理、API Proxy 控制台、资源 YAML 查看 / 编辑
 
 ## 💻 本地开发
 
 ### 环境准备
-1. 安装 [Node.js](https://nodejs.org/) (>=18) 和 [pnpm](https://pnpm.io/)
-2. 安装 [Go](https://go.dev/) (>=1.20)
+1. 安装 [Node.js](https://nodejs.org/) (>=20) 和 [pnpm](https://pnpm.io/) (>=10)
+2. 安装 [Go](https://go.dev/) (>=1.26)
 3. 拥有一个 Kubernetes 集群，并配置好 kubeconfig 文件 (默认读取 `~/.kube/config`)
 
 ### 运行前端

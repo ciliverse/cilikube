@@ -118,7 +118,7 @@ export function OverviewPage() {
   ]
 
   return (
-    <div className="flex w-full min-w-0 flex-col gap-4">
+    <div className="flex w-full min-w-0 flex-col gap-3 sm:gap-4">
       <PageHeader
         title="OVERVIEW"
         subtitle={`Live posture for ${activeCluster?.name || clusterId || 'selected cluster'}`}
@@ -129,7 +129,7 @@ export function OverviewPage() {
         variants={container}
         initial="hidden"
         animate="show"
-        className="grid w-full grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-5"
+        className="grid w-full grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-3 xl:grid-cols-5"
       >
         {cards.map((card) => (
           <motion.div key={card.label} variants={item}>
@@ -138,11 +138,13 @@ export function OverviewPage() {
         ))}
       </motion.div>
 
-      <Card className="min-w-0 p-5">
-        <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
-          <div>
-            <h2 className="font-display text-lg font-bold tracking-[0.12em]">CLUSTER RESOURCES</h2>
-            <p className="mt-1 text-xs text-text-dim">
+      <Card className="min-w-0 p-3 sm:p-5">
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2 sm:mb-4">
+          <div className="min-w-0">
+            <h2 className="font-display text-base font-bold tracking-[0.12em] sm:text-lg">
+              CLUSTER RESOURCES
+            </h2>
+            <p className="mt-1 hidden text-xs text-text-dim sm:block">
               Cluster-wide counts from /api/v1/summary/resources · click to open list
             </p>
           </div>
@@ -150,15 +152,15 @@ export function OverviewPage() {
             {summaryQ.isLoading ? 'loading…' : `${RESOURCE_TILES.length} types`}
           </Badge>
         </div>
-        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
+        <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-3 sm:gap-2 lg:grid-cols-4 xl:grid-cols-6">
           {RESOURCE_TILES.map((tile) => {
             const count = summary?.[tile.field]
             const allowed = !tile.resource || checkPermission(tile.resource, 'read')
             const value = count == null ? '—' : count
             const inner = (
               <>
-                <div className="hud-label">{tile.label}</div>
-                <div className="mt-1 font-display text-2xl font-bold tracking-wide text-cyan">
+                <div className="hud-label text-[10px] sm:text-[11px]">{tile.label}</div>
+                <div className="mt-0.5 font-display text-xl font-bold tracking-wide text-cyan sm:mt-1 sm:text-2xl">
                   {value}
                 </div>
               </>
@@ -167,7 +169,7 @@ export function OverviewPage() {
               return (
                 <div
                   key={tile.key}
-                  className="rounded border border-line/60 bg-mist/40 px-3 py-3 opacity-50"
+                  className="rounded border border-line/60 bg-mist/40 px-2.5 py-2.5 opacity-50 sm:px-3 sm:py-3"
                   title="No permission"
                 >
                   {inner}
@@ -178,7 +180,7 @@ export function OverviewPage() {
               <Link
                 key={tile.key}
                 to={tile.to}
-                className="rounded border border-line bg-mist px-3 py-3 transition hover:border-cyan/40 hover:bg-cyan/10"
+                className="rounded border border-line bg-mist px-2.5 py-2.5 transition hover:border-cyan/40 hover:bg-cyan/10 active:scale-[0.98] sm:px-3 sm:py-3"
               >
                 {inner}
               </Link>
@@ -192,11 +194,13 @@ export function OverviewPage() {
         ) : null}
       </Card>
 
-      <Card className="min-w-0 p-5">
-        <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
-          <div>
-            <h2 className="font-display text-lg font-bold tracking-[0.12em]">NODE SNAPSHOT</h2>
-            <p className="mt-1 text-xs text-text-dim">
+      <Card className="min-w-0 p-3 sm:p-5">
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2 sm:mb-4">
+          <div className="min-w-0">
+            <h2 className="font-display text-base font-bold tracking-[0.12em] sm:text-lg">
+              NODE SNAPSHOT
+            </h2>
+            <p className="mt-1 hidden text-xs text-text-dim sm:block">
               Aggregated from metrics-server · point-in-time (not Prometheus history)
             </p>
           </div>
@@ -205,26 +209,26 @@ export function OverviewPage() {
           </Badge>
         </div>
         {rollup.totalNodes ? (
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-            <div className="rounded border border-line bg-mist px-3 py-3">
+          <div className="grid grid-cols-2 gap-2 sm:gap-4 md:grid-cols-2 lg:grid-cols-4">
+            <div className="rounded border border-line bg-mist px-2.5 py-2.5 sm:px-3 sm:py-3">
               <div className="hud-label">Avg CPU</div>
-              <div className="mt-1 font-display text-xl font-bold text-cyan">
+              <div className="mt-1 font-display text-lg font-bold text-cyan sm:text-xl">
                 {formatPercent(rollup.avgCpuUsagePercent)}
               </div>
             </div>
-            <div className="rounded border border-line bg-mist px-3 py-3">
+            <div className="rounded border border-line bg-mist px-2.5 py-2.5 sm:px-3 sm:py-3">
               <div className="hud-label">Avg Memory</div>
-              <div className="mt-1 font-display text-xl font-bold text-orange">
+              <div className="mt-1 font-display text-lg font-bold text-orange sm:text-xl">
                 {formatPercent(rollup.avgMemoryUsagePercent)}
               </div>
             </div>
-            <div className="rounded border border-line bg-mist px-3 py-3">
+            <div className="rounded border border-line bg-mist px-2.5 py-2.5 sm:px-3 sm:py-3">
               <div className="hud-label">Capacity</div>
-              <div className="mt-1 font-mono text-sm text-text">
+              <div className="mt-1 font-mono text-xs text-text sm:text-sm">
                 {rollup.totalCpuCores} cores · {rollup.totalMemoryGB} Gi
               </div>
             </div>
-            <div className="space-y-3 rounded border border-line bg-mist px-3 py-3 md:col-span-2 lg:col-span-1">
+            <div className="col-span-2 space-y-3 rounded border border-line bg-mist px-2.5 py-2.5 sm:px-3 sm:py-3 md:col-span-2 lg:col-span-1">
               <UsageBar
                 label="CPU requests"
                 percent={rollup.totalCpuRequestsPercent}
@@ -244,21 +248,21 @@ export function OverviewPage() {
         )}
       </Card>
 
-      <div className="grid w-full gap-4 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
+      <div className="grid w-full gap-3 sm:gap-4 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
         <Card className="min-w-0 overflow-hidden">
-          <div className="border-b border-line px-5 py-4">
+          <div className="border-b border-line px-3 py-3 sm:px-5 sm:py-4">
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <h2 className="font-display text-lg font-bold tracking-[0.12em]">
+              <h2 className="font-display text-base font-bold tracking-[0.12em] sm:text-lg">
                 NODE RESOURCE USAGE
               </h2>
-              <Badge tone="neutral">metrics-server · snapshot</Badge>
+              <Badge tone="neutral">snapshot</Badge>
             </div>
-            <p className="mt-1 text-sm text-text-dim">
+            <p className="mt-1 hidden text-sm text-text-dim sm:block">
               Per-node CPU / memory / request saturation
             </p>
           </div>
-          <HudTableScroll>
-          <HudTable>
+          <HudTableScroll pinFirst wide>
+          <HudTable pinFirst wide>
               <thead>
                 <tr>
                   <th>Node</th>
@@ -304,13 +308,15 @@ export function OverviewPage() {
           </HudTableScroll>
         </Card>
 
-        <Card className="min-w-0 p-5">
-          <div className="mb-4 flex items-center justify-between gap-2">
-            <h2 className="font-display text-lg font-bold tracking-[0.12em]">RECENT EVENTS</h2>
+        <Card className="min-w-0 p-3 sm:p-5">
+          <div className="mb-3 flex items-center justify-between gap-2 sm:mb-4">
+            <h2 className="font-display text-base font-bold tracking-[0.12em] sm:text-lg">
+              RECENT EVENTS
+            </h2>
             <div className="flex items-center gap-2">
-              <Badge tone="warn">{warningEvents.length} warnings</Badge>
+              <Badge tone="warn">{warningEvents.length} warn</Badge>
               <Link to="/events" className="text-xs font-semibold text-cyan hover:underline">
-                View all
+                All
               </Link>
             </div>
           </div>
