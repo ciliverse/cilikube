@@ -71,7 +71,7 @@ app:
 # Backend configuration
 backend:
   image:
-    repository: cilliantech/cilikube
+    repository: ghcr.io/ciliverse/cilikube
     tag: v0.9.0
     pullPolicy: IfNotPresent
   replicas: 2
@@ -86,7 +86,7 @@ backend:
 # Frontend configuration
 frontend:
   image:
-    repository: cilliantech/cilikube-web
+    repository: ghcr.io/ciliverse/cilikube-web
     tag: v0.9.0
     pullPolicy: IfNotPresent
   replicas: 2
