@@ -161,20 +161,26 @@ CiliKube leverages industry-standard technologies and frameworks to ensure relia
   - Access: Roles, RoleBindings, ClusterRoles, ClusterRoleBindings
 - **Observe & ops**: Monitoring (Prometheus metrics), Helm releases, API Proxy console, resource YAML view / edit
 
-## 🖥️ Desktop (Windows first)
+## 🖥️ Desktop (Windows / macOS / Linux)
 
-Double-click app: Electron shell + embedded Go API, using your local `%USERPROFILE%\.kube\config`.
+Double-click app: Electron shell + embedded Go API, using your local kubeconfig (`~/.kube/config` or `%USERPROFILE%\.kube\config`).
 
-- **Download**: GitHub Releases for tags containing `desktop` (e.g. `v0.9.0-desktop.1`) — assets `CiliKube-*-win-x64.exe` (NSIS or portable)
-- **First login**: `admin` / `12345678` (change it immediately)
-- **Build**: push a desktop tag or run [Release Desktop](.github/workflows/release-desktop.yml) on `windows-latest` (SQLite needs CGO):
+Latest: **[v0.9.2-desktop.1](https://github.com/ciliverse/cilikube/releases/tag/v0.9.2-desktop.1)**
+
+| Platform | Asset |
+| --- | --- |
+| Windows x64 | [setup](https://github.com/ciliverse/cilikube/releases/download/v0.9.2-desktop.1/CiliKube-0.9.2-win-x64-setup.exe) / [portable](https://github.com/ciliverse/cilikube/releases/download/v0.9.2-desktop.1/CiliKube-0.9.2-win-x64-portable.exe) |
+| macOS Apple Silicon | [DMG](https://github.com/ciliverse/cilikube/releases/download/v0.9.2-desktop.1/CiliKube-0.9.2-mac-arm64.dmg) |
+| Linux x64 | [AppImage](https://github.com/ciliverse/cilikube/releases/download/v0.9.2-desktop.1/CiliKube-0.9.2-linux-x86_64.AppImage) |
+
+- **First login**: `admin` / `12345678` (forced password change on first login)
+- **Notes**: builds are unsigned (Windows SmartScreen / macOS Gatekeeper may warn). Intel Mac DMG not yet published.
+- **Build**: push a desktop tag (CI builds all three platforms; SQLite needs CGO on each runner):
 
 ```bash
-git tag v0.9.0-desktop.1
-git push origin v0.9.0-desktop.1
+git tag v0.9.2-desktop.1
+git push origin v0.9.2-desktop.1
 ```
-
-macOS / Linux packages will follow on the same architecture.
 
 ## 💻 Local Development
 

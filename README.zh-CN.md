@@ -161,20 +161,26 @@ CiliKube 采用行业标准技术和框架，确保可靠性、可维护性和�
   - Access：Roles、RoleBindings、ClusterRoles、ClusterRoleBindings
 - **可观测与运维**: Monitoring（Prometheus 指标）、Helm Release 管理、API Proxy 控制台、资源 YAML 查看 / 编辑
 
-## 🖥️ 桌面版（Windows 先行）
+## 🖥️ 桌面版（Windows / macOS / Linux）
 
-双击即用：Electron 壳 + 内嵌 Go 后端，自动读取本机 `%USERPROFILE%\.kube\config`。
+双击即用：Electron 壳 + 内嵌 Go 后端，自动读取本机 kubeconfig（`~/.kube/config` 或 `%USERPROFILE%\.kube\config`）。
 
-- **下载**：GitHub Releases 中带 `desktop` 的 tag（例如 `v0.9.0-desktop.1`），资产名 `CiliKube-*-win-x64.exe`（NSIS 安装包或 portable）
-- **首次登录**：`admin` / `12345678`（请尽快改密）
-- **自己打 Windows 包**：推送 tag 或手动跑 [Release Desktop](.github/workflows/release-desktop.yml)（须在 `windows-latest` 上编，因 SQLite CGO）：
+最新版：**[v0.9.2-desktop.1](https://github.com/ciliverse/cilikube/releases/tag/v0.9.2-desktop.1)**
+
+| 平台 | 下载 |
+| --- | --- |
+| Windows x64 | [安装包](https://github.com/ciliverse/cilikube/releases/download/v0.9.2-desktop.1/CiliKube-0.9.2-win-x64-setup.exe) / [便携版](https://github.com/ciliverse/cilikube/releases/download/v0.9.2-desktop.1/CiliKube-0.9.2-win-x64-portable.exe) |
+| macOS Apple Silicon | [DMG](https://github.com/ciliverse/cilikube/releases/download/v0.9.2-desktop.1/CiliKube-0.9.2-mac-arm64.dmg) |
+| Linux x64 | [AppImage](https://github.com/ciliverse/cilikube/releases/download/v0.9.2-desktop.1/CiliKube-0.9.2-linux-x86_64.AppImage) |
+
+- **首次登录**：`admin` / `12345678`（首次登录会强制改密）
+- **说明**：当前未代码签名（Windows SmartScreen / macOS 可能提示拦截）。Intel Mac DMG 暂未发布。
+- **自己打包**：推送带 `desktop` 的 tag，CI 会同时打三端（各 runner 上需 CGO 编 SQLite）：
 
 ```bash
-git tag v0.9.0-desktop.1
-git push origin v0.9.0-desktop.1
+git tag v0.9.2-desktop.1
+git push origin v0.9.2-desktop.1
 ```
-
-macOS / Linux 安装包将在同一套架构上后续补齐。
 
 ## 💻 本地开发
 
