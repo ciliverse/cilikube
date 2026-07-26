@@ -229,10 +229,10 @@ go build -o bin/cilikube cmd/server/main.go
 ### Using Official Images
 ```bash
 # Backend
-docker run -d --name cilikube -p 8080:8080 -v ~/.kube:/root/.kube:ro cilliantech/cilikube:latest
+docker run -d --name cilikube -p 8080:8080 -v ~/.kube:/root/.kube:ro ghcr.io/ciliverse/cilikube:v0.9.0
 
 # Frontend
-docker run -d --name cilikube-web -p 80:80 cilliantech/cilikube-web:latest
+docker run -d --name cilikube-web -p 80:80 ghcr.io/ciliverse/cilikube-web:v0.9.0
 ```
 
 ### Using Docker Compose

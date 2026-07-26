@@ -38,6 +38,11 @@ jobs:
           {
             echo "tag=${TAG}"
             echo "owner=${OWNER}"
+            if [ -n "${DOCKERHUB_USERNAME}" ]; then
+              echo "dockerhub=true"
+            else
+              echo "dockerhub=false"
+            fi
             echo "backend_tags<<EOF"
             echo "ghcr.io/${OWNER}/cilikube:${TAG}"
             echo "ghcr.io/${OWNER}/cilikube:latest"
@@ -67,7 +72,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Log in to Docker Hub
-        if: ${{ secrets.DOCKERHUB_USERNAME != '' && secrets.DOCKERHUB_TOKEN != '' }}
+        if: steps.meta.outputs.dockerhub == 'true'
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
