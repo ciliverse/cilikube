@@ -1,5 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { Navigate, useNavigate } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { motion } from 'framer-motion'
 import { fetchOAuthProviders, register, type OAuthProviderInfo } from '@/api/auth'
 import { fetchShowcaseInfo, type ShowcaseInfo } from '@/api/showcase'
@@ -15,6 +16,7 @@ function GitHubMark({ className }: { className?: string }) {
 }
 
 export function LoginPage() {
+  const { t } = useTranslation()
   const { login, isAuthenticated } = useAuth()
   const navigate = useNavigate()
   const [mode, setMode] = useState<'login' | 'register'>('login')
@@ -55,9 +57,7 @@ export function LoginPage() {
           setOauthHint('')
         } else if (enabledOnly.length) {
           setOauthStatus('partial')
-          setOauthHint(
-            'GitHub login is enabled but Client ID is missing. Set credentials in Admin → Settings.',
-          )
+          setOauthHint(t('login.oauthMissing'))
         } else {
           setOauthStatus('off')
           setOauthHint('')
@@ -65,14 +65,14 @@ export function LoginPage() {
       } catch {
         if (!cancelled) {
           setOauthStatus('error')
-          setOauthHint('Could not load OAuth providers')
+          setOauthHint(t('login.oauthLoadFailed'))
         }
       }
     })()
     return () => {
       cancelled = true
     }
-  }, [])
+  }, [t])
 
   if (isAuthenticated) return <Navigate to="/" replace />
 
@@ -91,7 +91,7 @@ export function LoginPage() {
       }
       navigate('/')
     } catch (err: any) {
-      setError(err?.response?.data?.message || err?.message || 'Request failed')
+      setError(err?.response?.data?.message || err?.message || t('login.requestFailed'))
     } finally {
       setLoading(false)
     }
@@ -120,7 +120,7 @@ export function LoginPage() {
             CILI<span className="accent">KUBE</span>
           </div>
           <p className="mt-2 text-xs tracking-[0.18em] text-text-dim uppercase sm:mt-3 sm:text-sm">
-            Multi-cluster control plane
+            {t('boot.subtitle')}
           </p>
         </div>
 
@@ -128,19 +128,17 @@ export function LoginPage() {
           className="hud-panel space-y-3.5 rounded p-5 sm:space-y-4 sm:p-6 md:p-8"
           onSubmit={onSubmit}
         >
-          <div className="hud-label">Authenticate</div>
+          <div className="hud-label">{t('login.authenticate')}</div>
           <h1 className="font-display text-lg font-bold tracking-[0.14em] text-text sm:text-xl">
-            {mode === 'login' ? 'SIGN IN' : 'REGISTER'}
+            {mode === 'login' ? t('login.signIn') : t('login.register')}
           </h1>
           <p className="text-[13px] text-text-dim sm:text-sm">
-            {mode === 'login'
-              ? 'Enter credentials to open the operator console.'
-              : 'Create an account (registration must be enabled by an admin).'}
+            {mode === 'login' ? t('login.subtitle') : t('login.createAccount')}
           </p>
 
           {showcase?.accounts?.length ? (
             <div className="space-y-2 rounded border border-cyan/30 bg-cyan/5 px-3 py-3 text-sm">
-              <div className="hud-label text-cyan">Accounts</div>
+              <div className="hud-label text-cyan">{t('login.accounts')}</div>
               {showcase.accounts.map((a) => (
                 <button
                   key={a.username}
@@ -165,7 +163,7 @@ export function LoginPage() {
           ) : null}
 
           <label className="block space-y-1.5">
-            <span className="hud-label">Username</span>
+            <span className="hud-label">{t('login.username')}</span>
             <Input
               className="h-11 text-base sm:h-auto sm:text-sm"
               value={username}
@@ -176,7 +174,7 @@ export function LoginPage() {
           </label>
           {mode === 'register' ? (
             <label className="block space-y-1.5">
-              <span className="hud-label">Email</span>
+              <span className="hud-label">{t('login.email')}</span>
               <Input
                 className="h-11 text-base sm:h-auto sm:text-sm"
                 type="email"
@@ -188,7 +186,7 @@ export function LoginPage() {
             </label>
           ) : null}
           <label className="block space-y-1.5">
-            <span className="hud-label">Password</span>
+            <span className="hud-label">{t('login.password')}</span>
             <Input
               className="h-11 text-base sm:h-auto sm:text-sm"
               type="password"
@@ -210,7 +208,11 @@ export function LoginPage() {
             className="h-11 w-full tracking-[0.14em] uppercase"
             disabled={loading}
           >
-            {loading ? 'Connecting…' : mode === 'login' ? 'Enter' : 'Create account'}
+            {loading
+              ? t('common.loading')
+              : mode === 'login'
+                ? t('login.enter')
+                : t('login.createAccount')}
           </Button>
 
           {allowRegistration ? (
@@ -222,7 +224,7 @@ export function LoginPage() {
                 setError('')
               }}
             >
-              {mode === 'login' ? 'Need an account? Register' : 'Already registered? Sign in'}
+              {mode === 'login' ? t('login.needAccount') : t('login.haveAccount')}
             </button>
           ) : null}
 
@@ -250,7 +252,9 @@ export function LoginPage() {
                   }}
                 >
                   {p.name === 'github' ? <GitHubMark className="h-4 w-4 shrink-0" /> : null}
-                  Continue with {p.display_name || p.name}
+                  {p.name === 'github'
+                    ? t('login.continueGithub')
+                    : `${t('login.enter')} ${p.display_name || p.name}`}
                 </Button>
               ))}
               {allowRegistration ? (

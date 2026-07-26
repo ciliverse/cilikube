@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
+import { useTranslation } from 'react-i18next'
 import { motion } from 'framer-motion'
 import { Activity, Boxes, Container, Server, Siren } from 'lucide-react'
 import { getNodeMetrics, getSummary, listEvents } from '@/api/cluster'
@@ -62,6 +63,7 @@ function UsageBar({ label, percent, detail }: { label: string; percent: number; 
 }
 
 export function OverviewPage() {
+  const { t } = useTranslation()
   const { clusterId, activeCluster } = useCluster()
   const { checkPermission } = useAuth()
 
@@ -91,27 +93,27 @@ export function OverviewPage() {
 
   const cards = [
     {
-      label: 'Nodes',
+      label: t('overview.nodes'),
       value: summary?.nodes ?? rollup.totalNodes ?? '-',
       icon: <Server className="h-5 w-5" />,
     },
     {
-      label: 'Namespaces',
+      label: t('overview.namespaces'),
       value: summary?.namespaces ?? '-',
       icon: <Boxes className="h-5 w-5" />,
     },
     {
-      label: 'Pods',
+      label: t('overview.pods'),
       value: summary?.pods ?? '-',
       icon: <Container className="h-5 w-5" />,
     },
     {
-      label: 'Avg CPU',
+      label: t('overview.avgCpu'),
       value: rollup.totalNodes ? formatPercent(rollup.avgCpuUsagePercent) : '-',
       icon: <Activity className="h-5 w-5" />,
     },
     {
-      label: 'Recent warnings',
+      label: t('overview.recentWarnings'),
       value: warningEvents.length,
       icon: <Siren className="h-5 w-5" />,
     },
@@ -120,9 +122,9 @@ export function OverviewPage() {
   return (
     <div className="flex w-full min-w-0 flex-col gap-3 sm:gap-4">
       <PageHeader
-        title="OVERVIEW"
-        subtitle={`Live posture for ${activeCluster?.name || clusterId || 'selected cluster'}`}
-        action={<Badge tone="accent">{activeCluster?.name || 'no cluster'}</Badge>}
+        title={t('overview.title')}
+        subtitle={t('overview.subtitle')}
+        action={<Badge tone="accent">{activeCluster?.name || clusterId || '—'}</Badge>}
       />
 
       <motion.div
@@ -142,14 +144,14 @@ export function OverviewPage() {
         <div className="mb-3 flex flex-wrap items-center justify-between gap-2 sm:mb-4">
           <div className="min-w-0">
             <h2 className="font-display text-base font-bold tracking-[0.12em] sm:text-lg">
-              CLUSTER RESOURCES
+              {t('overview.clusterResources')}
             </h2>
             <p className="mt-1 hidden text-xs text-text-dim sm:block">
               Cluster-wide counts from /api/v1/summary/resources · click to open list
             </p>
           </div>
           <Badge tone="neutral">
-            {summaryQ.isLoading ? 'loading…' : `${RESOURCE_TILES.length} types`}
+            {summaryQ.isLoading ? t('common.loading') : `${RESOURCE_TILES.length} types`}
           </Badge>
         </div>
         <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-3 sm:gap-2 lg:grid-cols-4 xl:grid-cols-6">
@@ -198,20 +200,20 @@ export function OverviewPage() {
         <div className="mb-3 flex flex-wrap items-center justify-between gap-2 sm:mb-4">
           <div className="min-w-0">
             <h2 className="font-display text-base font-bold tracking-[0.12em] sm:text-lg">
-              NODE SNAPSHOT
+              {t('overview.nodeSnapshot')}
             </h2>
             <p className="mt-1 hidden text-xs text-text-dim sm:block">
               Aggregated from metrics-server · point-in-time (not Prometheus history)
             </p>
           </div>
           <Badge tone="neutral">
-            {rollup.totalNodes} nodes
+            {rollup.totalNodes} {t('overview.nodes').toLowerCase()}
           </Badge>
         </div>
         {rollup.totalNodes ? (
           <div className="grid grid-cols-2 gap-2 sm:gap-4 md:grid-cols-2 lg:grid-cols-4">
             <div className="rounded border border-line bg-mist px-2.5 py-2.5 sm:px-3 sm:py-3">
-              <div className="hud-label">Avg CPU</div>
+              <div className="hud-label">{t('overview.avgCpu')}</div>
               <div className="mt-1 font-display text-lg font-bold text-cyan sm:text-xl">
                 {formatPercent(rollup.avgCpuUsagePercent)}
               </div>
@@ -243,7 +245,7 @@ export function OverviewPage() {
           </div>
         ) : (
           <EmptyState>
-            {metricsQ.isLoading ? 'Loading metrics…' : 'Connect metrics-server to populate node snapshot.'}
+            {metricsQ.isLoading ? t('common.loading') : 'Connect metrics-server to populate node snapshot.'}
           </EmptyState>
         )}
       </Card>
@@ -253,7 +255,7 @@ export function OverviewPage() {
           <div className="border-b border-line px-3 py-3 sm:px-5 sm:py-4">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <h2 className="font-display text-base font-bold tracking-[0.12em] sm:text-lg">
-                NODE RESOURCE USAGE
+                {t('overview.nodeUsage')}
               </h2>
               <Badge tone="neutral">snapshot</Badge>
             </div>
@@ -299,7 +301,7 @@ export function OverviewPage() {
                 {metricsQ.isLoading && !metrics.length ? (
                   <tr>
                     <td colSpan={5}>
-                      <EmptyState>Loading metrics…</EmptyState>
+                      <EmptyState>{t('common.loading')}</EmptyState>
                     </td>
                   </tr>
                 ) : null}
@@ -311,7 +313,7 @@ export function OverviewPage() {
         <Card className="min-w-0 p-3 sm:p-5">
           <div className="mb-3 flex items-center justify-between gap-2 sm:mb-4">
             <h2 className="font-display text-base font-bold tracking-[0.12em] sm:text-lg">
-              RECENT EVENTS
+              {t('overview.recentEvents')}
             </h2>
             <div className="flex items-center gap-2">
               <Badge tone="warn">{warningEvents.length} warn</Badge>

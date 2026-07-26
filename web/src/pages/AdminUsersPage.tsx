@@ -1,5 +1,6 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import {
   createAdminUser,
   deleteAdminUser,
@@ -23,6 +24,7 @@ function isProtectedUser(username: string) {
 }
 
 export function AdminUsersPage() {
+  const { t } = useTranslation()
   const { isAdmin } = useAuth()
   const queryClient = useQueryClient()
   const [deleteTarget, setDeleteTarget] = useState<AdminUser | null>(null)
@@ -191,8 +193,8 @@ export function AdminUsersPage() {
   return (
     <ListPageFrame className="gap-3">
       <PageHeader
-        title="ADMIN USERS"
-        subtitle="Application user accounts"
+        title={t('admin.users')}
+        subtitle={t('admin.usersSubtitle')}
         action={
           <Button
             type="button"
@@ -203,7 +205,7 @@ export function AdminUsersPage() {
               setCreating(true)
             }}
           >
-            Create user
+            {t('admin.createUser')}
           </Button>
         }
       />

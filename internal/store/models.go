@@ -82,10 +82,12 @@ type User struct {
 	AvatarURL     string     `gorm:"type:text" json:"avatar_url"`
 	IsActive      bool       `gorm:"default:true" json:"is_active"`
 	EmailVerified bool       `gorm:"default:false" json:"email_verified"`
-	LastLoginAt   *time.Time `gorm:"column:last_login" json:"last_login_at"`
-	CreatedAt     time.Time  `json:"created_at"`
-	UpdatedAt     time.Time  `json:"updated_at"`
-	DeletedAt     *time.Time `gorm:"index" json:"-"`
+	// MustChangePassword forces the client to show a change-password gate after login.
+	MustChangePassword bool       `gorm:"default:false" json:"must_change_password"`
+	LastLoginAt        *time.Time `gorm:"column:last_login" json:"last_login_at"`
+	CreatedAt          time.Time  `json:"created_at"`
+	UpdatedAt          time.Time  `json:"updated_at"`
+	DeletedAt          *time.Time `gorm:"index" json:"-"`
 }
 
 // TableName specifies the table name for User model

@@ -16,12 +16,13 @@ type User struct {
 	DisplayName   string         `json:"display_name" gorm:"size:100"`
 	AvatarURL     string         `json:"avatar_url" gorm:"size:10000"`
 	Role          string         `json:"role" gorm:"default:user;size:20"`
-	IsActive      bool           `json:"is_active" gorm:"default:true"`
-	EmailVerified bool           `json:"email_verified" gorm:"default:false"`
-	LastLogin     *time.Time     `json:"last_login"`
-	CreatedAt     time.Time      `json:"created_at"`
-	UpdatedAt     time.Time      `json:"updated_at"`
-	DeletedAt     gorm.DeletedAt `json:"-" gorm:"index"`
+	IsActive           bool           `json:"is_active" gorm:"default:true"`
+	EmailVerified      bool           `json:"email_verified" gorm:"default:false"`
+	MustChangePassword bool           `json:"must_change_password" gorm:"default:false"`
+	LastLogin          *time.Time     `json:"last_login"`
+	CreatedAt          time.Time      `json:"created_at"`
+	UpdatedAt          time.Time      `json:"updated_at"`
+	DeletedAt          gorm.DeletedAt `json:"-" gorm:"index"`
 }
 
 //// UserRole user role association table
@@ -61,16 +62,17 @@ type UpdateProfileRequest struct {
 }
 
 type UserResponse struct {
-	ID            uint       `json:"id"`
-	Username      string     `json:"username"`
-	Email         string     `json:"email"`
-	DisplayName   string     `json:"display_name"`
-	AvatarURL     string     `json:"avatar_url"`
-	Role          string     `json:"role"`
-	IsActive      bool       `json:"is_active"`
-	EmailVerified bool       `json:"email_verified"`
-	LastLogin     *time.Time `json:"last_login"`
-	CreatedAt     time.Time  `json:"created_at"`
+	ID                 uint       `json:"id"`
+	Username           string     `json:"username"`
+	Email              string     `json:"email"`
+	DisplayName        string     `json:"display_name"`
+	AvatarURL          string     `json:"avatar_url"`
+	Role               string     `json:"role"`
+	IsActive           bool       `json:"is_active"`
+	EmailVerified      bool       `json:"email_verified"`
+	MustChangePassword bool       `json:"must_change_password"`
+	LastLogin          *time.Time `json:"last_login"`
+	CreatedAt          time.Time  `json:"created_at"`
 }
 
 type LoginResponse struct {
@@ -120,16 +122,17 @@ func (u *User) CheckPassword(password string) bool {
 // ToResponse converts to response format
 func (u *User) ToResponse() UserResponse {
 	return UserResponse{
-		ID:            u.ID,
-		Username:      u.Username,
-		Email:         u.Email,
-		DisplayName:   u.DisplayName,
-		AvatarURL:     u.AvatarURL,
-		Role:          u.Role,
-		IsActive:      u.IsActive,
-		EmailVerified: u.EmailVerified,
-		LastLogin:     u.LastLogin,
-		CreatedAt:     u.CreatedAt,
+		ID:                 u.ID,
+		Username:           u.Username,
+		Email:              u.Email,
+		DisplayName:        u.DisplayName,
+		AvatarURL:          u.AvatarURL,
+		Role:               u.Role,
+		IsActive:           u.IsActive,
+		EmailVerified:      u.EmailVerified,
+		MustChangePassword: u.MustChangePassword,
+		LastLogin:          u.LastLogin,
+		CreatedAt:          u.CreatedAt,
 	}
 }
 

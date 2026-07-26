@@ -1,6 +1,7 @@
 import { useEffect, useId, useRef, useState, type KeyboardEvent } from 'react'
 import { createPortal } from 'react-dom'
 import { useNavigate } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { Search, X } from 'lucide-react'
 import { useGlobalSearchHits } from '@/hooks/useGlobalSearchHits'
 import { ALL_NAMESPACES } from '@/store/namespace'
@@ -15,6 +16,7 @@ function shortcutLabel() {
 }
 
 export function GlobalSearchPalette() {
+  const { t } = useTranslation()
   const [open, setOpen] = useState(false)
   const [q, setQ] = useState('')
   const [highlight, setHighlight] = useState(0)
@@ -23,7 +25,8 @@ export function GlobalSearchPalette() {
   const listId = useId()
   const navigate = useNavigate()
   const { hits, loading, namespace } = useGlobalSearchHits(q, open)
-  const nsLabel = namespace === ALL_NAMESPACES || !namespace ? 'all namespaces' : namespace
+  const nsLabel =
+    namespace === ALL_NAMESPACES || !namespace ? t('common.allNamespaces') : namespace
 
   const close = () => {
     setOpen(false)
@@ -105,7 +108,7 @@ export function GlobalSearchPalette() {
               value={q}
               onChange={(e) => setQ(e.target.value)}
               onKeyDown={onListKey}
-              placeholder={`Search… (${nsLabel})`}
+              placeholder={`${t('common.search')}… (${nsLabel})`}
               aria-controls={listId}
               aria-autocomplete="list"
             />
@@ -127,15 +130,15 @@ export function GlobalSearchPalette() {
             className="min-h-0 flex-1 overflow-y-auto overscroll-contain py-1 sm:max-h-[50vh] sm:flex-none"
           >
             {loading && !hits.length ? (
-              <div className="px-4 py-6 text-center text-xs text-text-dim">Loading resources…</div>
+              <div className="px-4 py-6 text-center text-xs text-text-dim">{t('common.loading')}</div>
             ) : null}
             {!q.trim() ? (
               <div className="px-4 py-6 text-center text-xs text-text-dim">
-                Type a name fragment. Scope: {nsLabel}.
+                {t('nav.searchPlaceholder')} · {nsLabel}
               </div>
             ) : null}
             {q.trim() && !loading && !hits.length ? (
-              <div className="px-4 py-6 text-center text-xs text-text-dim">No matches.</div>
+              <div className="px-4 py-6 text-center text-xs text-text-dim">{t('common.search')}</div>
             ) : null}
             {hits.map((h, idx) => (
               <button
@@ -174,7 +177,7 @@ export function GlobalSearchPalette() {
       >
         <Search className="h-4 w-4 shrink-0 text-cyan/80 sm:h-3.5 sm:w-3.5" />
         <span className="hidden min-w-0 flex-1 truncate text-[12px] sm:inline">
-          Search resources…
+          {t('nav.searchPlaceholder')}
         </span>
         <kbd className="hidden shrink-0 rounded border border-line px-1.5 py-0.5 font-mono text-[10px] text-text-dim md:inline">
           {shortcutLabel()}

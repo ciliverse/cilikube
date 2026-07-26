@@ -624,17 +624,18 @@ func (s *OAuthService) issueTokenWithSession(user *models.User, userID uint, ipA
 
 func (s *OAuthService) convertStoreUserToModelsUser(storeUser *store.User) models.User {
 	return models.User{
-		ID:            storeUser.ID,
-		Username:      storeUser.Username,
-		Email:         storeUser.Email,
-		DisplayName:   storeUser.DisplayName,
-		AvatarURL:     storeUser.AvatarURL,
-		Role:          "viewer", // Will be set by caller based on roles
-		IsActive:      storeUser.IsActive,
-		EmailVerified: storeUser.EmailVerified,
-		LastLogin:     storeUser.LastLoginAt,
-		CreatedAt:     storeUser.CreatedAt,
-		UpdatedAt:     storeUser.UpdatedAt,
+		ID:                 storeUser.ID,
+		Username:           storeUser.Username,
+		Email:              storeUser.Email,
+		DisplayName:        storeUser.DisplayName,
+		AvatarURL:          storeUser.AvatarURL,
+		Role:               "viewer", // Will be set by caller based on roles
+		IsActive:           storeUser.IsActive,
+		EmailVerified:      storeUser.EmailVerified,
+		MustChangePassword: storeUser.MustChangePassword,
+		LastLogin:          storeUser.LastLoginAt,
+		CreatedAt:          storeUser.CreatedAt,
+		UpdatedAt:          storeUser.UpdatedAt,
 	}
 }
 

@@ -1,10 +1,12 @@
 import { useEffect, useRef, useState, type CSSProperties } from 'react'
 import { Link } from 'react-router-dom'
-import { ChevronDown, LogOut, Palette, Settings, Type, UserRound } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
+import { ChevronDown, Languages, LogOut, Palette, Settings, Type, UserRound } from 'lucide-react'
 import { useAuth } from '@/store/auth'
 import { useTheme } from '@/theme/useTheme'
 import { useFont } from '@/theme/useFont'
 import { switchTheme } from '@/theme/switchTheme'
+import { setStoredLang, type AppLang } from '@/i18n'
 import { cn } from '@/lib/utils'
 
 export function UserMenu({
@@ -14,6 +16,7 @@ export function UserMenu({
   primaryRole: string
   isViewerOnly: boolean
 }) {
+  const { t, i18n } = useTranslation()
   const { user, logout, isAdmin } = useAuth()
   const { themeId, themes } = useTheme()
   const { fontId, fonts, setFont } = useFont()
@@ -43,6 +46,13 @@ export function UserMenu({
         ? 'text-cyan'
         : 'text-text-dim'
 
+  const currentLang: AppLang = i18n.language?.startsWith('zh') ? 'zh' : 'en'
+
+  const setLang = (lang: AppLang) => {
+    void i18n.changeLanguage(lang)
+    setStoredLang(lang)
+  }
+
   return (
     <div ref={rootRef} className="relative">
       <button
@@ -61,7 +71,7 @@ export function UserMenu({
         <span className={cn('hidden sm:inline', roleTone)}>{primaryRole}</span>
         {isViewerOnly ? (
           <span className="hidden rounded border border-line px-1.5 py-0.5 text-[10px] tracking-wider uppercase md:inline">
-            read-only
+            {t('common.readOnly')}
           </span>
         ) : null}
         <ChevronDown className={cn('h-3.5 w-3.5 transition', open && 'rotate-180 text-cyan')} />
@@ -78,7 +88,7 @@ export function UserMenu({
             </div>
             <div className={cn('mt-0.5 text-[11px] uppercase tracking-wider', roleTone)}>
               {primaryRole}
-              {isViewerOnly ? ' · read-only' : ''}
+              {isViewerOnly ? ` · ${t('common.readOnly')}` : ''}
             </div>
           </div>
           <Link
@@ -88,7 +98,7 @@ export function UserMenu({
             onClick={() => setOpen(false)}
           >
             <UserRound className="h-3.5 w-3.5 text-cyan" />
-            Profile
+            {t('nav.profile')}
           </Link>
           {isAdmin ? (
             <Link
@@ -98,9 +108,37 @@ export function UserMenu({
               onClick={() => setOpen(false)}
             >
               <Settings className="h-3.5 w-3.5 text-cyan" />
-              Settings
+              {t('nav.settings')}
             </Link>
           ) : null}
+
+          <div className="my-1 border-t border-line" />
+          <div className="flex items-center gap-2 px-3 pt-2 text-[10px] tracking-[0.14em] text-text-dim uppercase">
+            <Languages className="h-3 w-3 text-cyan" />
+            {t('common.language')}
+          </div>
+          <div className="flex flex-col gap-0.5 px-2 pb-2 pt-1" role="group" aria-label={t('common.language')}>
+            {([
+              { id: 'zh' as AppLang, label: t('common.chinese') },
+              { id: 'en' as AppLang, label: t('common.english') },
+            ]).map((lang) => (
+              <button
+                key={lang.id}
+                type="button"
+                role="menuitemradio"
+                aria-checked={currentLang === lang.id}
+                className={cn(
+                  'min-h-10 rounded px-2 py-2 text-left text-[13px] transition sm:min-h-0 sm:py-1.5 sm:text-[12px]',
+                  currentLang === lang.id
+                    ? 'bg-mist text-cyan'
+                    : 'text-text hover:bg-mist hover:text-text',
+                )}
+                onClick={() => setLang(lang.id)}
+              >
+                {lang.label}
+              </button>
+            ))}
+          </div>
 
           <div className="my-1 border-t border-line" />
           <div className="flex items-center gap-2 px-3 pt-2 text-[10px] tracking-[0.14em] text-text-dim uppercase">
@@ -108,21 +146,21 @@ export function UserMenu({
             Theme
           </div>
           <div className="theme-swatches" role="group" aria-label="Theme">
-            {themes.map((t) => (
+            {themes.map((th) => (
               <button
-                key={t.id}
+                key={th.id}
                 type="button"
-                title={`${t.name} (${t.mode})`}
-                aria-label={t.name}
-                aria-pressed={themeId === t.id}
-                className={cn('theme-swatch', themeId === t.id && 'active')}
+                title={`${th.name} (${th.mode})`}
+                aria-label={th.name}
+                aria-pressed={themeId === th.id}
+                className={cn('theme-swatch', themeId === th.id && 'active')}
                 style={
                   {
-                    '--swatch-bg': t.colors.bg,
-                    '--swatch-accent': t.colors.primary,
+                    '--swatch-bg': th.colors.bg,
+                    '--swatch-accent': th.colors.primary,
                   } as CSSProperties
                 }
-                onClick={() => switchTheme(t.id)}
+                onClick={() => switchTheme(th.id)}
               />
             ))}
           </div>
@@ -164,7 +202,7 @@ export function UserMenu({
             }}
           >
             <LogOut className="h-3.5 w-3.5" />
-            Logout
+            {t('nav.logout')}
           </button>
         </div>
       ) : null}

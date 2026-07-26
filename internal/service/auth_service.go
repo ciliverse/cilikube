@@ -181,10 +181,16 @@ func (s *AuthService) Login(req *models.LoginRequest, ipAddress, userAgent strin
 	})
 	s.createAuditLog(&storeUser.ID, "login", "user", fmt.Sprintf("%d", storeUser.ID), ipAddress, userAgent, string(loginDetails))
 
+	userResp := user.ToResponse()
+	// Desktop first-run: logging in with the factory default password always requires a change.
+	if configs.IsDesktop() && req.Password == "12345678" {
+		userResp.MustChangePassword = true
+	}
+
 	return &models.LoginResponse{
 		Token:     token,
 		ExpiresAt: expiresAt,
-		User:      user.ToResponse(),
+		User:      userResp,
 	}, nil
 }
 
@@ -482,6 +488,7 @@ func (s *AuthService) ChangePassword(userID uint, req *models.ChangePasswordRequ
 	if err := storeUser.HashPassword(req.NewPassword); err != nil {
 		return fmt.Errorf("failed to hash new password: %w", err)
 	}
+	storeUser.MustChangePassword = false
 
 	if err := s.store.UpdateUser(storeUser); err != nil {
 		return fmt.Errorf("failed to update password: %w", err)
@@ -580,17 +587,18 @@ func (s *AuthService) DeleteUser(userID uint) error {
 // convertStoreUserToModelsUser converts store.User to models.User
 func (s *AuthService) convertStoreUserToModelsUser(storeUser *store.User) models.User {
 	return models.User{
-		ID:            storeUser.ID,
-		Username:      storeUser.Username,
-		Email:         storeUser.Email,
-		DisplayName:   storeUser.DisplayName,
-		AvatarURL:     storeUser.AvatarURL,
-		Role:          "viewer", // Will be set by caller based on roles
-		IsActive:      storeUser.IsActive,
-		EmailVerified: storeUser.EmailVerified,
-		LastLogin:     storeUser.LastLoginAt,
-		CreatedAt:     storeUser.CreatedAt,
-		UpdatedAt:     storeUser.UpdatedAt,
+		ID:                 storeUser.ID,
+		Username:           storeUser.Username,
+		Email:              storeUser.Email,
+		DisplayName:        storeUser.DisplayName,
+		AvatarURL:          storeUser.AvatarURL,
+		Role:               "viewer", // Will be set by caller based on roles
+		IsActive:           storeUser.IsActive,
+		EmailVerified:      storeUser.EmailVerified,
+		MustChangePassword: storeUser.MustChangePassword,
+		LastLogin:          storeUser.LastLoginAt,
+		CreatedAt:          storeUser.CreatedAt,
+		UpdatedAt:          storeUser.UpdatedAt,
 	}
 }
 

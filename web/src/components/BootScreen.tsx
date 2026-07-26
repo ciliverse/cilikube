@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 
 const STEPS = [
   'cilikube bootloader v0.8',
@@ -56,6 +57,7 @@ export function markBootDone() {
 }
 
 export function BootScreen({ onDone }: { onDone: () => void }) {
+  const { t } = useTranslation()
   const [count, setCount] = useState(0)
   const [exiting, setExiting] = useState(false)
   const doneRef = useRef(false)
@@ -99,7 +101,7 @@ export function BootScreen({ onDone }: { onDone: () => void }) {
         <div className="ck-boot-logo" data-text="CILIKUBE">
           CILI<span className="accent">KUBE</span>
         </div>
-        <div className="ck-boot-sub">// multi-cluster control plane · operator console</div>
+        <div className="ck-boot-sub">// {t('boot.subtitle')}</div>
 
         <div className="ck-boot-log">
           {STEPS.slice(0, count).map((s, i) => (

@@ -7,6 +7,7 @@ export type UserInfo = {
   role?: string
   roles?: string[]
   display_name?: string
+  must_change_password?: boolean
 }
 
 export type LoginResult = {

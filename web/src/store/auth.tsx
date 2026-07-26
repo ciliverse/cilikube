@@ -25,10 +25,14 @@ import {
   type ResourceAction,
 } from '@/lib/permissions'
 
+const PENDING_OLD_PW_KEY = 'cilikube_pending_old_pw'
+
 type AuthContextValue = {
   token: string | null
   user: UserInfo | null
   isAuthenticated: boolean
+  mustChangePassword: boolean
+  pendingOldPassword: string
   roles: string[]
   isAdmin: boolean
   canEdit: boolean
@@ -39,6 +43,7 @@ type AuthContextValue = {
   checkPermission: (resource: string, action: ResourceAction) => boolean
   login: (username: string, password: string) => Promise<void>
   applySession: (result: LoginResult) => void
+  clearPendingOldPassword: () => void
   logout: () => Promise<void>
 }
 
@@ -50,17 +55,36 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const raw = localStorage.getItem('cilikube_user')
     return raw ? (JSON.parse(raw) as UserInfo) : null
   })
+  const [pendingOldPassword, setPendingOldPassword] = useState(
+    () => sessionStorage.getItem(PENDING_OLD_PW_KEY) || '',
+  )
+
+  const clearPendingOldPassword = useCallback(() => {
+    sessionStorage.removeItem(PENDING_OLD_PW_KEY)
+    setPendingOldPassword('')
+  }, [])
 
   const applySession = useCallback((result: LoginResult) => {
     setToken(result.token)
     setTokenState(result.token)
     setUser(result.user)
     localStorage.setItem('cilikube_user', JSON.stringify(result.user))
+    if (!result.user.must_change_password) {
+      sessionStorage.removeItem(PENDING_OLD_PW_KEY)
+      setPendingOldPassword('')
+    }
   }, [])
 
   const login = useCallback(
     async (username: string, password: string) => {
       const result = await loginApi(username, password)
+      if (result.user.must_change_password) {
+        sessionStorage.setItem(PENDING_OLD_PW_KEY, password)
+        setPendingOldPassword(password)
+      } else {
+        sessionStorage.removeItem(PENDING_OLD_PW_KEY)
+        setPendingOldPassword('')
+      }
       applySession(result)
     },
     [applySession],
@@ -70,6 +94,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await logoutApi()
     clearToken()
     localStorage.removeItem('cilikube_user')
+    sessionStorage.removeItem(PENDING_OLD_PW_KEY)
+    setPendingOldPassword('')
     setTokenState(null)
     setUser(null)
   }, [])
@@ -80,6 +106,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       token,
       user,
       isAuthenticated: Boolean(token),
+      mustChangePassword: Boolean(user?.must_change_password),
+      pendingOldPassword,
       roles,
       isAdmin: isAdmin(user),
       canEdit: canEdit(user),
@@ -91,9 +119,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         checkResourcePermission(user, resource, action),
       login,
       applySession,
+      clearPendingOldPassword,
       logout,
     }
-  }, [token, user, login, applySession, logout])
+  }, [token, user, pendingOldPassword, login, applySession, clearPendingOldPassword, logout])
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }

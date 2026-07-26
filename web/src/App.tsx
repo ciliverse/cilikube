@@ -46,6 +46,9 @@ const ProfilePage = lazy(() =>
 const AdminSettingsPage = lazy(() =>
   import('@/pages/AdminSettingsPage').then((m) => ({ default: m.AdminSettingsPage })),
 )
+const ForcePasswordChangePage = lazy(() =>
+  import('@/pages/ForcePasswordChangePage').then((m) => ({ default: m.ForcePasswordChangePage })),
+)
 
 const ClusterRoleBindingsPage = lazy(() =>
   import('@/pages/resources').then((m) => ({ default: m.ClusterRoleBindingsPage })),
@@ -143,8 +146,11 @@ const queryClient = new QueryClient({
 })
 
 function Protected({ children }: { children: ReactNode }) {
-  const { isAuthenticated } = useAuth()
+  const { isAuthenticated, mustChangePassword, pendingOldPassword } = useAuth()
   if (!isAuthenticated) return <Navigate to="/login" replace />
+  if (mustChangePassword) {
+    return <ForcePasswordChangePage defaultOldPassword={pendingOldPassword} />
+  }
   return children
 }
 

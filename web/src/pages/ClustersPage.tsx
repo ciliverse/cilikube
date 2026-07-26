@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { listClusters, updateCluster, type ClusterItem } from '@/api/cluster'
 import { apiDelete, apiGet, apiPost } from '@/lib/api'
@@ -24,6 +25,7 @@ type LocalContextsResp = {
 }
 
 export function ClustersPage() {
+  const { t } = useTranslation()
   const { isAdmin, canMutate } = useAuth()
   const { clusterId, setClusterId } = useCluster()
   const queryClient = useQueryClient()
@@ -55,10 +57,11 @@ export function ClustersPage() {
 
   const clusters = q.data || []
   const localContexts = useMemo(() => localQ.data?.contexts || [], [localQ.data])
+  const isEmpty = !q.isLoading && clusters.length === 0
 
   const create = async () => {
     if (!name.trim() || !kubeconfig.trim()) {
-      setErr('Name and kubeconfig are required')
+      setErr(t('clusters.kubeRequired'))
       return
     }
     setBusy(true)
@@ -73,12 +76,12 @@ export function ClustersPage() {
       setName('')
       setDescription('')
       setKubeconfig('')
-      setMsg('Cluster created')
+      setMsg(t('clusters.created'))
       await q.refetch()
       void queryClient.invalidateQueries({ queryKey: ['clusters'] })
       void localQ.refetch()
     } catch (e: any) {
-      setErr(e?.message || 'Create failed')
+      setErr(e?.message || t('clusters.createFailed'))
     } finally {
       setBusy(false)
     }
@@ -92,7 +95,7 @@ export function ClustersPage() {
 
   const importLocal = async () => {
     if (!selectedContexts.length) {
-      setErr('Select at least one local context')
+      setErr(t('clusters.importNeedSelect'))
       return
     }
     setBusy(true)
@@ -111,9 +114,9 @@ export function ClustersPage() {
       const skipped = Object.keys(res?.skipped || {})
       const failed = Object.keys(res?.failed || {})
       setMsg(
-        `Imported ${imported.length}` +
-          (skipped.length ? `, skipped ${skipped.length}` : '') +
-          (failed.length ? `, failed ${failed.length}` : ''),
+        t('clusters.importOk', { imported: imported.length }) +
+          (skipped.length ? t('clusters.importSkipped', { count: skipped.length }) : '') +
+          (failed.length ? t('clusters.importFailedCount', { count: failed.length }) : ''),
       )
       if (failed.length) {
         setErr(Object.entries(res.failed).map(([k, v]) => `${k}: ${v}`).join('; '))
@@ -123,7 +126,7 @@ export function ClustersPage() {
       void queryClient.invalidateQueries({ queryKey: ['clusters'] })
       void localQ.refetch()
     } catch (e: any) {
-      setErr(e?.message || 'Import failed')
+      setErr(e?.message || t('clusters.importFailed'))
     } finally {
       setBusy(false)
     }
@@ -137,7 +140,7 @@ export function ClustersPage() {
       setClusterId(id)
       await q.refetch()
     } catch (e: any) {
-      setErr(e?.message || 'Set active failed')
+      setErr(e?.message || t('clusters.setActiveFailed'))
     } finally {
       setBusy(false)
     }
@@ -152,7 +155,7 @@ export function ClustersPage() {
       await q.refetch()
       void queryClient.invalidateQueries({ queryKey: ['clusters'] })
     } catch (e: any) {
-      setErr(e?.message || 'Delete failed')
+      setErr(e?.message || t('clusters.deleteFailed'))
     } finally {
       setBusy(false)
     }
@@ -169,7 +172,7 @@ export function ClustersPage() {
   const saveEdit = async () => {
     if (!editTarget?.id) return
     if (!editName.trim()) {
-      setErr('Name is required')
+      setErr(t('clusters.nameRequired'))
       return
     }
     setBusy(true)
@@ -187,7 +190,7 @@ export function ClustersPage() {
       await q.refetch()
       void queryClient.invalidateQueries({ queryKey: ['clusters'] })
     } catch (e: any) {
-      setErr(e?.message || 'Update failed')
+      setErr(e?.message || t('clusters.updateFailed'))
     } finally {
       setBusy(false)
     }
@@ -195,10 +198,7 @@ export function ClustersPage() {
 
   return (
     <div className="flex w-full min-w-0 flex-col gap-4">
-      <PageHeader
-        title="CLUSTERS"
-        subtitle="Paste kubeconfig or import contexts from the API host kubeconfig"
-      />
+      <PageHeader title={t('clusters.title')} subtitle={t('clusters.subtitle')} />
       {err ? (
         <div className="rounded border border-danger/30 bg-danger/10 px-4 py-2 text-sm text-danger">{err}</div>
       ) : null}
@@ -206,16 +206,31 @@ export function ClustersPage() {
         <div className="rounded border border-ok/30 bg-ok/10 px-4 py-2 text-sm text-ok">{msg}</div>
       ) : null}
 
+      {isEmpty && canWrite ? (
+        <Card className="space-y-3 border-cyan/40 bg-cyan/5 p-5">
+          <h2 className="font-display text-lg font-bold tracking-[0.12em] text-cyan">
+            {t('clusters.guideTitle')}
+          </h2>
+          <ol className="list-decimal space-y-2 pl-5 text-sm text-text">
+            <li>{t('clusters.guideStep1')}</li>
+            <li>{t('clusters.guideStep2')}</li>
+            <li>{t('clusters.guideStep3')}</li>
+            <li>{t('clusters.guideStep4')}</li>
+          </ol>
+          <p className="text-xs text-text-dim">{t('clusters.emptyHint')}</p>
+        </Card>
+      ) : null}
+
       <Card className="overflow-hidden">
         <HudTableScroll>
           <HudTable>
             <thead>
               <tr>
-                <th>Name</th>
-                <th>Status</th>
-                <th>Version</th>
-                <th>Source</th>
-                <th>Actions</th>
+                <th>{t('common.name')}</th>
+                <th>{t('common.status')}</th>
+                <th>{t('clusters.version')}</th>
+                <th>{t('clusters.source')}</th>
+                <th>{t('common.actions')}</th>
               </tr>
             </thead>
             <tbody>
@@ -228,13 +243,13 @@ export function ClustersPage() {
                     {c.name}
                     {selected ? (
                       <span className="ml-2 text-[10px] tracking-wider text-ok uppercase">
-                        current
+                        {t('clusters.current')}
                       </span>
                     ) : null}
                   </td>
                   <td>
                     <Badge tone={selected || c.status === 'Available' || c.status === 'Active' ? 'ok' : 'neutral'}>
-                      {selected ? 'Active' : c.status || '-'}
+                      {selected ? t('common.active') : c.status || '-'}
                     </Badge>
                   </td>
                   <td>{c.version || '-'}</td>
@@ -250,7 +265,7 @@ export function ClustersPage() {
                             disabled={busy || selected}
                             onClick={() => void setActive(id)}
                           >
-                            {selected ? 'Active' : 'Set active'}
+                            {selected ? t('common.active') : t('common.setActive')}
                           </Button>
                           <Button
                             variant="ghost"
@@ -258,7 +273,7 @@ export function ClustersPage() {
                             type="button"
                             onClick={() => openEdit(c)}
                           >
-                            Edit
+                            {t('common.edit')}
                           </Button>
                           <Button
                             variant="danger"
@@ -266,11 +281,11 @@ export function ClustersPage() {
                             type="button"
                             onClick={() => setDeleteTarget(c)}
                           >
-                            Delete
+                            {t('common.delete')}
                           </Button>
                         </>
                       ) : (
-                        <span className="text-xs text-text-dim">read-only</span>
+                        <span className="text-xs text-text-dim">{t('common.readOnly')}</span>
                       )}
                     </div>
                   </td>
@@ -279,7 +294,7 @@ export function ClustersPage() {
               {!q.isLoading && !clusters.length ? (
                 <tr>
                   <td colSpan={5}>
-                    <EmptyState>No clusters configured.</EmptyState>
+                    <EmptyState>{t('clusters.empty')}</EmptyState>
                   </td>
                 </tr>
               ) : null}
@@ -289,15 +304,20 @@ export function ClustersPage() {
       </Card>
 
       {canWrite ? (
-        <Card className="space-y-3 p-5">
+        <Card
+          className={
+            isEmpty
+              ? 'space-y-3 border-cyan/50 bg-cyan/5 p-5 shadow-[0_0_24px_rgba(53,230,255,0.08)]'
+              : 'space-y-3 p-5'
+          }
+        >
           <div className="flex flex-wrap items-end justify-between gap-2">
             <div>
               <h2 className="font-display text-lg font-bold tracking-[0.12em]">
-                IMPORT LOCAL KUBECONFIG
+                {t('clusters.importLocal')}
               </h2>
               <p className="mt-1 text-[11px] text-text-dim">
-                Source: {localQ.data?.path || '…'} — selected contexts are copied into the DB
-                (not hot-mounted).
+                {t('clusters.importSource', { path: localQ.data?.path || '…' })}
               </p>
             </div>
             <Button
@@ -305,12 +325,12 @@ export function ClustersPage() {
               disabled={busy || !selectedContexts.length}
               onClick={() => void importLocal()}
             >
-              Import selected ({selectedContexts.length})
+              {t('clusters.importSelected', { count: selectedContexts.length })}
             </Button>
           </div>
           {localQ.isError ? (
             <p className="text-sm text-warn">
-              {(localQ.error as Error)?.message || 'Could not read local kubeconfig'}
+              {(localQ.error as Error)?.message || t('clusters.couldNotRead')}
             </p>
           ) : null}
           <div className="overflow-hidden rounded border border-line">
@@ -319,9 +339,9 @@ export function ClustersPage() {
                 <thead>
                   <tr>
                     <th className="w-10"></th>
-                    <th>Context</th>
-                    <th>Server</th>
-                    <th>Conflict</th>
+                    <th>{t('clusters.context')}</th>
+                    <th>{t('clusters.server')}</th>
+                    <th>{t('clusters.conflict')}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -341,11 +361,14 @@ export function ClustersPage() {
                         <td className="font-mono text-[11px] text-text-dim">{c.server || '-'}</td>
                         <td className="text-xs">
                           {c.conflict_name ? (
-                            <Badge tone="warn">name taken</Badge>
+                            <Badge tone="warn">{t('clusters.conflictName')}</Badge>
                           ) : c.conflict_server ? (
-                            <Badge tone="warn">same as {c.existing_name}</Badge>
+                            <Badge tone="warn">
+                              {t('clusters.conflictServer')}
+                              {c.existing_name ? `: ${c.existing_name}` : ''}
+                            </Badge>
                           ) : (
-                            <span className="text-text-dim">—</span>
+                            <span className="text-text-dim">{t('clusters.none')}</span>
                           )}
                         </td>
                       </tr>
@@ -354,7 +377,7 @@ export function ClustersPage() {
                   {!localQ.isLoading && !localContexts.length ? (
                     <tr>
                       <td colSpan={4}>
-                        <EmptyState>No contexts found in local kubeconfig.</EmptyState>
+                        <EmptyState>{t('clusters.noLocal')}</EmptyState>
                       </td>
                     </tr>
                   ) : null}
@@ -367,13 +390,15 @@ export function ClustersPage() {
 
       {canWrite ? (
         <Card className="space-y-3 p-5">
-          <h2 className="font-display text-lg font-bold tracking-[0.12em]">ADD CLUSTER</h2>
+          <h2 className="font-display text-lg font-bold tracking-[0.12em]">
+            {t('clusters.createTitle')}
+          </h2>
           <label className="block space-y-1">
-            <span className="hud-label">Name</span>
+            <span className="hud-label">{t('common.name')}</span>
             <input className="hud-field" value={name} onChange={(e) => setName(e.target.value)} />
           </label>
           <label className="block space-y-1">
-            <span className="hud-label">Description</span>
+            <span className="hud-label">{t('clusters.description')}</span>
             <input
               className="hud-field"
               value={description}
@@ -381,29 +406,29 @@ export function ClustersPage() {
             />
           </label>
           <label className="block space-y-1">
-            <span className="hud-label">Kubeconfig</span>
+            <span className="hud-label">{t('clusters.kubeconfig')}</span>
             <textarea
               className="hud-field min-h-[160px] font-mono text-xs"
               value={kubeconfig}
               onChange={(e) => setKubeconfig(e.target.value)}
-              placeholder="paste kubeconfig YAML"
+              placeholder={t('clusters.kubeconfig')}
             />
           </label>
           <Button type="button" disabled={busy} onClick={() => void create()}>
-            Create cluster
+            {t('clusters.create')}
           </Button>
         </Card>
       ) : null}
 
       <Modal
         open={Boolean(editTarget)}
-        title="EDIT CLUSTER"
+        title={t('clusters.editTitle')}
         subtitle={editTarget?.name}
         onClose={() => setEditTarget(null)}
       >
         <div className="space-y-3 px-5 py-4">
           <label className="block space-y-1">
-            <span className="hud-label">Name</span>
+            <span className="hud-label">{t('common.name')}</span>
             <input
               className="hud-field"
               value={editName}
@@ -411,7 +436,7 @@ export function ClustersPage() {
             />
           </label>
           <label className="block space-y-1">
-            <span className="hud-label">Description</span>
+            <span className="hud-label">{t('clusters.description')}</span>
             <input
               className="hud-field"
               value={editDescription}
@@ -419,20 +444,20 @@ export function ClustersPage() {
             />
           </label>
           <label className="block space-y-1">
-            <span className="hud-label">Kubeconfig (optional replace)</span>
+            <span className="hud-label">{t('clusters.replaceKubeOptional')}</span>
             <textarea
               className="hud-field min-h-[140px] font-mono text-xs"
               value={editKubeconfig}
               onChange={(e) => setEditKubeconfig(e.target.value)}
-              placeholder="leave empty to keep existing kubeconfig"
+              placeholder={t('clusters.replaceKubeOptional')}
             />
           </label>
           <div className="flex justify-end gap-2">
             <Button variant="ghost" type="button" onClick={() => setEditTarget(null)}>
-              Cancel
+              {t('common.cancel')}
             </Button>
             <Button type="button" disabled={busy} onClick={() => void saveEdit()}>
-              Save
+              {t('common.save')}
             </Button>
           </div>
         </div>
@@ -440,11 +465,11 @@ export function ClustersPage() {
 
       <ConfirmDialog
         open={Boolean(deleteTarget)}
-        title="DELETE CLUSTER"
+        title={t('clusters.deleteTitle')}
         confirmText={deleteTarget?.name}
-        confirmLabel="Delete cluster"
+        confirmLabel={t('common.delete')}
         busy={busy}
-        description="Remove this cluster registration from CiliKube (does not delete the Kubernetes cluster)."
+        description={t('clusters.deleteConfirm', { name: deleteTarget?.name || '' })}
         onClose={() => setDeleteTarget(null)}
         onConfirm={remove}
       />

@@ -134,11 +134,12 @@ func (s *DatabaseStore) createDefaultAdminUser() error {
 
 	// Create admin user
 	adminUser := &User{
-		Username:      "admin",
-		Email:         "admin@cilikube.com",
-		DisplayName:   "System Administrator",
-		IsActive:      true,
-		EmailVerified: true,
+		Username:           "admin",
+		Email:              "admin@cilikube.com",
+		DisplayName:        "System Administrator",
+		IsActive:           true,
+		EmailVerified:      true,
+		MustChangePassword: true,
 	}
 
 	// Hash password

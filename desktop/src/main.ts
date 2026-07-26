@@ -97,6 +97,10 @@ jwt:
   secret_key: "${jwtSecret}"
   expire_duration: 24h0m0s
   issuer: cilikube
+preferences:
+  ui:
+    default_language: zh
+    default_theme: tron
 oauth:
   github:
     client_id: ""
@@ -162,6 +166,50 @@ function waitForHealth(addr: string, timeoutMs: number): Promise<void> {
   })
 }
 
+function classifySidecarError(raw: string): { title: string; body: string } {
+  const lower = raw.toLowerCase()
+  if (lower.includes('sidecar binary not found')) {
+    return {
+      title: 'CiliKube 启动失败 · 缺少后端程序',
+      body:
+        '未找到内嵌的 cilikube.exe。\n请重新安装或从 GitHub Releases 重新下载完整安装包。\n\n' +
+        raw,
+    }
+  }
+  if (lower.includes('did not become healthy') || lower.includes('health check failed')) {
+    return {
+      title: 'CiliKube 启动失败 · 后端未就绪',
+      body:
+        '内嵌 API 服务启动超时或健康检查失败。\n常见原因：端口被占用、配置损坏、本机安全软件拦截。\n\n' +
+        raw,
+    }
+  }
+  if (lower.includes('kubeconfig') || lower.includes('kubernetes')) {
+    return {
+      title: 'CiliKube 启动失败 · 集群配置',
+      body:
+        '读取 Kubernetes 配置时出错。\n请确认 %USERPROFILE%\\.kube\\config 存在且可读（应用仍可启动后在「集群管理」中导入）。\n\n' +
+        raw,
+    }
+  }
+  return {
+    title: 'CiliKube 启动失败',
+    body: raw,
+  }
+}
+
+function persistSidecarLog(userData: string): string {
+  const logDir = path.join(userData, 'logs')
+  fs.mkdirSync(logDir, { recursive: true })
+  const logPath = path.join(logDir, 'sidecar-last-error.log')
+  const content =
+    `time=${new Date().toISOString()}\n` +
+    sidecarLog.join('\n') +
+    '\n'
+  fs.writeFileSync(logPath, content, 'utf8')
+  return logPath
+}
+
 async function startSidecar(): Promise<string> {
   const bin = sidecarBinary()
   if (!fs.existsSync(bin)) {
@@ -190,6 +238,10 @@ async function startSidecar(): Promise<string> {
 
   pushLog(`starting sidecar: ${bin}`)
   pushLog(`addr=${addr} cwd=${cwd}`)
+  pushLog(`kubeconfig_default=${defaultKubeconfig()}`)
+  pushLog(`config=${configPath}`)
+  pushLog(`db=${dbPath}`)
+  pushLog(`web_root=${webRoot}`)
 
   sidecar = spawn(bin, ['--config', configPath], {
     cwd,
@@ -218,8 +270,11 @@ async function startSidecar(): Promise<string> {
     await waitForHealth(addr, 45000)
   } catch (err) {
     stopSidecar()
-    const tail = sidecarLog.slice(-40).join('\n')
-    throw new Error(`${(err as Error).message}\n\n--- sidecar log ---\n${tail}`)
+    const logPath = persistSidecarLog(userData)
+    const tail = sidecarLog.slice(-50).join('\n')
+    throw new Error(
+      `${(err as Error).message}\n\n--- 最近日志 ---\n${tail}\n\n完整日志已保存：\n${logPath}`,
+    )
   }
 
   sidecarAddr = addr
@@ -290,7 +345,9 @@ if (!gotLock) {
       const addr = await startSidecar()
       await createWindow(addr)
     } catch (err) {
-      dialog.showErrorBox('CiliKube failed to start', String((err as Error).message || err))
+      const raw = String((err as Error).message || err)
+      const { title, body } = classifySidecarError(raw)
+      dialog.showErrorBox(title, body)
       app.quit()
     }
   })

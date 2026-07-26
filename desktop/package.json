@@ -1,6 +1,6 @@
 {
   "name": "cilikube-desktop",
-  "version": "0.9.0",
+  "version": "0.9.1",
   "private": true,
   "description": "CiliKube desktop shell (Electron + Go sidecar)",
   "main": "dist/main.js",
@@ -24,7 +24,10 @@
     "typescript": "^5.8.2"
   },
   "pnpm": {
-    "onlyBuiltDependencies": ["electron", "electron-winstaller"]
+    "onlyBuiltDependencies": [
+      "electron",
+      "electron-winstaller"
+    ]
   },
   "build": {
     "appId": "website.cillian.cilikube",
@@ -41,34 +44,53 @@
       {
         "from": "resources-staging/bin",
         "to": "bin",
-        "filter": ["**/*"]
+        "filter": [
+          "**/*"
+        ]
       },
       {
         "from": "resources-staging/web",
         "to": "web",
-        "filter": ["**/*"]
+        "filter": [
+          "**/*"
+        ]
       },
       {
         "from": "resources-staging/pkg",
         "to": "pkg",
-        "filter": ["**/*"]
+        "filter": [
+          "**/*"
+        ]
       }
     ],
     "win": {
       "icon": "assets/icon.ico",
       "signAndEditExecutable": false,
       "target": [
-        { "target": "nsis", "arch": ["x64"] },
-        { "target": "portable", "arch": ["x64"] }
-      ],
-      "artifactName": "CiliKube-${version}-win-${arch}.${ext}"
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
+      ]
     },
     "publish": null,
     "nsis": {
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
-      "shortcutName": "CiliKube"
+      "shortcutName": "CiliKube",
+      "artifactName": "CiliKube-${version}-win-${arch}-setup.${ext}"
+    },
+    "portable": {
+      "artifactName": "CiliKube-${version}-win-${arch}-portable.${ext}"
     }
   }
 }
