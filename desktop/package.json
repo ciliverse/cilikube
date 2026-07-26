@@ -1,0 +1,68 @@
+{
+  "name": "cilikube-desktop",
+  "version": "0.9.0",
+  "private": true,
+  "description": "CiliKube desktop shell (Electron + Go sidecar)",
+  "main": "dist/main.js",
+  "author": "ciliverse",
+  "license": "Apache-2.0",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "prepare:resources": "node scripts/prepare-sidecar.mjs",
+    "start": "pnpm build && electron .",
+    "pack:win": "pnpm build && electron-builder --win --x64",
+    "pack:dir": "pnpm build && electron-builder --win --x64 --dir"
+  },
+  "devDependencies": {
+    "@types/node": "^22.13.10",
+    "electron": "^35.1.2",
+    "electron-builder": "^26.0.12",
+    "typescript": "^5.8.2"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": ["electron", "electron-winstaller"]
+  },
+  "build": {
+    "appId": "website.cillian.cilikube",
+    "productName": "CiliKube",
+    "directories": {
+      "output": "release",
+      "buildResources": "assets"
+    },
+    "files": [
+      "dist/**/*",
+      "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "resources-staging/bin",
+        "to": "bin",
+        "filter": ["**/*"]
+      },
+      {
+        "from": "resources-staging/web",
+        "to": "web",
+        "filter": ["**/*"]
+      },
+      {
+        "from": "resources-staging/pkg",
+        "to": "pkg",
+        "filter": ["**/*"]
+      }
+    ],
+    "win": {
+      "icon": "assets/icon.ico",
+      "target": [
+        { "target": "nsis", "arch": ["x64"] },
+        { "target": "portable", "arch": ["x64"] }
+      ],
+      "artifactName": "CiliKube-${version}-win-${arch}.${ext}"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "shortcutName": "CiliKube"
+    }
+  }
+}

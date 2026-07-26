@@ -1,0 +1,85 @@
+name: Release Desktop
+
+on:
+  push:
+    tags:
+      - 'v*-desktop*'
+      - 'v*.*.*-desktop.*'
+  workflow_dispatch:
+    inputs:
+      upload_release:
+        description: 'Upload artifacts to a GitHub Release (uses github.ref_name)'
+        required: false
+        default: 'false'
+
+permissions:
+  contents: write
+
+jobs:
+  windows:
+    name: Windows x64
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.26.x'
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: Build web
+        run: |
+          pnpm --dir web install --frozen-lockfile
+          pnpm --dir web build
+
+      - name: Build Go sidecar (CGO / sqlite)
+        env:
+          CGO_ENABLED: '1'
+        run: |
+          New-Item -ItemType Directory -Force -Path build/desktop | Out-Null
+          go build -ldflags "-w -s" -o build/desktop/cilikube.exe ./cmd/server
+
+      - name: Install desktop deps
+        run: pnpm --dir desktop install
+
+      - name: Stage sidecar resources
+        run: node desktop/scripts/prepare-sidecar.mjs
+        env:
+          SIDECAR_BIN: ${{ github.workspace }}\build\desktop\cilikube.exe
+          WEB_DIST: ${{ github.workspace }}\web\dist
+          REPO_ROOT: ${{ github.workspace }}
+
+      - name: Package Electron (Windows)
+        run: pnpm --dir desktop pack:win
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload workflow artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: cilikube-desktop-windows-x64
+          path: |
+            desktop/release/*.exe
+            desktop/release/*.yml
+          if-no-files-found: error
+
+      - name: Publish GitHub Release assets
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            desktop/release/CiliKube-*-win-*.exe
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

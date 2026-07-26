@@ -6,9 +6,11 @@ import (
 	"flag"
 	"fmt"
 	"log/slog"
+	"net"
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
@@ -151,6 +153,9 @@ func New(configPath string) (*Application, error) {
 
 func (app *Application) Run() {
 	serverAddr := ":" + app.Config.Server.Port
+	if host := strings.TrimSpace(app.Config.Server.Host); host != "" {
+		serverAddr = net.JoinHostPort(host, app.Config.Server.Port)
+	}
 	initialization.DisplayServerInfo(serverAddr, app.Config.Server.Mode)
 	app.Server = &http.Server{
 		Addr:         serverAddr,
@@ -192,6 +197,9 @@ func GetConfigPath() string {
 		return *config
 	}
 
+	if env := os.Getenv("CILIKUBE_CONFIG"); env != "" {
+		return env
+	}
 	if env := os.Getenv("CILIKUBE_CONFIG_PATH"); env != "" {
 		return env
 	}

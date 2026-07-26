@@ -161,6 +161,21 @@ CiliKube leverages industry-standard technologies and frameworks to ensure relia
   - Access: Roles, RoleBindings, ClusterRoles, ClusterRoleBindings
 - **Observe & ops**: Monitoring (Prometheus metrics), Helm releases, API Proxy console, resource YAML view / edit
 
+## 🖥️ Desktop (Windows first)
+
+Double-click app: Electron shell + embedded Go API, using your local `%USERPROFILE%\.kube\config`.
+
+- **Download**: GitHub Releases for tags containing `desktop` (e.g. `v0.9.0-desktop.1`) — assets `CiliKube-*-win-x64.exe` (NSIS or portable)
+- **First login**: `admin` / `12345678` (change it immediately)
+- **Build**: push a desktop tag or run [Release Desktop](.github/workflows/release-desktop.yml) on `windows-latest` (SQLite needs CGO):
+
+```bash
+git tag v0.9.0-desktop.1
+git push origin v0.9.0-desktop.1
+```
+
+macOS / Linux packages will follow on the same architecture.
+
 ## 💻 Local Development
 
 ### Environment Preparation

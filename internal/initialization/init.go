@@ -389,5 +389,8 @@ func SetupRouter(cfg *configs.Config, services *service.AppServices, k8sManager 
 		InitializeHandlers(apiV1, services, k8sManager, cfg)
 	}
 
+	// Desktop (and optional self-hosted) SPA: serve after API routes.
+	RegisterDesktopStatic(router, cfg.Server.WebRoot)
+
 	return router
 }

@@ -1,6 +1,10 @@
 node_modules
 web/node_modules
 web/dist
+desktop/node_modules
+desktop/release
+desktop/resources-staging
+desktop/dist
 .idea/
 minikube-darwin-arm64
 output/

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
 	"path/filepath"
 	"strings"
 
@@ -110,8 +111,11 @@ func InitCasbin(db *gorm.DB) (*casbin.Enforcer, error) {
 	}
 
 	log.Println("Initializing Casbin Enforcer...")
-	// Ensure model.conf path is correct
-	e, err := casbin.NewEnforcer("./pkg/auth/model.conf", adapter)
+	modelPath := os.Getenv("CILIKUBE_CASBIN_MODEL")
+	if modelPath == "" {
+		modelPath = "./pkg/auth/model.conf"
+	}
+	e, err := casbin.NewEnforcer(modelPath, adapter)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create Casbin Enforcer: %w", err)
 	}

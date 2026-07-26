@@ -34,12 +34,15 @@ type PrometheusConfig struct {
 }
 
 type ServerConfig struct {
+	Host            string `yaml:"host" json:"host"` // empty = all interfaces; desktop uses 127.0.0.1
 	Port            string `yaml:"port" json:"port"`
 	ReadTimeout     int    `yaml:"read_timeout" json:"read_timeout"`
 	WriteTimeout    int    `yaml:"write_timeout" json:"write_timeout"`
 	Mode            string `yaml:"mode" json:"mode"`                   // debug, release
 	ActiveClusterID string `yaml:"activeCluster" json:"activeCluster"` // Modified to match field name in config file
 	EncryptionKey   string `yaml:"encryptionKey" json:"encryptionKey"`
+	// WebRoot is the directory containing index.html (desktop SPA). Not required for API-only deploys.
+	WebRoot string `yaml:"web_root" json:"web_root"`
 }
 
 type KubernetesConfig struct {
@@ -225,6 +228,7 @@ func Load(path string) (*Config, error) {
 
 	GlobalConfig = cfg
 	setDefaults()
+	ApplyDesktopOverrides(cfg)
 
 	return cfg, nil
 }

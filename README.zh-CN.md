@@ -161,6 +161,21 @@ CiliKube 采用行业标准技术和框架，确保可靠性、可维护性和�
   - Access：Roles、RoleBindings、ClusterRoles、ClusterRoleBindings
 - **可观测与运维**: Monitoring（Prometheus 指标）、Helm Release 管理、API Proxy 控制台、资源 YAML 查看 / 编辑
 
+## 🖥️ 桌面版（Windows 先行）
+
+双击即用：Electron 壳 + 内嵌 Go 后端，自动读取本机 `%USERPROFILE%\.kube\config`。
+
+- **下载**：GitHub Releases 中带 `desktop` 的 tag（例如 `v0.9.0-desktop.1`），资产名 `CiliKube-*-win-x64.exe`（NSIS 安装包或 portable）
+- **首次登录**：`admin` / `12345678`（请尽快改密）
+- **自己打 Windows 包**：推送 tag 或手动跑 [Release Desktop](.github/workflows/release-desktop.yml)（须在 `windows-latest` 上编，因 SQLite CGO）：
+
+```bash
+git tag v0.9.0-desktop.1
+git push origin v0.9.0-desktop.1
+```
+
+macOS / Linux 安装包将在同一套架构上后续补齐。
+
 ## 💻 本地开发
 
 ### 环境准备
