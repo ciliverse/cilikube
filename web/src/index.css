@@ -1,8 +1,10 @@
 @import "tailwindcss";
 
+/* Maple Mono CN — includes CJK + Latin (Latin-only maple-*.woff2 kept as fallback). */
 @font-face {
   font-family: "Maple Mono";
-  src: url("/fonts/maple-400.woff2") format("woff2");
+  src: url("/fonts/maple-cn-400.woff2") format("woff2"),
+       url("/fonts/maple-400.woff2") format("woff2");
   font-weight: 400;
   font-style: normal;
   font-display: swap;
@@ -10,17 +12,18 @@
 
 @font-face {
   font-family: "Maple Mono";
-  src: url("/fonts/maple-700.woff2") format("woff2");
+  src: url("/fonts/maple-cn-700.woff2") format("woff2"),
+       url("/fonts/maple-700.woff2") format("woff2");
   font-weight: 600 700;
   font-style: normal;
   font-display: swap;
 }
 
 @theme {
-  /* Self-hosted Maple only — avoid Google Fonts RTT (slow on CN mobile). */
-  --font-display: "Maple Mono", ui-monospace, Menlo, Consolas, monospace;
-  --font-sans: "Maple Mono", ui-monospace, Menlo, Consolas, monospace;
-  --font-mono: "Maple Mono", ui-monospace, Menlo, Consolas, monospace;
+  /* Self-hosted Maple Mono CN — avoid Google Fonts RTT (slow on CN mobile). */
+  --font-display: "Maple Mono", "PingFang SC", "Microsoft YaHei", ui-monospace, monospace;
+  --font-sans: "Maple Mono", "PingFang SC", "Microsoft YaHei", ui-monospace, monospace;
+  --font-mono: "Maple Mono", "PingFang SC", "Microsoft YaHei", ui-monospace, monospace;
 
   /* Defaults = TRON dark; runtime themes override via documentElement */
   --color-bg: #04070a;

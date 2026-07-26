@@ -1,4 +1,4 @@
-/** UI font packs — self-hosted Maple Mono (no Google Fonts). */
+/** UI font packs — self-hosted Maple Mono CN (CJK + Latin, no Google Fonts). */
 
 export type FontPack = {
   id: string
@@ -11,17 +11,17 @@ export type FontPack = {
 export const FONT_PACKS: FontPack[] = [
   {
     id: 'maple',
-    name: 'Maple Mono',
-    display: '"Maple Mono", ui-monospace, Menlo, Consolas, monospace',
-    sans: '"Maple Mono", ui-monospace, Menlo, Consolas, monospace',
-    mono: '"Maple Mono", ui-monospace, Menlo, Consolas, monospace',
+    name: 'Maple Mono CN',
+    display: '"Maple Mono", "PingFang SC", "Microsoft YaHei", ui-monospace, monospace',
+    sans: '"Maple Mono", "PingFang SC", "Microsoft YaHei", ui-monospace, monospace',
+    mono: '"Maple Mono", "PingFang SC", "Microsoft YaHei", ui-monospace, monospace',
   },
   {
     id: 'hud',
-    name: 'HUD (Maple)',
-    display: '"Maple Mono", ui-monospace, Menlo, Consolas, monospace',
-    sans: '"Maple Mono", ui-monospace, Menlo, Consolas, monospace',
-    mono: '"Maple Mono", ui-monospace, Menlo, Consolas, monospace',
+    name: 'HUD (Maple CN)',
+    display: '"Maple Mono", "PingFang SC", "Microsoft YaHei", ui-monospace, monospace',
+    sans: '"Maple Mono", "PingFang SC", "Microsoft YaHei", ui-monospace, monospace',
+    mono: '"Maple Mono", "PingFang SC", "Microsoft YaHei", ui-monospace, monospace',
   },
 ]
 

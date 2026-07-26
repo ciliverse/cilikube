@@ -1,6 +1,6 @@
 {
   "name": "cilikube-desktop",
-  "version": "0.9.1",
+  "version": "0.9.2",
   "private": true,
   "description": "CiliKube desktop shell (Electron + Go sidecar)",
   "main": "dist/main.js",
@@ -15,7 +15,9 @@
     "prepare:resources": "node scripts/prepare-sidecar.mjs",
     "start": "pnpm build && electron .",
     "pack:win": "pnpm build && electron-builder --win --x64 --publish never",
-    "pack:dir": "pnpm build && electron-builder --win --x64 --dir --publish never"
+    "pack:mac": "pnpm build && electron-builder --mac --arm64 --publish never",
+    "pack:linux": "pnpm build && electron-builder --linux --x64 --publish never",
+    "pack:dir": "pnpm build && electron-builder --dir --publish never"
   },
   "devDependencies": {
     "@types/node": "^22.13.10",
@@ -81,6 +83,35 @@
         }
       ]
     },
+    "mac": {
+      "icon": "assets/icon.icns",
+      "category": "public.app-category.developer-tools",
+      "hardenedRuntime": false,
+      "gatekeeperAssess": false,
+      "identity": null,
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "arm64"
+          ]
+        }
+      ],
+      "artifactName": "CiliKube-${version}-mac-${arch}.${ext}"
+    },
+    "linux": {
+      "icon": "assets/icon.png",
+      "category": "Development",
+      "target": [
+        {
+          "target": "AppImage",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "artifactName": "CiliKube-${version}-linux-${arch}.${ext}"
+    },
     "publish": null,
     "nsis": {
       "oneClick": false,
@@ -91,6 +122,9 @@
     },
     "portable": {
       "artifactName": "CiliKube-${version}-win-${arch}-portable.${ext}"
+    },
+    "dmg": {
+      "artifactName": "CiliKube-${version}-mac-${arch}.${ext}"
     }
   }
 }

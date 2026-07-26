@@ -15,6 +15,10 @@ on:
 permissions:
   contents: write
 
+env:
+  # Unsigned builds are intentional for v1 (see desktop design spec).
+  CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+
 jobs:
   windows:
     name: Windows x64
@@ -80,6 +84,151 @@ jobs:
         with:
           files: |
             desktop/release/CiliKube-*-win-*.exe
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  macos:
+    name: macOS arm64
+    runs-on: macos-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.26.x'
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: Build web
+        run: |
+          pnpm --dir web install --frozen-lockfile
+          pnpm --dir web build
+
+      - name: Build Go sidecar (CGO / sqlite)
+        env:
+          CGO_ENABLED: '1'
+        run: |
+          mkdir -p build/desktop
+          go build -ldflags "-w -s" -o build/desktop/cilikube ./cmd/server
+
+      - name: Install desktop deps
+        run: pnpm --dir desktop install
+
+      - name: Stage sidecar resources
+        run: node desktop/scripts/prepare-sidecar.mjs
+        env:
+          SIDECAR_BIN: ${{ github.workspace }}/build/desktop/cilikube
+          WEB_DIST: ${{ github.workspace }}/web/dist
+          REPO_ROOT: ${{ github.workspace }}
+
+      - name: Package Electron (macOS)
+        run: pnpm --dir desktop pack:mac
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload workflow artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: cilikube-desktop-macos-arm64
+          path: |
+            desktop/release/*.dmg
+            desktop/release/*.zip
+            desktop/release/*.yml
+          if-no-files-found: error
+
+      - name: Publish GitHub Release assets
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            desktop/release/CiliKube-*-mac-*.dmg
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  linux:
+    name: Linux x64
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.26.x'
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: Install Linux packaging deps
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            libgtk-3-0 libnotify4 libnss3 libxss1 libxtst6 \
+            xdg-utils libatspi2.0-0 libuuid1 libsecret-1-0 \
+            rpm fuse libfuse2
+
+      - name: Build web
+        run: |
+          pnpm --dir web install --frozen-lockfile
+          pnpm --dir web build
+
+      - name: Build Go sidecar (CGO / sqlite)
+        env:
+          CGO_ENABLED: '1'
+        run: |
+          mkdir -p build/desktop
+          go build -ldflags "-w -s" -o build/desktop/cilikube ./cmd/server
+
+      - name: Install desktop deps
+        run: pnpm --dir desktop install
+
+      - name: Stage sidecar resources
+        run: node desktop/scripts/prepare-sidecar.mjs
+        env:
+          SIDECAR_BIN: ${{ github.workspace }}/build/desktop/cilikube
+          WEB_DIST: ${{ github.workspace }}/web/dist
+          REPO_ROOT: ${{ github.workspace }}
+
+      - name: Package Electron (Linux AppImage)
+        run: pnpm --dir desktop pack:linux
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload workflow artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: cilikube-desktop-linux-x64
+          path: |
+            desktop/release/*.AppImage
+            desktop/release/*.yml
+          if-no-files-found: error
+
+      - name: Publish GitHub Release assets
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            desktop/release/CiliKube-*-linux-*.AppImage
           generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
