@@ -2,8 +2,8 @@ apiVersion: v2
 name: cilikube
 description: CiliKube Kubernetes multi-cluster management platform
 type: application
-version: 0.8.0
-appVersion: "0.8.0"
+version: 0.9.0
+appVersion: "0.9.0"
 keywords:
   - kubernetes
   - dashboard

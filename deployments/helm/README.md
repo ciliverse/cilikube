@@ -72,7 +72,7 @@ app:
 backend:
   image:
     repository: cilliantech/cilikube
-    tag: v0.8.0
+    tag: v0.9.0
     pullPolicy: IfNotPresent
   replicas: 2
   resources:
@@ -87,7 +87,7 @@ backend:
 frontend:
   image:
     repository: cilliantech/cilikube-web
-    tag: v0.8.0
+    tag: v0.9.0
     pullPolicy: IfNotPresent
   replicas: 2
   resources:

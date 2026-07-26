@@ -5,7 +5,7 @@
 </div>
 
 <div align="center">
-  <img src="https://img.shields.io/badge/Release-v0.8.0-green?style=flat-square" alt="Release v0.8.0">
+  <img src="https://img.shields.io/badge/Release-v0.9.0-green?style=flat-square" alt="Release v0.9.0">
   <img src="https://img.shields.io/badge/Frontend-React%2019-61DAFB?style=flat-square&logo=react" alt="React 19">
   <img src="https://img.shields.io/badge/Frontend-TypeScript%207-blue?style=flat-square&logo=typescript" alt="TypeScript 7">
   <img src="https://img.shields.io/badge/Frontend-Vite%208-blue?style=flat-square&logo=vite" alt="Vite 8">
@@ -44,7 +44,9 @@
 
 CiliKube 是一个企业级开源 Kubernetes 多集群管理平台，采用现代化 Web 技术栈构建，包括 React、TypeScript、Go 和 Gin。该平台为全面的 Kubernetes 资源管理提供直观、简化的界面，同时保持自定义需求的可扩展性。CiliKube 为寻求高效集群运维的组织和学习云原生技术的开发者提供了理想的基础平台。
 
-### v0.8.0 React UI（当前）
+### v0.9.0（当前）
+
+相对 v0.8.0 的主要更新：Gateway API（GatewayClass / Gateway / HTTPRoute）、中文界面 + Maple Mono CN、桌面客户端（Windows / macOS / Linux）、桌面首次登录强制改密。
 
 <div align="center">
   <img src="docs/v0.8/overview.png" alt="集群概览" width="100%">

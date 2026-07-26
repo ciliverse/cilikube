@@ -5,7 +5,7 @@
 </div>
 
 <div align="center">
-  <img src="https://img.shields.io/badge/Release-v0.8.0-green?style=flat-square" alt="Release v0.8.0">
+  <img src="https://img.shields.io/badge/Release-v0.9.0-green?style=flat-square" alt="Release v0.9.0">
   <img src="https://img.shields.io/badge/Frontend-React%2019-61DAFB?style=flat-square&logo=react" alt="React 19">
   <img src="https://img.shields.io/badge/Frontend-TypeScript%207-blue?style=flat-square&logo=typescript" alt="TypeScript 7">
   <img src="https://img.shields.io/badge/Frontend-Vite%208-blue?style=flat-square&logo=vite" alt="Vite 8">
@@ -44,7 +44,9 @@ This project's CDN acceleration and security protection services are generously 
 
 CiliKube is an enterprise-grade, open-source Kubernetes multi-cluster management platform built with modern web technologies including React, TypeScript, Go, and Gin. The platform provides an intuitive, streamlined interface for comprehensive Kubernetes resource management while maintaining extensibility for custom requirements. CiliKube serves as an ideal foundation for organizations seeking efficient cluster operations and developers learning cloud-native technologies.
 
-### v0.8.0 React UI (current)
+### v0.9.0 (current)
+
+Highlights since v0.8.0: Gateway API (GatewayClass / Gateway / HTTPRoute), Chinese UI + Maple Mono CN, desktop apps (Windows / macOS / Linux), forced password change on first desktop login.
 
 <div align="center">
   <img src="docs/v0.8/overview.png" alt="Cluster Overview" width="100%">
