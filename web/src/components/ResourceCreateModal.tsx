@@ -93,7 +93,7 @@ export function ResourceCreateModal({ open, resource, namespaced = true, onClose
             </Button>
           </div>
           <textarea
-            className="m-0 h-[55vh] w-full resize-none bg-[#040a0e] px-4 py-3 font-mono text-[12px] text-text outline-none"
+            className="m-0 h-[55vh] w-full resize-none term-surface px-4 py-3 font-mono text-[12px] outline-none"
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
             spellCheck={false}

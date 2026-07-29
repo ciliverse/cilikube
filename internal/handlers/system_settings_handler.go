@@ -49,6 +49,7 @@ func (h *SystemSettingsHandler) GetSystemInfo(c *gin.Context) {
 			"rbac_enabled":      cfg != nil && cfg.Database.Enabled,
 			"audit_log_enabled": cfg != nil && cfg.Security.Audit.LogAdminActions,
 			"metrics_enabled":   cfg == nil || cfg.Preferences.FeatureFlags.AdvancedMetrics,
+			"ai_enabled":        cfg != nil && cfg.AI.Enabled && (cfg.AI.Provider == "mock" || cfg.AI.APIKey != ""),
 		},
 	}
 
@@ -348,6 +349,75 @@ func (h *SystemSettingsHandler) UpdateSystemPreferences(c *gin.Context) {
 	}
 
 	utils.ApiSuccess(c, req, "System preferences updated successfully")
+}
+
+// GetAISettings returns AI assistant settings (API key never returned).
+func (h *SystemSettingsHandler) GetAISettings(c *gin.Context) {
+	cfg := h.cfg()
+	if cfg == nil {
+		utils.ApiError(c, http.StatusInternalServerError, "Configuration not available")
+		return
+	}
+	provider := cfg.AI.Provider
+	if provider == "" {
+		provider = "mock"
+	}
+	utils.ApiSuccess(c, gin.H{
+		"enabled":      cfg.AI.Enabled,
+		"provider":     provider,
+		"base_url":     cfg.AI.BaseURL,
+		"model":        cfg.AI.Model,
+		"api_key_set":  cfg.AI.APIKey != "",
+		"ready":        cfg.AI.Enabled && (provider == "mock" || cfg.AI.APIKey != ""),
+	}, "AI settings retrieved successfully")
+}
+
+// UpdateAISettings updates AI assistant settings.
+func (h *SystemSettingsHandler) UpdateAISettings(c *gin.Context) {
+	cfg := h.cfg()
+	if cfg == nil {
+		utils.ApiError(c, http.StatusInternalServerError, "Configuration not available")
+		return
+	}
+	var req struct {
+		Enabled  *bool   `json:"enabled"`
+		Provider *string `json:"provider"`
+		BaseURL  *string `json:"base_url"`
+		Model    *string `json:"model"`
+		APIKey   *string `json:"api_key"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		utils.ApiError(c, http.StatusBadRequest, "Invalid request data", err.Error())
+		return
+	}
+	if req.Enabled != nil {
+		cfg.AI.Enabled = *req.Enabled
+	}
+	if req.Provider != nil {
+		p := strings.TrimSpace(strings.ToLower(*req.Provider))
+		if p != "mock" && p != "openai" {
+			utils.ApiError(c, http.StatusBadRequest, "provider must be mock or openai")
+			return
+		}
+		cfg.AI.Provider = p
+	}
+	if req.BaseURL != nil {
+		cfg.AI.BaseURL = strings.TrimSpace(*req.BaseURL)
+	}
+	if req.Model != nil {
+		cfg.AI.Model = strings.TrimSpace(*req.Model)
+	}
+	if req.APIKey != nil {
+		key := strings.TrimSpace(*req.APIKey)
+		if key != "" {
+			cfg.AI.APIKey = key
+		}
+	}
+	if err := configs.SaveGlobalConfig(); err != nil {
+		utils.ApiError(c, http.StatusInternalServerError, "Failed to save AI settings", err.Error())
+		return
+	}
+	h.GetAISettings(c)
 }
 
 func readVersion() string {

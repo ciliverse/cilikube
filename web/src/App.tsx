@@ -3,10 +3,13 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { AuthProvider, useAuth } from '@/store/auth'
 import { ClusterProvider } from '@/store/cluster'
 import { NamespaceProvider } from '@/store/namespace'
-import { AppShell } from '@/components/AppShell'
 import { lazy, Suspense, useState, type ReactNode } from 'react'
 import { BootScreen, shouldShowBootScreen } from '@/components/BootScreen'
 
+// Lazy shell — keep /login free of AppShell + framer-motion + lucide nav icons.
+const AppShell = lazy(() =>
+  import('@/components/AppShell').then((m) => ({ default: m.AppShell })),
+)
 const LoginPage = lazy(() => import('@/pages/LoginPage').then((m) => ({ default: m.LoginPage })))
 const OAuthCallbackPage = lazy(() =>
   import('@/pages/OAuthCallbackPage').then((m) => ({ default: m.OAuthCallbackPage })),
@@ -40,6 +43,7 @@ const HelmPage = lazy(() => import('@/pages/HelmPage').then((m) => ({ default: m
 const ProxyConsolePage = lazy(() =>
   import('@/pages/ProxyConsolePage').then((m) => ({ default: m.ProxyConsolePage })),
 )
+const AiChatPage = lazy(() => import('@/pages/AiChatPage').then((m) => ({ default: m.AiChatPage })))
 const ProfilePage = lazy(() =>
   import('@/pages/ProfilePage').then((m) => ({ default: m.ProfilePage })),
 )
@@ -176,7 +180,8 @@ export default function App() {
                     </Protected>
                   }
                 >
-                  <Route index element={<OverviewPage />} />
+                  <Route index element={<Navigate to="/ai" replace />} />
+                  <Route path="overview" element={<OverviewPage />} />
                   <Route path="nodes" element={<NodesPage />} />
                   <Route path="namespaces" element={<NamespacesPage />} />
                   <Route path="events" element={<EventsPage />} />
@@ -287,8 +292,9 @@ export default function App() {
                   <Route path="search" element={<GlobalSearchPage />} />
                   <Route path="helm" element={<HelmPage />} />
                   <Route path="proxy" element={<ProxyConsolePage />} />
+                  <Route path="ai" element={<AiChatPage />} />
                 </Route>
-                <Route path="*" element={<Navigate to="/" replace />} />
+                <Route path="*" element={<Navigate to="/ai" replace />} />
               </Routes>
             </Suspense>
           </BrowserRouter>

@@ -99,6 +99,9 @@ func systemViewerPolicies() []rolePolicy {
 		{"viewer", "/api/v1/profile", "GET"},
 		{"viewer", "/api/v1/profile", "PUT"},
 		{"viewer", "/api/v1/profile/:name", "GET"},
+
+		{"viewer", "/api/v1/ai/status", "GET"},
+		{"viewer", "/api/v1/ai/chat", "POST"},
 	}
 
 	readResources := []string{
@@ -162,6 +165,9 @@ func systemEditorPolicies() []rolePolicy {
 
 		{"editor", "/api/v1/clusters", "GET"},
 		{"editor", "/api/v1/clusters/:id", "GET"},
+
+		{"editor", "/api/v1/ai/status", "GET"},
+		{"editor", "/api/v1/ai/chat", "POST"},
 
 		{"editor", "/api/v1/auth/profile", "GET"},
 		{"editor", "/api/v1/auth/profile", "PUT"},

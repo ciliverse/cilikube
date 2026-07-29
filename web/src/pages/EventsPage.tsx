@@ -5,6 +5,7 @@ import dayjs from 'dayjs'
 import { listEvents, listNamespaces } from '@/api/cluster'
 import { useCluster } from '@/store/cluster'
 import { Badge, Card, EmptyState, HudSelect, PageHeader } from '@/components/ui'
+import { shouldSkipEnterAnim } from '@/lib/motionPrefs'
 
 export function EventsPage() {
   const { clusterId } = useCluster()
@@ -66,9 +67,9 @@ export function EventsPage() {
         {events.map((event: any, index: number) => (
           <motion.div
             key={event.id || `${event.name}-${index}`}
-            initial={{ opacity: 0, x: -8 }}
+            initial={shouldSkipEnterAnim() ? false : { opacity: 0, x: -8 }}
             animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: Math.min(index, 10) * 0.03 }}
+            transition={{ delay: shouldSkipEnterAnim() ? 0 : Math.min(index, 10) * 0.03 }}
           >
             <Card className="p-4">
               <div className="flex flex-wrap items-center justify-between gap-2">

@@ -34,7 +34,7 @@ export function OAuthCallbackPage() {
 
     // Link flow requires an existing session; login flow must not skip the exchange.
     if (isAuthenticated && !linking) {
-      navigate('/', { replace: true })
+      navigate('/ai', { replace: true })
       return
     }
     if (linking && !isAuthenticated) {
@@ -65,7 +65,7 @@ export function OAuthCallbackPage() {
             username: result.user.username,
           })
         }
-        navigate('/', { replace: true })
+        navigate('/ai', { replace: true })
       } catch (e: any) {
         if (!cancelled) {
           setError(

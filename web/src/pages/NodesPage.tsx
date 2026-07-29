@@ -7,6 +7,7 @@ import { AgeCell, CreatedCell } from '@/components/AgeCell'
 import { HudTable, HudTablePanel, ListPageFrame } from '@/components/HudTableScroll'
 import { Badge, EmptyState, PageHeader } from '@/components/ui'
 import { metaCreated } from '@/api/resources'
+import { shouldSkipEnterAnim } from '@/lib/motionPrefs'
 
 function nodeReady(node: any) {
   const conditions = node?.status?.conditions || []
@@ -46,9 +47,9 @@ export function NodesPage() {
                 return (
                   <motion.tr
                     key={name}
-                    initial={{ opacity: 0, y: 8 }}
+                    initial={shouldSkipEnterAnim() ? false : { opacity: 0, y: 8 }}
                     animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: index * 0.03 }}
+                    transition={{ delay: shouldSkipEnterAnim() ? 0 : index * 0.03 }}
                   >
                     <td>
                       <Link className="font-semibold text-cyan hover:underline" to={`/nodes/${name}`}>

@@ -12,6 +12,7 @@ import {
 import { getPrometheusStatus, prometheusQueryRange } from '@/api/cluster'
 import { useCluster } from '@/store/cluster'
 import { EmptyState } from '@/components/ui'
+import { useTheme } from '@/theme/useTheme'
 
 type Props = {
   title?: string
@@ -38,10 +39,14 @@ export function PromTimeChart({
   query,
   hours = 1,
   step = '60s',
-  color = '#35e6ff',
+  color,
   yFormatter = (v) => v.toFixed(2),
 }: Props) {
   const { clusterId } = useCluster()
+  const { theme } = useTheme()
+  const stroke = color || theme.colors.primary
+  const dim = theme.colors.textDim
+  const axis = theme.colors.primaryDim
   const statusQ = useQuery({
     queryKey: ['prometheus-status'],
     queryFn: getPrometheusStatus,
@@ -83,21 +88,23 @@ export function PromTimeChart({
     return <EmptyState>No series returned for this query.</EmptyState>
   }
 
+  const gradId = `prom-${theme.id}-${stroke.replace('#', '')}`
+
   return (
     <div className="h-56 w-full min-w-0">
       <ResponsiveContainer width="100%" height="100%">
         <AreaChart data={data} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
           <defs>
-            <linearGradient id={`prom-${color.replace('#', '')}`} x1="0" y1="0" x2="0" y2="1">
-              <stop offset="5%" stopColor={color} stopOpacity={0.4} />
-              <stop offset="95%" stopColor={color} stopOpacity={0} />
+            <linearGradient id={gradId} x1="0" y1="0" x2="0" y2="1">
+              <stop offset="5%" stopColor={stroke} stopOpacity={0.4} />
+              <stop offset="95%" stopColor={stroke} stopOpacity={0} />
             </linearGradient>
           </defs>
-          <CartesianGrid stroke="rgba(53,230,255,0.08)" vertical={false} />
-          <XAxis dataKey="t" tick={{ fontSize: 10, fill: '#6f98a3' }} stroke="#1a7f92" minTickGap={24} />
+          <CartesianGrid stroke={theme.colors.primary} strokeOpacity={0.12} vertical={false} />
+          <XAxis dataKey="t" tick={{ fontSize: 10, fill: dim }} stroke={axis} minTickGap={24} />
           <YAxis
-            tick={{ fontSize: 11, fill: '#6f98a3' }}
-            stroke="#1a7f92"
+            tick={{ fontSize: 11, fill: dim }}
+            stroke={axis}
             tickFormatter={yFormatter}
             width={48}
           />
@@ -105,17 +112,17 @@ export function PromTimeChart({
             formatter={(value) => [yFormatter(Number(value ?? 0)), 'value']}
             labelFormatter={(label) => `Time ${label}`}
             contentStyle={{
-              background: '#071016',
-              border: '1px solid rgba(53,230,255,0.25)',
+              background: theme.terminal.bg,
+              border: `1px solid ${theme.colors.primary}40`,
               borderRadius: 4,
-              color: '#cfeef5',
+              color: theme.terminal.fg,
             }}
           />
           <Area
             type="monotone"
             dataKey="v"
-            stroke={color}
-            fill={`url(#prom-${color.replace('#', '')})`}
+            stroke={stroke}
+            fill={`url(#${gradId})`}
             strokeWidth={2}
           />
         </AreaChart>

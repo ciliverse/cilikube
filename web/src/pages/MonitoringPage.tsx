@@ -9,6 +9,7 @@ import { useCluster } from '@/store/cluster'
 import { Badge, Card, EmptyState, PageHeader, StatCard } from '@/components/ui'
 import { HudTable, HudTableScroll } from '@/components/HudTableScroll'
 import { PromTimeChart } from '@/components/PromTimeChart'
+import { shouldSkipEnterAnim } from '@/lib/motionPrefs'
 import { formatPercent } from '@/lib/utils'
 
 export function MonitoringPage() {
@@ -57,9 +58,9 @@ export function MonitoringPage() {
           <motion.div
             key={card.label}
             className="min-w-0"
-            initial={{ opacity: 0, y: 10 }}
+            initial={shouldSkipEnterAnim() ? false : { opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: index * 0.05 }}
+            transition={{ delay: shouldSkipEnterAnim() ? 0 : index * 0.05 }}
           >
             <StatCard label={card.label} value={card.value} />
           </motion.div>

@@ -5,7 +5,8 @@
 server:
   port: "8080"
   read_timeout: 30
-  write_timeout: 30
+  # AI chat SSE needs a longer write timeout than short REST calls
+  write_timeout: 120
   mode: release
   activeCluster: ""
   # 恰好 32 字节。生成：openssl rand -base64 32 | head -c 32
@@ -89,5 +90,13 @@ prometheus:
   enabled: false
   url: http://127.0.0.1:9090
   timeout: 15s
+
+# Public demo: mock AI (no API key). Switch provider to openai + api_key for real models.
+ai:
+  enabled: true
+  provider: mock
+  base_url: ""
+  model: mock
+  api_key: ""
 
 clusters: []

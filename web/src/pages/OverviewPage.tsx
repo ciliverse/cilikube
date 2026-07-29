@@ -10,14 +10,19 @@ import { useAuth } from '@/store/auth'
 import { Badge, Card, EmptyState, PageHeader, StatCard } from '@/components/ui'
 import { HudTable, HudTableScroll } from '@/components/HudTableScroll'
 import { formatPercent } from '@/lib/utils'
+import { shouldSkipEnterAnim } from '@/lib/motionPrefs'
 import { parseNodeMetricsSummary } from '@/lib/nodeMetricsSummary'
 
+const skipEnter = shouldSkipEnterAnim()
 const container = {
-  hidden: { opacity: 0 },
-  show: { opacity: 1, transition: { staggerChildren: 0.06 } },
+  hidden: skipEnter ? { opacity: 1 } : { opacity: 0 },
+  show: {
+    opacity: 1,
+    transition: skipEnter ? { duration: 0 } : { staggerChildren: 0.06 },
+  },
 }
 const item = {
-  hidden: { opacity: 0, y: 10 },
+  hidden: skipEnter ? { opacity: 1, y: 0 } : { opacity: 0, y: 10 },
   show: { opacity: 1, y: 0 },
 }
 

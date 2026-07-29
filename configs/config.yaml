@@ -1,7 +1,7 @@
 server:
     port: "8080"
     read_timeout: 30
-    write_timeout: 30
+    write_timeout: 120
     mode: debug
     activeCluster: ""
     encryptionKey: change-me-in-production-32chars!!
@@ -97,5 +97,11 @@ prometheus:
     enabled: false
     url: http://prometheus:9090
     timeout: 15s
+ai:
+    enabled: true
+    provider: mock
+    base_url: ""
+    model: mock
+    api_key: ""
 # clusters: (deprecated) — add via UI or import from kubernetes.kubeconfig
 clusters: []

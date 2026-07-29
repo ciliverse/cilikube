@@ -134,7 +134,7 @@ export function PodLogs({ namespace, podName, containers }: Props) {
           const el = e.currentTarget
           autoScrollRef.current = el.scrollTop + el.clientHeight >= el.scrollHeight - 24
         }}
-        className="m-0 min-h-0 flex-1 overflow-auto bg-[#040a0e] px-4 py-3 font-mono text-[12px] leading-5 text-text whitespace-pre-wrap break-all"
+        className="term-surface m-0 min-h-0 flex-1 overflow-auto px-4 py-3 font-mono text-[12px] leading-5 whitespace-pre-wrap break-all"
       >
         {logs ||
           (status === 'connecting'

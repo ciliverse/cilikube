@@ -1,7 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { Navigate, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { motion } from 'framer-motion'
 import { fetchOAuthProviders, register, type OAuthProviderInfo } from '@/api/auth'
 import { fetchShowcaseInfo, type ShowcaseInfo } from '@/api/showcase'
 import { useAuth } from '@/store/auth'
@@ -74,7 +73,7 @@ export function LoginPage() {
     }
   }, [t])
 
-  if (isAuthenticated) return <Navigate to="/" replace />
+  if (isAuthenticated) return <Navigate to="/ai" replace />
 
   const readyProviders = providers.filter((p) => p.login_ready && p.auth_url)
 
@@ -89,7 +88,7 @@ export function LoginPage() {
       } else {
         await login(username, password)
       }
-      navigate('/')
+      navigate('/ai')
     } catch (err: any) {
       setError(err?.response?.data?.message || err?.message || t('login.requestFailed'))
     } finally {
@@ -99,22 +98,12 @@ export function LoginPage() {
 
   return (
     <div className="relative flex min-h-dvh w-full items-start justify-center overflow-y-auto px-4 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-[max(1.5rem,env(safe-area-inset-top))] sm:items-center sm:py-8">
-      <motion.div
-        aria-hidden
-        className="pointer-events-none absolute inset-0 hidden sm:block"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-      >
+      <div aria-hidden className="pointer-events-none absolute inset-0 hidden sm:block">
         <div className="absolute left-[12%] top-[18%] h-64 w-64 rounded-full bg-cyan/10 blur-3xl" />
         <div className="absolute bottom-[12%] right-[10%] h-72 w-72 rounded-full bg-orange/10 blur-3xl" />
-      </motion.div>
+      </div>
 
-      <motion.div
-        initial={{ opacity: 0, y: 14 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4, ease: 'easeOut' }}
-        className="relative w-full max-w-md"
-      >
+      <div className="login-enter relative w-full max-w-md">
         <div className="mb-6 text-center sm:mb-10">
           <div className="hud-brand text-2xl sm:text-3xl md:text-4xl">
             CILI<span className="accent">KUBE</span>
@@ -275,7 +264,7 @@ export function LoginPage() {
         <p className="mt-5 text-center text-[10px] tracking-[0.14em] text-text-dim uppercase sm:mt-6 sm:text-[11px] sm:tracking-[0.16em]">
           React · Vite · TanStack Query · Tailwind
         </p>
-      </motion.div>
+      </div>
     </div>
   )
 }

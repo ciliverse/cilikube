@@ -233,7 +233,7 @@ export function HelmPage() {
           <label className="block space-y-1">
             <span className="hud-label">Values (YAML)</span>
             <textarea
-              className="hud-field min-h-[120px] font-mono text-xs"
+              className="term-surface min-h-[120px] w-full rounded border border-line px-3 py-2 font-mono text-xs outline-none"
               value={form.values}
               onChange={(e) => setForm((f) => ({ ...f, values: e.target.value }))}
               spellCheck={false}

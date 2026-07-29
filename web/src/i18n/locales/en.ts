@@ -72,6 +72,8 @@ const en = {
     rolebindings: 'RoleBindings',
     clusterroles: 'ClusterRoles',
     clusterrolebindings: 'ClusterRoleBindings',
+    ai: 'AI Home',
+    console: 'Cluster console',
     monitoring: 'Monitoring',
     audit: 'Audit',
     proxy: 'API Proxy',

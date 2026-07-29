@@ -92,6 +92,7 @@ func InitializeHandlers(router *gin.RouterGroup, services *service.AppServices, 
 	routes.RegisterUserManagementRoutes(adminGroup, services.AuthService, services.RoleService)
 	routes.RegisterRoleManagementRoutes(adminGroup, services.RoleService)
 	routes.RegisterSystemSettingsRoutes(router, cfg)
+	routes.RegisterAIRoutes(router, cfg, k8sManager)
 	routes.RegisterClusterRoutes(router, handlers.NewClusterHandler(services.ClusterService))
 	routes.RegisterInstallerRoutes(router, handlers.NewInstallerHandler(services.InstallerService))
 	routes.KubernetesProxyRoutes(router, handlers.NewProxyHandler(k8sManager))

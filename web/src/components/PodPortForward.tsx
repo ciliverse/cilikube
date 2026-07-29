@@ -156,7 +156,7 @@ export function PodPortForward({ open, namespace, podName, onClose }: Props) {
             Listening on API host 127.0.0.1:{localPort.trim()} → pod :{remotePort.trim()}
           </p>
         ) : null}
-        <pre className="max-h-[40vh] overflow-auto rounded border border-line bg-[#040a0e] px-3 py-3 font-mono text-[11px] text-text whitespace-pre-wrap">
+        <pre className="max-h-[40vh] overflow-auto rounded border border-line term-surface px-3 py-3 font-mono text-[11px] whitespace-pre-wrap">
           {messages.length
             ? messages.map((m) => JSON.stringify(m)).join('\n')
             : '# status messages will appear here'}

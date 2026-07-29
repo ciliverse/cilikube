@@ -72,6 +72,8 @@ const zh = {
     rolebindings: 'RoleBindings',
     clusterroles: 'ClusterRoles',
     clusterrolebindings: 'ClusterRoleBindings',
+    ai: 'AI 工作台',
+    console: '集群控制台',
     monitoring: '监控',
     audit: '审计',
     proxy: 'API 代理',

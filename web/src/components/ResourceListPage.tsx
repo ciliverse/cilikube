@@ -9,6 +9,7 @@ import { HudTable, HudTablePanel, ListPageFrame } from '@/components/HudTableScr
 import { ResourceCreateModal } from '@/components/ResourceCreateModal'
 import { AgeCell, CreatedCell } from '@/components/AgeCell'
 import { metaCreated } from '@/api/resources'
+import { shouldSkipEnterAnim } from '@/lib/motionPrefs'
 
 export type ResourceColumn = {
   key: string
@@ -119,9 +120,9 @@ export function ResourceListPage({
             {data.map((item: any, index: number) => (
               <motion.tr
                 key={item?.metadata?.uid || item?.metadata?.name || index}
-                initial={{ opacity: 0, y: 6 }}
+                initial={shouldSkipEnterAnim() ? false : { opacity: 0, y: 6 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: Math.min(index, 12) * 0.02 }}
+                transition={{ delay: shouldSkipEnterAnim() ? 0 : Math.min(index, 12) * 0.02 }}
               >
                 {cols.map((col) => (
                   <td key={col.key}>{col.render(item)}</td>

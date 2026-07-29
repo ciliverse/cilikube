@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { Link, useNavigate, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { dump as yamlDump, load as yamlLoad } from 'js-yaml'
 import { ArrowLeft, Pencil, RefreshCw, Save, Trash2, X } from 'lucide-react'
@@ -25,6 +25,7 @@ import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { podMetricsKey, usePodMetricsMap } from '@/hooks/usePodMetricsMap'
 import { PromTimeChart } from '@/components/PromTimeChart'
 import { ScaleDialog } from '@/components/ScaleDialog'
+import { PodWorkbench } from '@/components/PodWorkbench'
 
 type Tab = 'summary' | 'events' | 'yaml' | 'metrics' | 'related'
 
@@ -62,6 +63,7 @@ export function ResourceDetailPage({
   namespaced?: boolean
 }) {
   const { namespace = '', name = '' } = useParams()
+  const [searchParams, setSearchParams] = useSearchParams()
   const { clusterId } = useCluster()
   const { canMutate, canDelete, checkPermission } = useAuth()
   const navigate = useNavigate()
@@ -76,6 +78,10 @@ export function ResourceDetailPage({
   const [confirmRestart, setConfirmRestart] = useState(false)
   const [scaleOpen, setScaleOpen] = useState(false)
   const [scaleBusy, setScaleBusy] = useState(false)
+  const consoleTab = searchParams.get('console')
+  const consoleOpen =
+    resource === 'pods' &&
+    (consoleTab === 'logs' || consoleTab === 'exec' || consoleTab === 'attach' || consoleTab === 'yaml')
 
   const canRead = checkPermission(resource, 'read')
   const canWrite = canMutate(resource)
@@ -263,6 +269,26 @@ export function ResourceDetailPage({
             <Link to={`/${resource}`} className="text-xs text-cyan hover:underline">
               List
             </Link>
+            {resource === 'pods' ? (
+              <>
+                <Button
+                  variant="outline"
+                  className="px-3 py-1.5 text-xs"
+                  type="button"
+                  onClick={() => setSearchParams({ console: 'logs' })}
+                >
+                  Logs
+                </Button>
+                <Button
+                  variant="outline"
+                  className="px-3 py-1.5 text-xs"
+                  type="button"
+                  onClick={() => setSearchParams({ console: 'exec' })}
+                >
+                  Terminal
+                </Button>
+              </>
+            ) : null}
             {supportsScale && canWrite ? (
               <Button
                 variant="outline"
@@ -517,13 +543,13 @@ export function ResourceDetailPage({
           </div>
           {editing ? (
             <textarea
-              className="m-0 h-[min(60vh,55dvh)] w-full resize-none bg-[#040a0e] px-3 py-3 font-mono text-[12px] text-text outline-none sm:h-[60vh] sm:px-4"
+              className="m-0 h-[min(60vh,55dvh)] w-full resize-none term-surface px-3 py-3 font-mono text-[12px] outline-none sm:h-[60vh] sm:px-4"
               value={draft}
               onChange={(e) => setDraft(e.target.value)}
               spellCheck={false}
             />
           ) : (
-            <pre className="m-0 h-[min(60vh,55dvh)] overflow-auto bg-[#040a0e] px-3 py-3 font-mono text-[12px] text-text whitespace-pre sm:h-[60vh] sm:px-4">
+            <pre className="m-0 h-[min(60vh,55dvh)] overflow-auto term-surface px-3 py-3 font-mono text-[12px] whitespace-pre sm:h-[60vh] sm:px-4">
               {detailQ.isLoading ? '# loading…' : yamlText}
             </pre>
           )}
@@ -557,7 +583,7 @@ export function ResourceDetailPage({
             ) : (
               <EmptyState>No ownerReferences (root object).</EmptyState>
             )}
-            <div className="mt-4 rounded border border-line/60 bg-[#040a0e] px-3 py-4 font-mono text-[11px] text-text-dim">
+            <div className="mt-4 rounded border border-line/60 term-surface px-3 py-4 font-mono text-[11px] opacity-90">
               <div className="mb-2 text-cyan">{kind}/{name}</div>
               {owners.map((o) => (
                 <div key={`edge-${o.kind}-${o.name}`}>↑ owned by {o.kind}/{o.name}</div>
@@ -667,6 +693,22 @@ export function ResourceDetailPage({
         onClose={() => setConfirmRestart(false)}
         onConfirm={doRestart}
       />
+      {resource === 'pods' ? (
+        <PodWorkbench
+          open={consoleOpen}
+          pod={obj || { metadata: { name, namespace } }}
+          initialTab={(consoleTab as 'logs' | 'exec' | 'attach' | 'yaml') || 'logs'}
+          onClose={() => {
+            const next = new URLSearchParams(searchParams)
+            next.delete('console')
+            setSearchParams(next, { replace: true })
+          }}
+          onDeleted={() => {
+            void queryClient.invalidateQueries({ queryKey: ['detail', clusterId, resource, namespace, name] })
+            navigate('/pods')
+          }}
+        />
+      ) : null}
     </div>
   )
 }

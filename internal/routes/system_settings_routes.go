@@ -29,5 +29,9 @@ func RegisterSystemSettingsRoutes(router *gin.RouterGroup, config *configs.Confi
 		// System preferences
 		settingsRoutes.GET("/preferences", settingsHandler.GetSystemPreferences)
 		settingsRoutes.PUT("/preferences", settingsHandler.UpdateSystemPreferences)
+
+		// AI assistant
+		settingsRoutes.GET("/ai", settingsHandler.GetAISettings)
+		settingsRoutes.PUT("/ai", settingsHandler.UpdateAISettings)
 	}
 }

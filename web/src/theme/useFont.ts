@@ -14,7 +14,7 @@ export function useFont(): {
   fonts: FontPack[]
   setFont: (id: string) => void
 } {
-  const fontId = useSyncExternalStore(subscribeFont, getStoredFontId, () => 'hud')
+  const fontId = useSyncExternalStore(subscribeFont, getStoredFontId, () => 'maple')
   return {
     font: resolveFont(fontId),
     fontId,

@@ -10,6 +10,7 @@ import { Badge, EmptyState, HudSelect, PageHeader, StatCard } from '@/components
 import { metaCreated } from '@/api/resources'
 import { podMetricsKey, usePodMetricsMap } from '@/hooks/usePodMetricsMap'
 import { PercentCell } from '@/components/PodMetricCells'
+import { shouldSkipEnterAnim } from '@/lib/motionPrefs'
 
 function podTone(phase?: string) {
   const p = (phase || '').toLowerCase()
@@ -108,9 +109,9 @@ export function WorkloadsPage() {
                 return (
                   <motion.tr
                     key={pod.metadata?.uid || name}
-                    initial={{ opacity: 0, y: 8 }}
+                    initial={shouldSkipEnterAnim() ? false : { opacity: 0, y: 8 }}
                     animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: Math.min(index, 12) * 0.02 }}
+                    transition={{ delay: shouldSkipEnterAnim() ? 0 : Math.min(index, 12) * 0.02 }}
                   >
                     <td className="font-semibold text-cyan">
                       {name && ns ? (

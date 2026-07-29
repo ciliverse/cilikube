@@ -1,4 +1,4 @@
-import { NavLink, Outlet, useLocation } from 'react-router-dom'
+import { Link, NavLink, Outlet, useLocation } from 'react-router-dom'
 import { AnimatePresence, motion } from 'framer-motion'
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -23,9 +23,11 @@ import {
   Cloud,
   FileCode2,
   ScrollText,
+  Sparkles,
   Terminal,
   X,
 } from 'lucide-react'
+import { shouldSkipEnterAnim } from '@/lib/motionPrefs'
 import { useAuth } from '@/store/auth'
 import { useCluster } from '@/store/cluster'
 import { ALL_NAMESPACES, useNamespace } from '@/store/namespace'
@@ -48,7 +50,7 @@ const navGroups: NavGroup[] = [
   {
     titleKey: 'nav.cluster',
     items: [
-      { to: '/', labelKey: 'nav.overview', icon: LayoutDashboard },
+      { to: '/overview', labelKey: 'nav.overview', icon: LayoutDashboard },
       { to: '/nodes', labelKey: 'nav.nodes', icon: Server, resource: 'nodes' },
       { to: '/namespaces', labelKey: 'nav.namespaces', icon: Layers, resource: 'namespaces' },
       { to: '/events', labelKey: 'nav.events', icon: Activity },
@@ -252,8 +254,8 @@ export function AppShell() {
     label: String(c.name || c.id),
   }))
 
-  const reduceMotion =
-    typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  const skipEnterAnim = shouldSkipEnterAnim()
+  const aiHome = location.pathname === '/ai' || location.pathname === '/'
 
   const clusterLabel = t('nav.cluster')
   const nsLabel = t('common.namespace')
@@ -261,28 +263,54 @@ export function AppShell() {
   return (
     <div className="relative flex h-dvh w-full flex-col overflow-hidden pb-[env(safe-area-inset-bottom)] pt-[env(safe-area-inset-top)]">
       <header className="z-30 flex h-12 w-full shrink-0 items-center gap-1.5 border-b border-line bg-panel-solid/95 px-2 backdrop-blur sm:h-14 sm:gap-3 sm:px-3 md:gap-4 md:px-5">
-        <button
-          type="button"
-          className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded border border-line text-cyan sm:h-10 sm:w-10 md:hidden"
-          aria-label={mobileNavOpen ? 'Close navigation' : 'Open navigation'}
-          aria-expanded={mobileNavOpen}
-          onClick={() => setMobileNavOpen((v) => !v)}
-        >
-          {mobileNavOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-        </button>
+        {!aiHome ? (
+          <button
+            type="button"
+            className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded border border-line text-cyan sm:h-10 sm:w-10 md:hidden"
+            aria-label={mobileNavOpen ? 'Close navigation' : 'Open navigation'}
+            aria-expanded={mobileNavOpen}
+            onClick={() => setMobileNavOpen((v) => !v)}
+          >
+            {mobileNavOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+          </button>
+        ) : null}
 
-        <div className="hud-brand hidden shrink-0 text-sm sm:block md:text-base">
+        <Link to="/ai" className="hud-brand hidden shrink-0 text-sm sm:block md:text-base">
           CILI<span className="accent">KUBE</span>
-        </div>
-        <div className="hud-brand shrink-0 text-xs tracking-[0.12em] sm:hidden">
+        </Link>
+        <Link to="/ai" className="hud-brand shrink-0 text-xs tracking-[0.12em] sm:hidden">
           C<span className="accent">K</span>
-        </div>
+        </Link>
 
-        <div className="min-w-0 flex-1">
-          <GlobalSearchPalette />
-        </div>
+        {!aiHome ? (
+          <div className="min-w-0 flex-1">
+            <GlobalSearchPalette />
+          </div>
+        ) : (
+          <div className="min-w-0 flex-1" />
+        )}
 
         <div className="flex shrink-0 items-center gap-1.5 sm:gap-2 md:gap-3">
+          {aiHome ? (
+            <Link
+              to="/overview"
+              className="inline-flex items-center gap-1.5 rounded border border-cyan/40 bg-cyan/10 px-2.5 py-1.5 text-xs font-medium text-cyan hover:border-cyan sm:px-3"
+            >
+              <Terminal className="h-3.5 w-3.5" />
+              <span className="hidden sm:inline">{t('nav.console')}</span>
+              <span className="sm:hidden">控制台</span>
+            </Link>
+          ) : (
+            <Link
+              to="/ai"
+              className="inline-flex items-center gap-1.5 rounded border border-line px-2.5 py-1.5 text-xs text-cyan hover:border-cyan sm:px-3"
+              title={t('nav.ai')}
+            >
+              <Sparkles className="h-3.5 w-3.5" />
+              <span className="hidden sm:inline">{t('nav.ai')}</span>
+            </Link>
+          )}
+
           <label className="hidden items-center gap-2 lg:flex">
             <span className="hud-label">{clusterLabel}</span>
             <HudSelect
@@ -316,14 +344,16 @@ export function AppShell() {
       </header>
 
       <div className="relative flex min-h-0 w-full flex-1">
-        {/* Desktop sidebar */}
-        <aside className="hidden h-full w-[232px] shrink-0 flex-col border-r border-line bg-panel-solid/50 md:flex">
-          <NavBody groups={visibleGroups} />
-        </aside>
+        {/* Desktop sidebar — hidden on AI home (console entry lives in the AI page) */}
+        {!aiHome ? (
+          <aside className="hidden h-full w-[232px] shrink-0 flex-col border-r border-line bg-panel-solid/50 md:flex">
+            <NavBody groups={visibleGroups} />
+          </aside>
+        ) : null}
 
         {/* Mobile drawer */}
         <AnimatePresence>
-          {mobileNavOpen ? (
+          {!aiHome && mobileNavOpen ? (
             <>
               <motion.button
                 type="button"
@@ -389,42 +419,56 @@ export function AppShell() {
           ) : null}
         </AnimatePresence>
 
-        <main className="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden px-2.5 py-2.5 sm:px-4 sm:py-4 md:px-6 md:py-5 xl:px-8">
-          <div className="mb-2.5 grid shrink-0 grid-cols-2 gap-2 lg:hidden">
-            <div className="min-w-0">
-              <div className="hud-label mb-1">{clusterLabel}</div>
-              <HudSelect
-                aria-label={clusterLabel}
-                className="w-full"
-                value={clusterId}
-                onChange={setClusterId}
-                disabled={switching || !clusters.length}
-                options={clusterOptions}
-              />
+        <main
+          className={cn(
+            'relative flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden',
+            aiHome
+              ? 'px-0 py-0'
+              : 'px-2.5 py-2.5 sm:px-4 sm:py-4 md:px-6 md:py-5 xl:px-8',
+          )}
+        >
+          {!aiHome ? (
+            <div className="mb-2.5 grid shrink-0 grid-cols-2 gap-2 lg:hidden">
+              <div className="min-w-0">
+                <div className="hud-label mb-1">{clusterLabel}</div>
+                <HudSelect
+                  aria-label={clusterLabel}
+                  className="w-full"
+                  value={clusterId}
+                  onChange={setClusterId}
+                  disabled={switching || !clusters.length}
+                  options={clusterOptions}
+                />
+              </div>
+              <div className="min-w-0">
+                <div className="hud-label mb-1">{nsLabel}</div>
+                <HudSelect
+                  aria-label={nsLabel}
+                  className="w-full"
+                  value={namespace}
+                  onChange={setNamespace}
+                  searchableWhen={0}
+                  options={nsOptions}
+                />
+              </div>
             </div>
-            <div className="min-w-0">
-              <div className="hud-label mb-1">{nsLabel}</div>
-              <HudSelect
-                aria-label={nsLabel}
-                className="w-full"
-                value={namespace}
-                onChange={setNamespace}
-                searchableWhen={0}
-                options={nsOptions}
-              />
-            </div>
-          </div>
+          ) : null}
 
-          <div className="shrink-0">
-            <OAuthAccountBanner />
-          </div>
+          {!aiHome ? (
+            <div className="shrink-0">
+              <OAuthAccountBanner />
+            </div>
+          ) : null}
 
           <motion.div
             key={location.pathname}
-            className="flex h-full min-h-0 w-full min-w-0 flex-1 flex-col overflow-y-auto overscroll-contain"
-            initial={reduceMotion ? false : { opacity: 0, y: 6 }}
+            className={cn(
+              'flex h-full min-h-0 w-full min-w-0 flex-1 flex-col',
+              aiHome ? 'overflow-hidden' : 'overflow-y-auto overscroll-contain',
+            )}
+            initial={skipEnterAnim ? false : { opacity: 0, y: 6 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: reduceMotion ? 0 : 0.2, ease: 'easeOut' }}
+            transition={{ duration: skipEnterAnim ? 0 : 0.2, ease: 'easeOut' }}
           >
             <Outlet />
           </motion.div>

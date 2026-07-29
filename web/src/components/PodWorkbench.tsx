@@ -267,13 +267,13 @@ export function PodWorkbench({ pod, open, initialTab = 'logs', onClose, onDelete
             </div>
             {editing ? (
               <textarea
-                className="m-0 min-h-0 flex-1 resize-none border-0 bg-[#040a0e] px-4 py-3 font-mono text-[12px] leading-5 text-text outline-none"
+                className="m-0 min-h-0 flex-1 resize-none border-0 term-surface px-4 py-3 font-mono text-[12px] leading-5 outline-none"
                 value={draft}
                 spellCheck={false}
                 onChange={(e) => setDraft(e.target.value)}
               />
             ) : (
-              <pre className="m-0 min-h-0 flex-1 overflow-auto bg-[#040a0e] px-4 py-3 font-mono text-[12px] leading-5 text-text whitespace-pre">
+              <pre className="m-0 min-h-0 flex-1 overflow-auto term-surface px-4 py-3 font-mono text-[12px] leading-5 whitespace-pre">
                 {detailQ.isLoading ? '# loading…' : yamlText || '# empty'}
               </pre>
             )}

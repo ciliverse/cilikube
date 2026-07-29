@@ -4,6 +4,12 @@ import { FitAddon } from 'xterm-addon-fit'
 import 'xterm/css/xterm.css'
 import { buildPodWsUrl } from '@/api/resources'
 import { Badge, Button, HudSelect } from '@/components/ui'
+import {
+  getStoredThemeId,
+  resolveTheme,
+  subscribeTheme,
+  toXtermTheme,
+} from '@/theme/themes'
 
 type Props = {
   namespace: string
@@ -28,6 +34,7 @@ export function PodTerminal({ namespace, podName, containers, mode = 'exec' }: P
 
   useEffect(() => {
     if (!hostRef.current || termRef.current) return
+    const initial = resolveTheme(getStoredThemeId())
     const term = new Terminal({
       cursorBlink: true,
       convertEol: true,
@@ -35,12 +42,7 @@ export function PodTerminal({ namespace, podName, containers, mode = 'exec' }: P
         getComputedStyle(document.documentElement).getPropertyValue('--font-mono').trim() ||
         'Maple Mono, Menlo, Consolas, monospace',
       fontSize: 13,
-      theme: {
-        background: '#040a0e',
-        foreground: '#cfeef5',
-        cursor: '#35e6ff',
-        selectionBackground: 'rgba(53,230,255,0.25)',
-      },
+      theme: toXtermTheme(initial.terminal),
     })
     const fit = new FitAddon()
     term.loadAddon(fit)
@@ -69,7 +71,18 @@ export function PodTerminal({ namespace, podName, containers, mode = 'exec' }: P
       }
     })
 
+    const unsubTheme = subscribeTheme(() => {
+      const next = resolveTheme(getStoredThemeId())
+      term.options.theme = toXtermTheme(next.terminal)
+      try {
+        term.refresh(0, Math.max(0, term.rows - 1))
+      } catch {
+        /* ignore */
+      }
+    })
+
     return () => {
+      unsubTheme()
       window.removeEventListener('resize', onResize)
       dataDisp.dispose()
       wsRef.current?.close(1000, 'unmount')
@@ -201,7 +214,7 @@ export function PodTerminal({ namespace, podName, containers, mode = 'exec' }: P
           <Badge tone={statusTone}>{status}</Badge>
         </div>
       </div>
-      <div ref={hostRef} className="min-h-0 flex-1 bg-[#040a0e] px-2 py-2" />
+      <div ref={hostRef} className="term-surface min-h-0 flex-1 px-2 py-2" />
     </div>
   )
 }

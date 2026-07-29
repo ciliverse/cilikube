@@ -28,6 +28,15 @@ export function AdminSettingsPage() {
   })
   const [security, setSecurity] = useState<any>(null)
   const [prefs, setPrefs] = useState<any>(null)
+  const [ai, setAi] = useState({
+    enabled: false,
+    provider: 'mock',
+    base_url: '',
+    model: 'mock',
+    api_key: '',
+    api_key_set: false,
+    ready: false,
+  })
 
   const systemQ = useQuery({
     queryKey: ['settings-system'],
@@ -48,6 +57,11 @@ export function AdminSettingsPage() {
     queryKey: ['settings-preferences'],
     enabled: isAdmin,
     queryFn: () => apiGet<any>('/api/v1/settings/preferences'),
+  })
+  const aiQ = useQuery({
+    queryKey: ['settings-ai'],
+    enabled: isAdmin,
+    queryFn: () => apiGet<any>('/api/v1/settings/ai'),
   })
 
   useEffect(() => {
@@ -79,6 +93,20 @@ export function AdminSettingsPage() {
   useEffect(() => {
     if (prefsQ.data) setPrefs(structuredClone(prefsQ.data))
   }, [prefsQ.data])
+
+  useEffect(() => {
+    if (aiQ.data) {
+      setAi({
+        enabled: Boolean(aiQ.data.enabled),
+        provider: aiQ.data.provider || 'mock',
+        base_url: aiQ.data.base_url || '',
+        model: aiQ.data.model || '',
+        api_key: '',
+        api_key_set: Boolean(aiQ.data.api_key_set),
+        ready: Boolean(aiQ.data.ready),
+      })
+    }
+  }, [aiQ.data])
 
   if (!isAdmin) {
     return (
@@ -154,6 +182,30 @@ export function AdminSettingsPage() {
     }
   }
 
+  const saveAi = async () => {
+    setBusy(true)
+    setErr('')
+    setMsg('')
+    try {
+      const body: Record<string, unknown> = {
+        enabled: ai.enabled,
+        provider: ai.provider,
+        base_url: ai.base_url,
+        model: ai.model,
+      }
+      if (ai.api_key.trim()) body.api_key = ai.api_key.trim()
+      await apiPut('/api/v1/settings/ai', body)
+      setMsg('AI settings saved')
+      setAi((a) => ({ ...a, api_key: '' }))
+      await aiQ.refetch()
+      await systemQ.refetch()
+    } catch (e: any) {
+      setErr(e?.message || 'Save failed')
+    } finally {
+      setBusy(false)
+    }
+  }
+
   const sys = systemQ.data
 
   return (
@@ -177,9 +229,75 @@ export function AdminSettingsPage() {
           <p className="text-xs text-text-dim">
             OAuth {sys.features.oauth_enabled ? 'on' : 'off'} · RBAC{' '}
             {sys.features.rbac_enabled ? 'on' : 'off'} · Audit{' '}
-            {sys.features.audit_log_enabled ? 'on' : 'off'}
+            {sys.features.audit_log_enabled ? 'on' : 'off'} · AI{' '}
+            {sys.features.ai_enabled ? 'on' : 'off'}
           </p>
         ) : null}
+      </Card>
+
+      <Card className="space-y-3 p-5">
+        <div className="flex flex-wrap items-center gap-2">
+          <h2 className="font-display text-lg font-bold tracking-[0.12em]">AI</h2>
+          <Badge tone={ai.ready ? 'ok' : 'warn'}>{ai.ready ? 'ready' : 'not ready'}</Badge>
+        </div>
+        <p className="text-xs text-text-dim">
+          默认 mock 可直接用。切到 openai 时再填 Base URL、Model、API Key（OpenAI-compatible）。
+        </p>
+        <label className="flex items-center gap-2 text-sm">
+          <input
+            type="checkbox"
+            checked={ai.enabled}
+            onChange={(e) => setAi((a) => ({ ...a, enabled: e.target.checked }))}
+          />
+          Enable AI assistant
+        </label>
+        <div className="grid gap-3 md:grid-cols-2">
+          <label className="block space-y-1">
+            <span className="hud-label">Provider</span>
+            <select
+              className="hud-field"
+              value={ai.provider}
+              onChange={(e) => setAi((a) => ({ ...a, provider: e.target.value }))}
+            >
+              <option value="mock">mock (local demo)</option>
+              <option value="openai">openai-compatible</option>
+            </select>
+          </label>
+          <label className="block space-y-1">
+            <span className="hud-label">Model</span>
+            <input
+              className="hud-field font-mono text-xs"
+              value={ai.model}
+              onChange={(e) => setAi((a) => ({ ...a, model: e.target.value }))}
+              placeholder="gpt-4o-mini"
+            />
+          </label>
+          <label className="block space-y-1 md:col-span-2">
+            <span className="hud-label">Base URL (optional)</span>
+            <input
+              className="hud-field font-mono text-xs"
+              value={ai.base_url}
+              onChange={(e) => setAi((a) => ({ ...a, base_url: e.target.value }))}
+              placeholder="https://api.openai.com/v1"
+            />
+          </label>
+          <label className="block space-y-1 md:col-span-2">
+            <span className="hud-label">
+              API Key{ai.api_key_set ? ' (set — leave blank to keep)' : ''}
+            </span>
+            <input
+              type="password"
+              className="hud-field font-mono text-xs"
+              value={ai.api_key}
+              onChange={(e) => setAi((a) => ({ ...a, api_key: e.target.value }))}
+              placeholder={ai.api_key_set ? '••••••••' : 'sk-…'}
+              autoComplete="new-password"
+            />
+          </label>
+        </div>
+        <Button disabled={busy} onClick={() => void saveAi()}>
+          Save AI
+        </Button>
       </Card>
 
       <Card className="space-y-3 p-5">
@@ -417,7 +535,8 @@ export function AdminSettingsPage() {
                 ))}
               </select>
               <p className="text-[10px] text-text-dim">
-                Maple Mono is bundled locally (same family used with CiliTerm).
+                Default: Latin Maple (~75KB) + system CJK. Maple Mono CN loads subset fonts from this
+                site on demand (no third-party CDN).
               </p>
             </label>
             <label className="block space-y-1">

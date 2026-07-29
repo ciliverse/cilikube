@@ -218,13 +218,13 @@ export function ResourceYamlModal({ open, resource, item, namespaced = true, onC
         ) : null}
         {editing ? (
           <textarea
-            className="m-0 h-[min(62vh,55dvh)] min-h-[220px] w-full resize-none border-0 bg-[#040a0e] px-3 py-3 font-mono text-[12px] leading-5 text-text outline-none sm:h-[62vh] sm:min-h-[360px] sm:px-4"
+            className="m-0 h-[min(62vh,55dvh)] min-h-[220px] w-full resize-none border-0 term-surface px-3 py-3 font-mono text-[12px] leading-5 outline-none sm:h-[62vh] sm:min-h-[360px] sm:px-4"
             value={draft}
             spellCheck={false}
             onChange={(e) => setDraft(e.target.value)}
           />
         ) : (
-          <pre className="m-0 h-[min(62vh,55dvh)] min-h-[220px] overflow-auto bg-[#040a0e] px-3 py-3 font-mono text-[12px] leading-5 text-text whitespace-pre sm:h-[62vh] sm:min-h-[360px] sm:px-4">
+          <pre className="m-0 h-[min(62vh,55dvh)] min-h-[220px] overflow-auto term-surface px-3 py-3 font-mono text-[12px] leading-5 whitespace-pre sm:h-[62vh] sm:min-h-[360px] sm:px-4">
             {detailQ.isLoading ? '# loading…' : yamlText || '# empty'}
           </pre>
         )}

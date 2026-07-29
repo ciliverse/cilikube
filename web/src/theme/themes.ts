@@ -13,12 +13,21 @@ export type ThemeColors = {
   textDim: string
 }
 
+/** Colors for Logs <pre> and xterm.js (Exec / Attach). */
+export type TerminalTheme = {
+  bg: string
+  fg: string
+  cursor: string
+  selection: string
+}
+
 export type Theme = {
   id: string
   name: string
   /** light | dark — for system/OS hints and terminal defaults */
   mode: 'dark' | 'light'
   colors: ThemeColors
+  terminal: TerminalTheme
 }
 
 export const BUILTIN_THEMES: Theme[] = [
@@ -38,6 +47,12 @@ export const BUILTIN_THEMES: Theme[] = [
       text: '#e8fbff',
       textDim: '#7aafbb',
     },
+    terminal: {
+      bg: '#040a0e',
+      fg: '#cfeef5',
+      cursor: '#35e6ff',
+      selection: 'rgba(53,230,255,0.25)',
+    },
   },
   {
     id: 'paper',
@@ -54,6 +69,12 @@ export const BUILTIN_THEMES: Theme[] = [
       green: '#0f6b42',
       text: '#0b1218',
       textDim: '#3a4a54',
+    },
+    terminal: {
+      bg: '#f7f3ea',
+      fg: '#0b1218',
+      cursor: '#065a74',
+      selection: 'rgba(6,90,116,0.28)',
     },
   },
   {
@@ -72,6 +93,12 @@ export const BUILTIN_THEMES: Theme[] = [
       text: '#d4ffe0',
       textDim: '#5a9a68',
     },
+    terminal: {
+      bg: '#000800',
+      fg: '#b8ffcc',
+      cursor: '#2dff7a',
+      selection: 'rgba(45,255,122,0.28)',
+    },
   },
   {
     id: 'amber',
@@ -89,6 +116,12 @@ export const BUILTIN_THEMES: Theme[] = [
       text: '#ffe29a',
       textDim: '#b88a30',
     },
+    terminal: {
+      bg: '#100800',
+      fg: '#ffe29a',
+      cursor: '#ffb400',
+      selection: 'rgba(255,180,0,0.28)',
+    },
   },
   {
     id: 'nord',
@@ -105,6 +138,81 @@ export const BUILTIN_THEMES: Theme[] = [
       green: '#a3be8c',
       text: '#eceff4',
       textDim: '#9aa3b5',
+    },
+    terminal: {
+      bg: '#2e3440',
+      fg: '#eceff4',
+      cursor: '#88c0d0',
+      selection: 'rgba(136,192,208,0.3)',
+    },
+  },
+  {
+    id: 'sakura',
+    name: 'Sakura',
+    mode: 'light',
+    colors: {
+      bg: '#fff8f6',
+      bgPanel: 'rgba(255, 253, 252, 0.97)',
+      bgPanelSolid: '#fffdfc',
+      primary: '#d4537e',
+      primaryDim: '#a63d62',
+      secondary: '#c4782a',
+      red: '#c0392b',
+      green: '#2d8a5f',
+      text: '#2a1420',
+      textDim: '#7a5360',
+    },
+    terminal: {
+      bg: '#fff5f7',
+      fg: '#2a1420',
+      cursor: '#d4537e',
+      selection: 'rgba(212,83,126,0.28)',
+    },
+  },
+  {
+    id: 'midnight-violet',
+    name: 'Midnight Violet',
+    mode: 'dark',
+    colors: {
+      bg: '#07040f',
+      bgPanel: 'rgba(18, 8, 28, 0.94)',
+      bgPanelSolid: '#12081c',
+      primary: '#c084fc',
+      primaryDim: '#7c3aed',
+      secondary: '#f0abfc',
+      red: '#f87171',
+      green: '#6ee7b7',
+      text: '#f3e8ff',
+      textDim: '#a78bb8',
+    },
+    terminal: {
+      bg: '#0c0614',
+      fg: '#efe6ff',
+      cursor: '#c084fc',
+      selection: 'rgba(192,132,252,0.3)',
+    },
+  },
+  {
+    id: 'solarized',
+    name: 'Solarized',
+    mode: 'dark',
+    colors: {
+      bg: '#002b36',
+      bgPanel: 'rgba(7, 54, 66, 0.94)',
+      bgPanelSolid: '#073642',
+      primary: '#268bd2',
+      primaryDim: '#1a6a9e',
+      secondary: '#b58900',
+      red: '#dc322f',
+      green: '#859900',
+      text: '#fdf6e3',
+      textDim: '#93a1a1',
+    },
+    terminal: {
+      bg: '#002b36',
+      fg: '#eee8d5',
+      cursor: '#268bd2',
+      selection: 'rgba(38,139,210,0.32)',
     },
   },
 ]
@@ -125,14 +233,32 @@ export function resolveTheme(id?: string | null): Theme {
   return BUILTIN_THEMES.find((t) => t.id === id) || BUILTIN_THEMES[0]
 }
 
+/** Map our terminal pack into xterm.js `ITheme`. */
+export function toXtermTheme(term: TerminalTheme): {
+  background: string
+  foreground: string
+  cursor: string
+  selectionBackground: string
+} {
+  return {
+    background: term.bg,
+    foreground: term.fg,
+    cursor: term.cursor,
+    selectionBackground: term.selection,
+  }
+}
+
 /** Apply theme colors to :root (Tailwind @theme + custom HUD classes). */
 export function applyTheme(theme: Theme): void {
   const c = theme.colors
+  const t = theme.terminal
   const root = document.documentElement
   const set = (k: string, v: string) => root.style.setProperty(k, v)
 
   root.dataset.theme = theme.id
   root.dataset.themeMode = theme.mode
+  // Keep native <textarea>/<input> chrome aligned with theme (esp. OS dark + light UI).
+  root.style.colorScheme = theme.mode
 
   set('--color-bg', c.bg)
   set('--color-panel', c.bgPanel)
@@ -160,6 +286,11 @@ export function applyTheme(theme: Theme): void {
   set('--color-glow', hexToRgba(c.primary, light ? 0.14 : 0.4))
   set('--color-scroll-thumb', hexToRgba(c.primary, light ? 0.5 : 0.45))
   set('--color-scroll-track', hexToRgba(c.bgPanelSolid, light ? 0.85 : 0.55))
+
+  set('--color-term-bg', t.bg)
+  set('--color-term-fg', t.fg)
+  set('--color-term-cursor', t.cursor)
+  set('--color-term-selection', t.selection)
 }
 
 const listeners = new Set<() => void>()

@@ -19,26 +19,19 @@ function ts(i: number): string {
   return v.padStart(5, ' ')
 }
 
-function isCoarsePointerMobile(): boolean {
-  try {
-    return window.matchMedia('(max-width: 768px), (pointer: coarse)').matches
-  } catch {
-    return false
-  }
-}
-
 export function shouldShowBootScreen(): boolean {
   if (typeof window === 'undefined') return false
   if (sessionStorage.getItem(BOOT_SESSION_KEY)) return false
   if (window.location.pathname.startsWith('/login/oauth/callback')) return false
-  // Skip theatrical boot on phones — saves ~2–3s before first paint.
-  if (isCoarsePointerMobile()) {
-    try {
+  // Opt-out: ?boot=0 or localStorage cilikube_boot=0
+  try {
+    const params = new URLSearchParams(window.location.search)
+    if (params.get('boot') === '0' || localStorage.getItem('cilikube_boot') === '0') {
       sessionStorage.setItem(BOOT_SESSION_KEY, '1')
-    } catch {
-      /* ignore */
+      return false
     }
-    return false
+  } catch {
+    /* ignore */
   }
   try {
     if (localStorage.getItem('cilikube_token')) return false

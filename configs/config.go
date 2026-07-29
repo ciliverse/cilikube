@@ -23,7 +23,17 @@ type Config struct {
 	Security    SecurityConfig    `yaml:"security" json:"security"`
 	Preferences PreferencesConfig `yaml:"preferences" json:"preferences"`
 	Prometheus  PrometheusConfig  `yaml:"prometheus" json:"prometheus"`
+	AI          AIConfig          `yaml:"ai" json:"ai"`
 	Clusters    []ClusterInfo     `yaml:"clusters" json:"clusters"`
+}
+
+// AIConfig configures the cluster chat assistant (OpenAI-compatible or mock).
+type AIConfig struct {
+	Enabled  bool   `yaml:"enabled" json:"enabled"`
+	Provider string `yaml:"provider" json:"provider"` // mock | openai
+	BaseURL  string `yaml:"base_url" json:"base_url"`
+	Model    string `yaml:"model" json:"model"`
+	APIKey   string `yaml:"api_key" json:"api_key"`
 }
 
 // PrometheusConfig configures the external Prometheus query integration.
@@ -662,5 +672,16 @@ func setSecurityDefaults() {
 	}
 	if GlobalConfig.Prometheus.URL == "" {
 		GlobalConfig.Prometheus.URL = "http://prometheus:9090"
+	}
+
+	if GlobalConfig.AI.Provider == "" {
+		GlobalConfig.AI.Provider = "mock"
+	}
+	if GlobalConfig.AI.Model == "" {
+		if GlobalConfig.AI.Provider == "mock" {
+			GlobalConfig.AI.Model = "mock"
+		} else {
+			GlobalConfig.AI.Model = "gpt-4o-mini"
+		}
 	}
 }

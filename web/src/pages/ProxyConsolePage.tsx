@@ -124,7 +124,7 @@ export function ProxyConsolePage() {
         <Button type="button" disabled={busy} onClick={onSubmit}>
           {busy ? 'Calling…' : `${method} via proxy`}
         </Button>
-        <pre className="max-h-[50vh] overflow-auto rounded border border-line bg-[#040a0e] px-3 py-3 font-mono text-[11px] text-text whitespace-pre-wrap">
+        <pre className="max-h-[50vh] overflow-auto rounded border border-line term-surface px-3 py-3 font-mono text-[11px] whitespace-pre-wrap">
           {out || '# response will appear here'}
         </pre>
       </Card>
