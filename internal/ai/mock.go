@@ -34,14 +34,19 @@ func processMock(ctx context.Context, client *k8s.Client, req *ChatRequest, send
 		parts = append(parts, res.Text)
 	}
 
-	listKind := func(kind string, limit int, forceNS string) {
+	// nsMode: "" = UI/request namespace; "*" = all namespaces; other = force that ns.
+	listKind := func(kind string, limit int, nsMode string, extra map[string]interface{}) {
 		args := map[string]interface{}{"kind": kind, "limit": limit}
-		useNS := forceNS
-		if useNS == "" {
-			useNS = ns
+		for k, v := range extra {
+			args[k] = v
 		}
-		if useNS != "" && kind != "nodes" && kind != "namespaces" {
-			args["namespace"] = useNS
+		switch {
+		case nsMode == "*":
+			// omit namespace → cluster-wide
+		case nsMode != "":
+			args["namespace"] = nsMode
+		case ns != "" && kind != "nodes" && kind != "namespaces":
+			args["namespace"] = ns
 		}
 		call("list_resources", args)
 	}
@@ -72,34 +77,60 @@ func processMock(ctx context.Context, client *k8s.Client, req *ChatRequest, send
 		strings.Contains(q, "warning") || strings.Contains(q, "error")
 	wantNS := strings.Contains(q, "namespace") || strings.Contains(q, "命名空间")
 
+	// Fleet / inspect style questions must not be trapped in the UI namespace selector
+	// (overview is cluster-wide; Pending pods often live outside "default").
+	clusterWidePods := comboInspect || comboTriage ||
+		strings.Contains(q, "failed") || strings.Contains(raw, "Failed") ||
+		strings.Contains(q, "pending") || strings.Contains(raw, "Pending") ||
+		strings.Contains(q, "异常") || strings.Contains(q, "故障")
+	clusterWideEvents := comboInspect ||
+		strings.Contains(q, "warning") || strings.Contains(raw, "Warning") ||
+		strings.Contains(q, "error") || strings.Contains(raw, "Error")
+
 	if wantOverview || (!wantPods && !wantDeploy && !wantSvc && !wantNode && !wantLogs && !wantEvents && !wantNS) {
 		call("get_cluster_overview", map[string]interface{}{})
 	}
 	if wantPods || wantLogs {
-		listKind("pods", 20, "")
+		nsMode := ""
+		extra := map[string]interface{}(nil)
+		if clusterWidePods {
+			nsMode = "*"
+		}
+		if comboInspect {
+			extra = map[string]interface{}{"phases": "Pending,Failed,Unknown"}
+		}
+		listKind("pods", 20, nsMode, extra)
 	}
 	if wantDeploy {
-		force := ""
+		nsMode := ""
 		if comboWorkload || strings.Contains(q, "default") {
-			force = "default"
+			nsMode = "default"
 		}
-		listKind("deployments", 20, force)
+		listKind("deployments", 20, nsMode, nil)
 	}
 	if wantSvc {
-		force := ""
+		nsMode := ""
 		if comboWorkload || strings.Contains(q, "default") {
-			force = "default"
+			nsMode = "default"
 		}
-		listKind("services", 20, force)
+		listKind("services", 20, nsMode, nil)
 	}
 	if wantNode {
-		listKind("nodes", 20, "")
+		listKind("nodes", 20, "*", nil)
 	}
 	if wantEvents {
-		listKind("events", 30, "")
+		nsMode := ""
+		extra := map[string]interface{}(nil)
+		if clusterWideEvents {
+			nsMode = "*"
+		}
+		if comboInspect {
+			extra = map[string]interface{}{"event_types": "Warning,Error"}
+		}
+		listKind("events", 30, nsMode, extra)
 	}
 	if wantNS {
-		listKind("namespaces", 40, "")
+		listKind("namespaces", 40, "*", nil)
 	}
 
 	if wantLogs {

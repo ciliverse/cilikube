@@ -150,12 +150,19 @@ func toolListResources(ctx context.Context, client *k8s.Client, args map[string]
 		if err != nil {
 			return toolResult{}, err
 		}
-		for i, p := range list.Items {
-			if i >= limit {
+		phaseAllow := parseCSVSet(strArg(args, "phases"))
+		n := 0
+		for _, p := range list.Items {
+			ph := string(p.Status.Phase)
+			if len(phaseAllow) > 0 && !phaseAllow[ph] {
+				continue
+			}
+			if n >= limit {
 				break
 			}
 			lines = append(lines, fmt.Sprintf("%s/%s phase=%s", p.Namespace, p.Name, p.Status.Phase))
 			refs = append(refs, podRef(p.Namespace, p.Name, ""))
+			n++
 		}
 	case "deployment", "deployments":
 		list, err := client.Clientset.AppsV1().Deployments(ns).List(ctx, metav1.ListOptions{})
@@ -210,20 +217,55 @@ func toolListResources(ctx context.Context, client *k8s.Client, args map[string]
 		if err != nil {
 			return toolResult{}, err
 		}
-		for i, e := range list.Items {
-			if i >= limit {
+		typeAllow := parseCSVSet(strArg(args, "event_types"))
+		n := 0
+		for _, e := range list.Items {
+			if len(typeAllow) > 0 && !typeAllow[e.Type] {
+				continue
+			}
+			if n >= limit {
 				break
 			}
 			lines = append(lines, fmt.Sprintf("[%s] %s/%s %s: %s", e.Type, e.InvolvedObject.Kind, e.InvolvedObject.Name, e.Reason, e.Message))
+			n++
 		}
 	default:
 		return toolResult{}, fmt.Errorf("unsupported kind %q", kind)
 	}
 
 	if len(lines) == 0 {
-		return toolResult{Text: "no items"}, nil
+		scope := "cluster-wide"
+		if ns != "" {
+			scope = "namespace=" + ns
+		}
+		filter := ""
+		if p := strArg(args, "phases"); p != "" {
+			filter = "; phases=" + p
+		}
+		if t := strArg(args, "event_types"); t != "" {
+			filter += "; event_types=" + t
+		}
+		return toolResult{Text: fmt.Sprintf("no items (%s%s)", scope, filter)}, nil
 	}
 	return toolResult{Text: strings.Join(lines, "\n"), Resources: refs}, nil
+}
+
+func parseCSVSet(raw string) map[string]bool {
+	raw = strings.TrimSpace(raw)
+	if raw == "" {
+		return nil
+	}
+	out := map[string]bool{}
+	for _, p := range strings.Split(raw, ",") {
+		p = strings.TrimSpace(p)
+		if p != "" {
+			out[p] = true
+		}
+	}
+	if len(out) == 0 {
+		return nil
+	}
+	return out
 }
 
 func toolGetResource(ctx context.Context, client *k8s.Client, args map[string]interface{}) (toolResult, error) {
