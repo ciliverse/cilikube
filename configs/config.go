@@ -239,6 +239,9 @@ func Load(path string) (*Config, error) {
 	GlobalConfig = cfg
 	setDefaults()
 	ApplyDesktopOverrides(cfg)
+	if err := ValidateSecrets(); err != nil {
+		return nil, err
+	}
 
 	return cfg, nil
 }

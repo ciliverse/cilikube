@@ -55,7 +55,7 @@ function clusterId(): string {
 /** SSE chat — uses fetch so Authorization header works. */
 export async function streamAiChat(
   messages: { role: string; content: string }[],
-  opts: { namespace?: string; signal?: AbortSignal },
+  opts: { namespace?: string; skillId?: string; signal?: AbortSignal },
   handlers: AiStreamHandlers,
 ): Promise<void> {
   const qs = new URLSearchParams()
@@ -72,6 +72,7 @@ export async function streamAiChat(
     body: JSON.stringify({
       messages,
       namespace: opts.namespace || '',
+      skill_id: opts.skillId || '',
     }),
     signal: opts.signal,
   })

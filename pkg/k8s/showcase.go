@@ -27,6 +27,16 @@ const (
 	ShowcaseClusterName = "demo"
 	ShowcaseAPIHost     = "https://showcase.cilikube.local"
 	ShowcaseVersion     = "v1.36.2-showcase"
+
+	ShowcaseProdClusterID   = "showcase-prod"
+	ShowcaseProdClusterName = "prod-east"
+	ShowcaseProdAPIHost     = "https://prod-east.showcase.cilikube.local"
+	ShowcaseProdVersion     = "v1.33.4-showcase"
+
+	ShowcaseStagingClusterID   = "showcase-staging"
+	ShowcaseStagingClusterName = "staging-lab"
+	ShowcaseStagingAPIHost     = "https://staging-lab.showcase.cilikube.local"
+	ShowcaseStagingVersion     = "v1.35.0-showcase"
 )
 
 // IsShowcase reports whether the process is running the public read-only exhibit.
@@ -36,13 +46,76 @@ func IsShowcase() bool {
 	return v == "1" || strings.EqualFold(v, "true") || strings.EqualFold(os.Getenv("CILIKUBE_MODE"), "showcase")
 }
 
-// IsShowcaseConfig detects the in-memory demo rest.Config.
+// IsShowcaseConfig detects an in-memory demo rest.Config (any fleet showcase cluster).
 func IsShowcaseConfig(cfg *rest.Config) bool {
-	return cfg != nil && cfg.Host == ShowcaseAPIHost
+	if cfg == nil || cfg.Host == "" {
+		return false
+	}
+	return strings.Contains(cfg.Host, "showcase.cilikube.local")
 }
 
-// NewShowcaseClient builds a client-go fake stack with seeded objects.
+// ShowcaseProfile is one simulated cluster in the public multi-cluster fleet.
+type ShowcaseProfile struct {
+	ID          string
+	Name        string
+	APIHost     string
+	Version     string
+	Environment string
+	Description string
+	Region      string
+	Seed        func() []runtime.Object
+}
+
+// ShowcaseProfiles returns the public demo fleet (primary demo + prod + staging).
+func ShowcaseProfiles() []ShowcaseProfile {
+	return []ShowcaseProfile{
+		{
+			ID:          ShowcaseClusterID,
+			Name:        ShowcaseClusterName,
+			APIHost:     ShowcaseAPIHost,
+			Version:     ShowcaseVersion,
+			Environment: "demo",
+			Description: "Public showcase cluster (simulated — full resource inventory)",
+			Region:      "exhibit",
+			Seed:        ShowcaseSeedObjects,
+		},
+		{
+			ID:          ShowcaseProdClusterID,
+			Name:        ShowcaseProdClusterName,
+			APIHost:     ShowcaseProdAPIHost,
+			Version:     ShowcaseProdVersion,
+			Environment: "production",
+			Description: "Simulated production-east fleet member (includes unhealthy pods / warnings)",
+			Region:      "demo-east",
+			Seed:        ShowcaseProdSeedObjects,
+		},
+		{
+			ID:          ShowcaseStagingClusterID,
+			Name:        ShowcaseStagingClusterName,
+			APIHost:     ShowcaseStagingAPIHost,
+			Version:     ShowcaseStagingVersion,
+			Environment: "staging",
+			Description: "Simulated staging lab (smaller, mostly healthy)",
+			Region:      "demo-west",
+			Seed:        ShowcaseStagingSeedObjects,
+		},
+	}
+}
+
+// NewShowcaseClient builds a client-go fake stack with seeded objects (primary demo host).
 func NewShowcaseClient(objs ...runtime.Object) *Client {
+	return NewShowcaseClientAt(ShowcaseAPIHost, ShowcaseVersion, objs...)
+}
+
+// NewShowcaseClientAt builds a fake client bound to a specific showcase API host/version.
+func NewShowcaseClientAt(apiHost, version string, objs ...runtime.Object) *Client {
+	if apiHost == "" {
+		apiHost = ShowcaseAPIHost
+	}
+	if version == "" {
+		version = ShowcaseVersion
+	}
+
 	var coreObjs, gwObjs []runtime.Object
 	for _, o := range objs {
 		switch o.(type) {
@@ -72,7 +145,7 @@ func NewShowcaseClient(objs ...runtime.Object) *Client {
 	dyn := dynamicfake.NewSimpleDynamicClient(scheme, allDyn...)
 
 	cfg := &rest.Config{
-		Host:  ShowcaseAPIHost,
+		Host:  apiHost,
 		QPS:   50,
 		Burst: 100,
 	}
@@ -83,41 +156,43 @@ func NewShowcaseClient(objs ...runtime.Object) *Client {
 		DiscoveryClient: cs.Discovery(),
 		Config:          cfg,
 		clusterInfo: &ClusterInfo{
-			ServerVersion: ShowcaseVersion,
+			ServerVersion: version,
 			Status:        "connected",
 		},
 	}
 }
 
-// registerShowcaseCluster installs the demo cluster as the only active client.
+// registerShowcaseCluster installs the multi-cluster simulated fleet.
 func (cm *ClusterManager) registerShowcaseCluster() {
-	client := NewShowcaseClient(ShowcaseSeedObjects()...)
 	now := time.Now()
-	info := store.Cluster{
-		ID:          ShowcaseClusterID,
-		Name:        ShowcaseClusterName,
-		Description: "Public showcase cluster (simulated — no real kube-apiserver)",
-		Provider:    "showcase",
-		Environment: "demo",
-		Region:      "exhibit",
-		Version:     ShowcaseVersion,
-		Status:      "Active",
-		CreatedAt:   now,
-		UpdatedAt:   now,
-	}
-
+	profiles := ShowcaseProfiles()
 	cm.lock.Lock()
-	cm.clients[ShowcaseClusterID] = client
-	cm.clientInfo[ShowcaseClusterID] = info
-	cm.nameToID[ShowcaseClusterName] = ShowcaseClusterID
-	cm.statusCache[ShowcaseClusterID] = ClusterInfoResponse{
-		ID:          ShowcaseClusterID,
-		Name:        ShowcaseClusterName,
-		Server:      ShowcaseAPIHost,
-		Version:     ShowcaseVersion,
-		Status:      "Available",
-		Source:      "showcase",
-		Environment: "demo",
+	for _, p := range profiles {
+		client := NewShowcaseClientAt(p.APIHost, p.Version, p.Seed()...)
+		info := store.Cluster{
+			ID:          p.ID,
+			Name:        p.Name,
+			Description: p.Description,
+			Provider:    "showcase",
+			Environment: p.Environment,
+			Region:      p.Region,
+			Version:     p.Version,
+			Status:      "Active",
+			CreatedAt:   now,
+			UpdatedAt:   now,
+		}
+		cm.clients[p.ID] = client
+		cm.clientInfo[p.ID] = info
+		cm.nameToID[p.Name] = p.ID
+		cm.statusCache[p.ID] = ClusterInfoResponse{
+			ID:          p.ID,
+			Name:        p.Name,
+			Server:      p.APIHost,
+			Version:     p.Version,
+			Status:      "Available",
+			Source:      "showcase",
+			Environment: p.Environment,
+		}
 	}
 	cm.lock.Unlock()
 

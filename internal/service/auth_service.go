@@ -159,6 +159,17 @@ func (s *AuthService) Login(req *models.LoginRequest, ipAddress, userAgent strin
 		user.Role = "viewer" // Default role
 	}
 
+	// Desktop / factory default password: force change in JWT claims (not UI-only).
+	if configs.IsDesktop() && req.Password == "12345678" {
+		user.MustChangePassword = true
+		if !storeUser.MustChangePassword {
+			storeUser.MustChangePassword = true
+			if err := s.store.UpdateUser(storeUser); err != nil {
+				fmt.Printf("Failed to persist must_change_password: %v\n", err)
+			}
+		}
+	}
+
 	// Create session first so JWT can embed session_id for revocation
 	sessionID, err := s.securityService.CreateSession(storeUser.ID, ipAddress, userAgent)
 	if err != nil {
@@ -181,16 +192,10 @@ func (s *AuthService) Login(req *models.LoginRequest, ipAddress, userAgent strin
 	})
 	s.createAuditLog(&storeUser.ID, "login", "user", fmt.Sprintf("%d", storeUser.ID), ipAddress, userAgent, string(loginDetails))
 
-	userResp := user.ToResponse()
-	// Desktop first-run: logging in with the factory default password always requires a change.
-	if configs.IsDesktop() && req.Password == "12345678" {
-		userResp.MustChangePassword = true
-	}
-
 	return &models.LoginResponse{
 		Token:     token,
 		ExpiresAt: expiresAt,
-		User:      userResp,
+		User:      user.ToResponse(),
 	}, nil
 }
 

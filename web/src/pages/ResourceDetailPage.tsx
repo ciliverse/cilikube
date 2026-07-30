@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { dump as yamlDump, load as yamlLoad } from 'js-yaml'
-import { ArrowLeft, Pencil, RefreshCw, Save, Trash2, X } from 'lucide-react'
+import { ArrowLeft, Bot, Pencil, RefreshCw, Save, Trash2, X } from 'lucide-react'
 import {
   deleteClusterScopedResource,
   deleteNamespacedResource,
@@ -26,6 +26,7 @@ import { podMetricsKey, usePodMetricsMap } from '@/hooks/usePodMetricsMap'
 import { PromTimeChart } from '@/components/PromTimeChart'
 import { ScaleDialog } from '@/components/ScaleDialog'
 import { PodWorkbench } from '@/components/PodWorkbench'
+import { buildInvestigateHref, kindFromResource } from '@/lib/aiInvestigate'
 
 type Tab = 'summary' | 'events' | 'yaml' | 'metrics' | 'related'
 
@@ -86,7 +87,15 @@ export function ResourceDetailPage({
   const canRead = checkPermission(resource, 'read')
   const canWrite = canMutate(resource)
   const canRemove = canDelete(resource)
-  const kind = KIND_MAP[resource] || resource
+  const kind = KIND_MAP[resource] || kindFromResource(resource) || resource
+  const investigateHref = name
+    ? buildInvestigateHref({
+        kind,
+        name,
+        namespace: namespaced ? namespace : undefined,
+        resource,
+      })
+    : ''
   const supportsRestart = ['deployments', 'statefulsets', 'daemonsets'].includes(resource)
   const supportsScale = ['deployments', 'statefulsets'].includes(resource)
   const podMetrics = usePodMetricsMap(resource === 'pods' ? namespace || undefined : undefined)
@@ -269,6 +278,16 @@ export function ResourceDetailPage({
             <Link to={`/${resource}`} className="text-xs text-cyan hover:underline">
               List
             </Link>
+            {investigateHref ? (
+              <Link
+                to={investigateHref}
+                className="inline-flex items-center gap-1 rounded border border-cyan/35 bg-cyan/10 px-3 py-1.5 text-xs font-semibold text-cyan hover:bg-cyan/18"
+                title="带上当前资源上下文，交给集群调查员只读查证"
+              >
+                <Bot className="h-3.5 w-3.5" />
+                用 AI 调查
+              </Link>
+            ) : null}
             {resource === 'pods' ? (
               <>
                 <Button

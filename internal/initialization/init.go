@@ -376,6 +376,14 @@ func SetupRouter(cfg *configs.Config, services *service.AppServices, k8sManager 
 		"/api/v1/system/healthz",
 		"/api/v1/showcase/info",
 	))
+	// Default-password users may only change password / read profile / logout until fixed.
+	apiV1.Use(auth.RequirePasswordChangedUnless(
+		"/api/v1/auth/change-password",
+		"/api/v1/auth/logout",
+		"/api/v1/auth/profile",
+		"/api/v1/auth/profile/detailed",
+		"/api/v1/profile/password",
+	))
 	// Enforce Casbin policies when available
 	if e != nil {
 		apiV1.Use(auth.NewCasbinBuilder().

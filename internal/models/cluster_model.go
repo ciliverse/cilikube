@@ -15,7 +15,8 @@ type UpdateClusterRequest struct {
 	Name           string            `json:"name"`
 	Provider       string            `json:"provider"`
 	Description    string            `json:"description"`
-	Environment    string            `json:"environment"`
+	// Environment is a pointer so clients can clear it with "" without touching omitted updates.
+	Environment    *string           `json:"environment"`
 	Region         string            `json:"region"`
 	Status         string            `json:"status"`
 	Labels         map[string]string `json:"labels"`
@@ -45,6 +46,31 @@ type ClusterListResponse struct {
 	Status      string `json:"status"`
 	Source      string `json:"source"`
 	Environment string `json:"environment"`
+}
+
+// FleetClusterCard is a lightweight per-cluster health rollup for the fleet page.
+type FleetClusterCard struct {
+	ID             string `json:"id"`
+	Name           string `json:"name"`
+	Server         string `json:"server"`
+	Version        string `json:"version"`
+	Status         string `json:"status"`
+	Source         string `json:"source"`
+	Environment    string `json:"environment"`
+	Reachable      bool   `json:"reachable"`
+	Nodes          *int   `json:"nodes,omitempty"`
+	NotReadyNodes  *int   `json:"not_ready_nodes,omitempty"`
+	Namespaces     *int   `json:"namespaces,omitempty"`
+	Pods           *int   `json:"pods,omitempty"`
+	UnhealthyPods  *int   `json:"unhealthy_pods,omitempty"`
+	WarningEvents  *int   `json:"warning_events,omitempty"`
+	Error          string `json:"error,omitempty"`
+}
+
+// FleetSummaryResponse is returned by GET /api/v1/clusters/fleet-summary.
+type FleetSummaryResponse struct {
+	ActiveClusterID string             `json:"active_cluster_id"`
+	Clusters        []FleetClusterCard `json:"clusters"`
 }
 
 // LocalKubeContext is a context discovered from the API host kubeconfig.

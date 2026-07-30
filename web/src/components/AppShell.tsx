@@ -11,6 +11,7 @@ import {
   HardDrive,
   KeyRound,
   LayoutDashboard,
+  LayoutGrid,
   Lock,
   Menu,
   Network,
@@ -32,6 +33,7 @@ import { useAuth } from '@/store/auth'
 import { useCluster } from '@/store/cluster'
 import { ALL_NAMESPACES, useNamespace } from '@/store/namespace'
 import { ConnDot, HudSelect } from './ui'
+import { BrandMark } from './BrandMark'
 import { GlobalSearchPalette } from './GlobalSearchPalette'
 import { OAuthAccountBanner } from './OAuthAccountBanner'
 import { UserMenu } from './UserMenu'
@@ -50,6 +52,7 @@ const navGroups: NavGroup[] = [
   {
     titleKey: 'nav.cluster',
     items: [
+      { to: '/fleet', labelKey: 'nav.fleet', icon: LayoutGrid },
       { to: '/overview', labelKey: 'nav.overview', icon: LayoutDashboard },
       { to: '/nodes', labelKey: 'nav.nodes', icon: Server, resource: 'nodes' },
       { to: '/namespaces', labelKey: 'nav.namespaces', icon: Layers, resource: 'namespaces' },
@@ -275,12 +278,17 @@ export function AppShell() {
           </button>
         ) : null}
 
-        <Link to="/ai" className="hud-brand hidden shrink-0 text-sm sm:block md:text-base">
-          CILI<span className="accent">KUBE</span>
-        </Link>
-        <Link to="/ai" className="hud-brand shrink-0 text-xs tracking-[0.12em] sm:hidden">
-          C<span className="accent">K</span>
-        </Link>
+        <BrandMark
+          to="/ai"
+          className="hidden sm:inline-flex"
+          brandClassName="text-sm md:text-base"
+        />
+        <BrandMark
+          to="/ai"
+          compact
+          className="sm:hidden"
+          brandClassName="text-xs tracking-[0.12em]"
+        />
 
         {!aiHome ? (
           <div className="min-w-0 flex-1">
@@ -375,9 +383,7 @@ export function AppShell() {
                 transition={{ type: 'tween', duration: 0.22, ease: 'easeOut' }}
               >
                 <div className="flex h-14 shrink-0 items-center justify-between border-b border-line px-3">
-                  <div className="hud-brand text-sm">
-                    CILI<span className="accent">KUBE</span>
-                  </div>
+                  <BrandMark brandClassName="text-sm" />
                   <button
                     type="button"
                     className="inline-flex h-10 w-10 items-center justify-center rounded border border-line text-cyan"

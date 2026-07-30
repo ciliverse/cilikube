@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 const STEPS = [
-  'cilikube bootloader v0.8',
+  'cilikube bootloader v1.0.0',
   'initializing control-plane UI',
   'loading casbin policy cache',
   'probing cluster contexts',

@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
-import { Network, RefreshCw, ScrollText, TerminalSquare } from 'lucide-react'
+import { Bot, Network, RefreshCw, ScrollText, TerminalSquare } from 'lucide-react'
 import { Badge, Button } from '@/components/ui'
 import { ResourceListPage, ageCell, createdCell } from '@/components/ResourceListPage'
 import { podMetricsKey, usePodMetricsMap } from '@/hooks/usePodMetricsMap'
@@ -25,6 +25,7 @@ import { useNamespace } from '@/store/namespace'
 import { useCluster } from '@/store/cluster'
 import { useAuth } from '@/store/auth'
 import { useYamlModal } from '@/hooks/useYamlModal'
+import { buildInvestigateHref } from '@/lib/aiInvestigate'
 
 function ReadyBadge({ ok, okText = 'Ready', badText = 'NotReady' }: { ok: boolean; okText?: string; badText?: string }) {
   return <Badge tone={ok ? 'ok' : 'danger'}>{ok ? okText : badText}</Badge>
@@ -142,6 +143,18 @@ export function PodsPage() {
         ]}
         actions={(item) => (
           <div className="flex items-center gap-1">
+            <Link
+              to={buildInvestigateHref({
+                kind: 'Pod',
+                name: metaName(item),
+                namespace: metaNamespace(item),
+                resource: 'pods',
+              })}
+              className="inline-flex items-center rounded px-2 py-1 text-cyan hover:bg-cyan/10"
+              title="用 AI 调查"
+            >
+              <Bot className="h-3.5 w-3.5" />
+            </Link>
             <Button
               variant="ghost"
               className="px-2 py-1"
@@ -267,6 +280,18 @@ export function DeploymentsPage() {
         ]}
         actions={(item, { refetch }) => (
           <div className="flex items-center gap-1">
+            <Link
+              to={buildInvestigateHref({
+                kind: 'Deployment',
+                name: metaName(item),
+                namespace: metaNamespace(item),
+                resource: 'deployments',
+              })}
+              className="inline-flex items-center rounded px-2 py-1 text-cyan hover:bg-cyan/10"
+              title="用 AI 调查"
+            >
+              <Bot className="h-3.5 w-3.5" />
+            </Link>
             {canMutate('deployments') ? (
               <>
                 <Button

@@ -73,6 +73,61 @@ func TestShowcaseClientListsSeededResources(t *testing.T) {
 	}
 }
 
+func TestShowcaseFleetSeeds(t *testing.T) {
+	profiles := ShowcaseProfiles()
+	if len(profiles) < 3 {
+		t.Fatalf("expected multi-cluster showcase fleet, got %d", len(profiles))
+	}
+	ctx := context.Background()
+	for _, p := range profiles {
+		c := NewShowcaseClientAt(p.APIHost, p.Version, p.Seed()...)
+		if !IsShowcaseConfig(c.Config) {
+			t.Fatalf("%s: expected showcase host", p.Name)
+		}
+		if c.Config.Host != p.APIHost {
+			t.Fatalf("%s: host %s want %s", p.Name, c.Config.Host, p.APIHost)
+		}
+		pods, err := c.Clientset.CoreV1().Pods("").List(ctx, metav1.ListOptions{})
+		if err != nil {
+			t.Fatalf("%s: list pods: %v", p.Name, err)
+		}
+		if len(pods.Items) < 3 {
+			t.Fatalf("%s: expected pods, got %d", p.Name, len(pods.Items))
+		}
+		nodes, err := c.Clientset.CoreV1().Nodes().List(ctx, metav1.ListOptions{})
+		if err != nil {
+			t.Fatalf("%s: list nodes: %v", p.Name, err)
+		}
+		if len(nodes.Items) < 1 {
+			t.Fatalf("%s: expected nodes", p.Name)
+		}
+	}
+
+	prod := NewShowcaseClientAt(ShowcaseProdAPIHost, ShowcaseProdVersion, ShowcaseProdSeedObjects()...)
+	pods, err := prod.Clientset.CoreV1().Pods("").List(ctx, metav1.ListOptions{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	unhealthy := 0
+	for i := range pods.Items {
+		p := &pods.Items[i]
+		phase := p.Status.Phase
+		if phase == "Failed" || phase == "Pending" {
+			unhealthy++
+			continue
+		}
+		for _, cs := range p.Status.ContainerStatuses {
+			if !cs.Ready || (cs.State.Waiting != nil && cs.State.Waiting.Reason == "CrashLoopBackOff") {
+				unhealthy++
+				break
+			}
+		}
+	}
+	if unhealthy < 3 {
+		t.Fatalf("prod-east should seed several unhealthy pods, got %d", unhealthy)
+	}
+}
+
 func TestIsShowcaseEnv(t *testing.T) {
 	t.Setenv("CILIKUBE_SHOWCASE", "")
 	t.Setenv("CILIKUBE_MODE", "")

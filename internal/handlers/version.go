@@ -26,8 +26,12 @@ type VersionInfo struct {
 
 // GetVersion retrieves version information
 func GetVersion(c *gin.Context) {
+	v := Version
+	if v == "" || v == "dev" {
+		v = readVersion()
+	}
 	versionInfo := VersionInfo{
-		Version:   Version,
+		Version:   v,
 		BuildTime: BuildTime,
 		GitCommit: GitCommit,
 		GoVersion: runtime.Version(),

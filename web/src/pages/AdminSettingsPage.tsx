@@ -7,6 +7,7 @@ import { BUILTIN_THEMES } from '@/theme/themes'
 import { FONT_PACKS, getStoredFontId, setFontId } from '@/theme/fonts'
 import { switchTheme } from '@/theme/switchTheme'
 import { useTheme } from '@/theme/useTheme'
+import { APP_VERSION, formatAppVersion } from '@/lib/version'
 
 export function AdminSettingsPage() {
   const { isAdmin } = useAuth()
@@ -37,6 +38,13 @@ export function AdminSettingsPage() {
     api_key_set: false,
     ready: false,
   })
+  const [prom, setProm] = useState({
+    enabled: false,
+    url: '',
+    timeout: '15s',
+    mode: 'off',
+    showcase: false,
+  })
 
   const systemQ = useQuery({
     queryKey: ['settings-system'],
@@ -62,6 +70,11 @@ export function AdminSettingsPage() {
     queryKey: ['settings-ai'],
     enabled: isAdmin,
     queryFn: () => apiGet<any>('/api/v1/settings/ai'),
+  })
+  const promQ = useQuery({
+    queryKey: ['settings-prometheus'],
+    enabled: isAdmin,
+    queryFn: () => apiGet<any>('/api/v1/settings/prometheus'),
   })
 
   useEffect(() => {
@@ -93,6 +106,18 @@ export function AdminSettingsPage() {
   useEffect(() => {
     if (prefsQ.data) setPrefs(structuredClone(prefsQ.data))
   }, [prefsQ.data])
+
+  useEffect(() => {
+    if (promQ.data) {
+      setProm({
+        enabled: Boolean(promQ.data.enabled),
+        url: String(promQ.data.url || ''),
+        timeout: String(promQ.data.timeout || '15s'),
+        mode: String(promQ.data.mode || 'off'),
+        showcase: Boolean(promQ.data.showcase),
+      })
+    }
+  }, [promQ.data])
 
   useEffect(() => {
     if (aiQ.data) {
@@ -168,7 +193,7 @@ export function AdminSettingsPage() {
     setErr('')
     setMsg('')
     try {
-      const nextTheme = prefs.ui_settings?.default_theme || 'tron'
+      const nextTheme = prefs.ui_settings?.default_theme || 'paper'
       await apiPut('/api/v1/settings/preferences', prefs)
       // Apply immediately — server prefs alone do not drive the live UI
       switchTheme(nextTheme)
@@ -206,11 +231,33 @@ export function AdminSettingsPage() {
     }
   }
 
+  const saveProm = async () => {
+    setBusy(true)
+    setErr('')
+    setMsg('')
+    try {
+      await apiPut('/api/v1/settings/prometheus', {
+        enabled: prom.enabled,
+        url: prom.url.trim(),
+        timeout: prom.timeout.trim() || '15s',
+      })
+      setMsg('Prometheus settings saved')
+      await promQ.refetch()
+      await systemQ.refetch()
+    } catch (e: any) {
+      setErr(e?.message || 'Save failed')
+    } finally {
+      setBusy(false)
+    }
+  }
+
   const sys = systemQ.data
+  const promTone =
+    prom.mode === 'showcase' || (prom.enabled && prom.url) ? 'ok' : prom.enabled ? 'warn' : 'neutral'
 
   return (
     <div className="flex w-full min-w-0 flex-col gap-4">
-      <PageHeader title="SYSTEM SETTINGS" subtitle="OAuth, security and preferences" />
+      <PageHeader title="SYSTEM SETTINGS" subtitle="OAuth, security, AI and Prometheus" />
       {err ? (
         <div className="rounded border border-danger/30 bg-danger/10 px-4 py-2 text-sm text-danger">{err}</div>
       ) : null}
@@ -221,7 +268,7 @@ export function AdminSettingsPage() {
       <Card className="space-y-2 p-5">
         <h2 className="font-display text-lg font-bold tracking-[0.12em]">SYSTEM</h2>
         <div className="flex flex-wrap gap-2 text-sm">
-          <Badge tone="accent">version {sys?.version || '—'}</Badge>
+          <Badge tone="accent">{formatAppVersion(sys?.version || APP_VERSION)}</Badge>
           <Badge tone="neutral">{sys?.environment || '—'}</Badge>
           <Badge tone="neutral">{sys?.go_version || '—'}</Badge>
         </div>
@@ -230,7 +277,8 @@ export function AdminSettingsPage() {
             OAuth {sys.features.oauth_enabled ? 'on' : 'off'} · RBAC{' '}
             {sys.features.rbac_enabled ? 'on' : 'off'} · Audit{' '}
             {sys.features.audit_log_enabled ? 'on' : 'off'} · AI{' '}
-            {sys.features.ai_enabled ? 'on' : 'off'}
+            {sys.features.ai_enabled ? 'on' : 'off'} · Prometheus{' '}
+            {sys.features.prometheus_enabled ? 'on' : 'off'}
           </p>
         ) : null}
       </Card>
@@ -297,6 +345,54 @@ export function AdminSettingsPage() {
         </div>
         <Button disabled={busy} onClick={() => void saveAi()}>
           Save AI
+        </Button>
+      </Card>
+
+      <Card className="space-y-3 p-5">
+        <div className="flex flex-wrap items-center gap-2">
+          <h2 className="font-display text-lg font-bold tracking-[0.12em]">PROMETHEUS</h2>
+          <Badge tone={promTone}>{prom.mode || 'off'}</Badge>
+        </div>
+        <p className="text-xs text-text-dim">
+          监控页时序图走 Prometheus HTTP API。自建环境勾选启用并填写可达 URL（需含 cAdvisor /
+          kubelet 容器指标）。公网 Showcase 在未配置远程 URL 时自动使用模拟曲线。
+        </p>
+        {prom.showcase && !prom.enabled ? (
+          <div className="rounded border border-cyan/30 bg-cyan/10 px-3 py-2 text-xs text-cyan">
+            当前为 Showcase：监控页使用模拟 Prometheus（mode=showcase）。若填入真实 URL
+            并启用，将改为远程查询。
+          </div>
+        ) : null}
+        <label className="flex items-center gap-2 text-sm">
+          <input
+            type="checkbox"
+            checked={prom.enabled}
+            onChange={(e) => setProm((p) => ({ ...p, enabled: e.target.checked }))}
+          />
+          Enable remote Prometheus
+        </label>
+        <div className="grid gap-3 md:grid-cols-2">
+          <label className="block space-y-1 md:col-span-2">
+            <span className="hud-label">URL</span>
+            <input
+              className="hud-field font-mono text-xs"
+              value={prom.url}
+              onChange={(e) => setProm((p) => ({ ...p, url: e.target.value }))}
+              placeholder="http://prometheus.monitoring.svc:9090"
+            />
+          </label>
+          <label className="block space-y-1">
+            <span className="hud-label">Timeout</span>
+            <input
+              className="hud-field font-mono text-xs"
+              value={prom.timeout}
+              onChange={(e) => setProm((p) => ({ ...p, timeout: e.target.value }))}
+              placeholder="15s"
+            />
+          </label>
+        </div>
+        <Button disabled={busy} onClick={() => void saveProm()}>
+          Save Prometheus
         </Button>
       </Card>
 
@@ -498,7 +594,7 @@ export function AdminSettingsPage() {
               <span className="hud-label">Theme</span>
               <select
                 className="hud-field"
-                value={prefs.ui_settings?.default_theme || themeId || 'tron'}
+                value={prefs.ui_settings?.default_theme || themeId || 'paper'}
                 onChange={(e) => {
                   const id = e.target.value
                   setPrefs((p: any) => ({

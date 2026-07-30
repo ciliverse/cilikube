@@ -1,12 +1,16 @@
 package service
 
 import (
+	"context"
 	"encoding/base64"
 	"fmt"
 	"os"
 	"path/filepath"
+	"sync"
 	"time"
 
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
@@ -17,6 +21,8 @@ import (
 	"github.com/ciliverse/cilikube/internal/store"
 	"github.com/ciliverse/cilikube/pkg/k8s"
 )
+
+const fleetProbeTimeout = 4 * time.Second
 
 // ClusterService provides business logic around cluster management.
 type ClusterService struct {
@@ -49,6 +55,135 @@ func (s *ClusterService) ListClusters() []models.ClusterListResponse {
 		}
 	}
 	return response
+}
+
+// GetFleetSummary fans out lightweight health probes across all registered clusters.
+func (s *ClusterService) GetFleetSummary() *models.FleetSummaryResponse {
+	infos := s.k8sManager.ListClusterInfo()
+	out := &models.FleetSummaryResponse{
+		ActiveClusterID: s.k8sManager.GetActiveClusterID(),
+		Clusters:        make([]models.FleetClusterCard, len(infos)),
+	}
+	if len(infos) == 0 {
+		return out
+	}
+
+	var wg sync.WaitGroup
+	for i, info := range infos {
+		wg.Add(1)
+		go func(idx int, base k8s.ClusterInfoResponse) {
+			defer wg.Done()
+			out.Clusters[idx] = s.probeFleetCluster(base)
+		}(i, info)
+	}
+	wg.Wait()
+	return out
+}
+
+func (s *ClusterService) probeFleetCluster(base k8s.ClusterInfoResponse) models.FleetClusterCard {
+	card := models.FleetClusterCard{
+		ID:          base.ID,
+		Name:        base.Name,
+		Server:      base.Server,
+		Version:     base.Version,
+		Status:      base.Status,
+		Source:      base.Source,
+		Environment: base.Environment,
+		Reachable:   false,
+	}
+
+	client, err := s.k8sManager.GetClientByID(base.ID)
+	if err != nil || client == nil || client.Clientset == nil {
+		card.Error = "cluster client unavailable"
+		if err != nil {
+			card.Error = err.Error()
+		}
+		return card
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), fleetProbeTimeout)
+	defer cancel()
+
+	nodes, err := client.Clientset.CoreV1().Nodes().List(ctx, metav1.ListOptions{})
+	if err != nil {
+		card.Error = err.Error()
+		return card
+	}
+	nNodes := len(nodes.Items)
+	notReady := 0
+	for i := range nodes.Items {
+		if nodeNotReady(&nodes.Items[i]) {
+			notReady++
+		}
+	}
+	card.Nodes = &nNodes
+	card.NotReadyNodes = &notReady
+	card.Reachable = true
+
+	if nsList, nsErr := client.Clientset.CoreV1().Namespaces().List(ctx, metav1.ListOptions{}); nsErr == nil {
+		nNS := len(nsList.Items)
+		card.Namespaces = &nNS
+	}
+
+	pods, err := client.Clientset.CoreV1().Pods("").List(ctx, metav1.ListOptions{})
+	if err != nil {
+		card.Error = err.Error()
+		return card
+	}
+	nPods := len(pods.Items)
+	unhealthy := 0
+	for i := range pods.Items {
+		if podUnhealthy(&pods.Items[i]) {
+			unhealthy++
+		}
+	}
+	card.Pods = &nPods
+	card.UnhealthyPods = &unhealthy
+
+	events, err := client.Clientset.CoreV1().Events("").List(ctx, metav1.ListOptions{
+		FieldSelector: "type=Warning",
+		Limit:         200,
+	})
+	if err == nil {
+		nWarn := len(events.Items)
+		if events.RemainingItemCount != nil {
+			nWarn += int(*events.RemainingItemCount)
+		}
+		card.WarningEvents = &nWarn
+	}
+	return card
+}
+
+func nodeNotReady(n *corev1.Node) bool {
+	for _, c := range n.Status.Conditions {
+		if c.Type == corev1.NodeReady {
+			return c.Status != corev1.ConditionTrue
+		}
+	}
+	return true
+}
+
+func podUnhealthy(p *corev1.Pod) bool {
+	switch p.Status.Phase {
+	case corev1.PodFailed, corev1.PodUnknown:
+		return true
+	case corev1.PodPending:
+		return true
+	case corev1.PodSucceeded:
+		return false
+	}
+	for _, cs := range p.Status.ContainerStatuses {
+		if !cs.Ready {
+			return true
+		}
+		if cs.State.Waiting != nil {
+			reason := cs.State.Waiting.Reason
+			if reason == "CrashLoopBackOff" || reason == "ImagePullBackOff" || reason == "ErrImagePull" {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 // GetClusterByID gets detailed information for a single cluster.

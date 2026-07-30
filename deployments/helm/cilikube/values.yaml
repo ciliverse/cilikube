@@ -51,8 +51,9 @@ config:
   jwtExpire: 24h0m0s
 
 secrets:
-  jwtSecret: change-me-jwt-secret-in-production
-  encryptionKey: change-me-in-production-32chars!!
+  # REQUIRED in release: JWT >=16 chars; encryptionKey exactly 32 chars. Known defaults are refused at startup.
+  jwtSecret: REPLACE_WITH_STRONG_JWT_SECRET
+  encryptionKey: REPLACE_WITH_32_CHAR_ENC_KEY!!
 
 autoscaling:
   enabled: false

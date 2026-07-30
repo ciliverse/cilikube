@@ -17,6 +17,7 @@ const OAuthCallbackPage = lazy(() =>
 const OverviewPage = lazy(() =>
   import('@/pages/OverviewPage').then((m) => ({ default: m.OverviewPage })),
 )
+const FleetPage = lazy(() => import('@/pages/FleetPage').then((m) => ({ default: m.FleetPage })))
 const NodesPage = lazy(() => import('@/pages/NodesPage').then((m) => ({ default: m.NodesPage })))
 const EventsPage = lazy(() => import('@/pages/EventsPage').then((m) => ({ default: m.EventsPage })))
 const MonitoringPage = lazy(() =>
@@ -181,6 +182,7 @@ export default function App() {
                   }
                 >
                   <Route index element={<Navigate to="/ai" replace />} />
+                  <Route path="fleet" element={<FleetPage />} />
                   <Route path="overview" element={<OverviewPage />} />
                   <Route path="nodes" element={<NodesPage />} />
                   <Route path="namespaces" element={<NamespacesPage />} />

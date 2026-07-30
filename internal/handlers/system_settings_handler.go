@@ -10,6 +10,7 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"github.com/ciliverse/cilikube/configs"
+	"github.com/ciliverse/cilikube/pkg/k8s"
 	"github.com/ciliverse/cilikube/pkg/utils"
 )
 
@@ -48,8 +49,9 @@ func (h *SystemSettingsHandler) GetSystemInfo(c *gin.Context) {
 			"oauth_enabled":     cfg != nil && cfg.OAuth.GitHub.Enabled && cfg.OAuth.GitHub.ClientID != "",
 			"rbac_enabled":      cfg != nil && cfg.Database.Enabled,
 			"audit_log_enabled": cfg != nil && cfg.Security.Audit.LogAdminActions,
-			"metrics_enabled":   cfg == nil || cfg.Preferences.FeatureFlags.AdvancedMetrics,
-			"ai_enabled":        cfg != nil && cfg.AI.Enabled && (cfg.AI.Provider == "mock" || cfg.AI.APIKey != ""),
+			"metrics_enabled":    cfg == nil || cfg.Preferences.FeatureFlags.AdvancedMetrics,
+			"ai_enabled":         cfg != nil && cfg.AI.Enabled && (cfg.AI.Provider == "mock" || cfg.AI.APIKey != ""),
+			"prometheus_enabled": cfg != nil && cfg.Prometheus.Enabled && cfg.Prometheus.URL != "",
 		},
 	}
 
@@ -420,13 +422,75 @@ func (h *SystemSettingsHandler) UpdateAISettings(c *gin.Context) {
 	h.GetAISettings(c)
 }
 
+// GetPrometheusSettings returns Prometheus integration settings.
+func (h *SystemSettingsHandler) GetPrometheusSettings(c *gin.Context) {
+	cfg := h.cfg()
+	if cfg == nil {
+		utils.ApiError(c, http.StatusInternalServerError, "Configuration not available")
+		return
+	}
+	mode := "off"
+	if k8s.IsShowcase() && (!cfg.Prometheus.Enabled || strings.TrimSpace(cfg.Prometheus.URL) == "") {
+		mode = "showcase"
+	} else if cfg.Prometheus.Enabled && strings.TrimSpace(cfg.Prometheus.URL) != "" {
+		mode = "remote"
+	}
+	utils.ApiSuccess(c, gin.H{
+		"enabled": cfg.Prometheus.Enabled,
+		"url":     cfg.Prometheus.URL,
+		"timeout": cfg.Prometheus.Timeout.String(),
+		"mode":    mode,
+		"showcase": k8s.IsShowcase(),
+	}, "Prometheus settings retrieved successfully")
+}
+
+// UpdatePrometheusSettings updates Prometheus integration settings.
+func (h *SystemSettingsHandler) UpdatePrometheusSettings(c *gin.Context) {
+	cfg := h.cfg()
+	if cfg == nil {
+		utils.ApiError(c, http.StatusInternalServerError, "Configuration not available")
+		return
+	}
+	var req struct {
+		Enabled *bool   `json:"enabled"`
+		URL     *string `json:"url"`
+		Timeout *string `json:"timeout"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		utils.ApiError(c, http.StatusBadRequest, "Invalid request data", err.Error())
+		return
+	}
+	if req.Enabled != nil {
+		cfg.Prometheus.Enabled = *req.Enabled
+	}
+	if req.URL != nil {
+		cfg.Prometheus.URL = strings.TrimSpace(*req.URL)
+	}
+	if req.Timeout != nil {
+		raw := strings.TrimSpace(*req.Timeout)
+		if raw != "" {
+			d, err := time.ParseDuration(raw)
+			if err != nil || d <= 0 {
+				utils.ApiError(c, http.StatusBadRequest, "timeout must be a positive duration (e.g. 15s)")
+				return
+			}
+			cfg.Prometheus.Timeout = d
+		}
+	}
+	if err := configs.SaveGlobalConfig(); err != nil {
+		utils.ApiError(c, http.StatusInternalServerError, "Failed to save Prometheus settings", err.Error())
+		return
+	}
+	h.GetPrometheusSettings(c)
+}
+
 func readVersion() string {
 	if v := os.Getenv("CILIKUBE_VERSION"); v != "" {
 		return v
 	}
 	data, err := os.ReadFile("VERSION")
 	if err != nil {
-		return "v0.8.0"
+		return "1.0.0"
 	}
 	return strings.TrimSpace(string(data))
 }

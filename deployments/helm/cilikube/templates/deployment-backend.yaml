@@ -38,6 +38,11 @@ spec:
                 secretKeyRef:
                   name: {{ include "cilikube.fullname" . }}-secrets
                   key: JWT_SECRET
+            - name: ENCRYPTION_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "cilikube.fullname" . }}-secrets
+                  key: ENCRYPTION_KEY
           volumeMounts:
             - name: config
               mountPath: /app/configs

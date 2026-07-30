@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { AnimatePresence, motion } from 'framer-motion'
 import {
@@ -27,6 +27,27 @@ import {
   saveAiSession,
   type AiSession,
 } from '@/lib/aiSessions'
+import {
+  allAiSkills,
+  DEFAULT_AI_AGENT,
+  deleteCustomSkill,
+  upsertCustomSkill,
+  type AiSkillDef,
+} from '@/lib/aiSkills'
+import { getFleetSummary } from '@/api/cluster'
+import {
+  buildFleetFocusPrompt,
+  buildFleetInspectPrompt,
+  buildFleetTourStepPrompt,
+  buildFleetTourSummaryPrompt,
+  buildInvestigatePrompt,
+  fleetIssueScore,
+  parseFleetFocus,
+  parseFleetInspectSearch,
+  parseFleetTourSearch,
+  parseInvestigateSearch,
+  resourceRefLabel,
+} from '@/lib/aiInvestigate'
 import { shouldSkipEnterAnim } from '@/lib/motionPrefs'
 import { useCluster } from '@/store/cluster'
 import { useNamespace } from '@/store/namespace'
@@ -46,16 +67,11 @@ function useIsDesktopHistory() {
   return desktop
 }
 
-const PROBES = [
-  { id: '01', label: '集群脉诊', hint: '节点 · 负载 · 命名空间', q: '集群现在怎么样？节点和关键负载健康吗？' },
-  { id: '02', label: '故障扫描', hint: 'Failed · Pending', q: '有哪些 Failed 或 Pending 的 Pod？' },
-  { id: '03', label: '部署盘点', hint: 'default Deployments', q: '列出 default 命名空间的 Deployments' },
-  { id: '04', label: '日志取样', hint: '最近输出', q: '随便挑一个 Pod，看看最近日志' },
-]
-
 export function AiChatPage() {
-  const { clusterId, activeCluster } = useCluster()
-  const { namespace } = useNamespace()
+  const { clusterId, activeCluster, setClusterId, switchCluster, switching } = useCluster()
+  const { namespace, setNamespace } = useNamespace()
+  const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
   const skipMotion = shouldSkipEnterAnim()
   const statusQ = useQuery({
     queryKey: ['ai-status'],
@@ -69,6 +85,7 @@ export function AiChatPage() {
   const [input, setInput] = useState('')
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState('')
+  const [skills, setSkills] = useState<AiSkillDef[]>(() => allAiSkills())
   const isDesktop = useIsDesktopHistory()
   const [historyOpen, setHistoryOpen] = useState(() => {
     try {
@@ -106,6 +123,19 @@ export function AiChatPage() {
   const abortRef = useRef<AbortController | null>(null)
   /** Skip one persist after hydrating another session (avoids writing A’s messages into B). */
   const skipPersistRef = useRef(false)
+  /** Consume resource-page / inspect deep-link (prompt + optional ns/cluster + auto). */
+  const investigateJobRef = useRef<{
+    prompt: string
+    namespaceOverride?: string
+    titleHint: string
+    auto: boolean
+    /** Switch to this cluster before sending (fleet inspect). */
+    clusterId?: string
+  } | null>(null)
+  /** Fleet-wide serial inspect (`?tour=1`). */
+  const fleetTourPendingRef = useRef<{ auto: boolean } | null>(null)
+  const fleetTourCancelRef = useRef(false)
+  const fleetTourRunningRef = useRef(false)
 
   const ready = Boolean(statusQ.data?.ready)
   const clusterLabel = activeCluster?.name || clusterId || '—'
@@ -143,6 +173,52 @@ export function AiChatPage() {
     }
   }, [activeId, clusterId, activeCluster?.name, hydrateSession, refreshSessions])
 
+  // Resource page → /ai?investigate=1&kind=&name=&namespace=
+  // Fleet card → /ai?inspect=1&cluster=&name=&focus=
+  // Fleet tour → /ai?tour=1
+  useEffect(() => {
+    const tour = parseFleetTourSearch(searchParams)
+    if (tour) {
+      fleetTourPendingRef.current = { auto: tour.auto }
+      navigate('/ai', { replace: true })
+      return
+    }
+    const fleet = parseFleetInspectSearch(searchParams)
+    if (fleet) {
+      const auto = searchParams.get('auto') !== '0'
+      const focus = parseFleetFocus(searchParams)
+      investigateJobRef.current = {
+        prompt: focus
+          ? buildFleetFocusPrompt(fleet.clusterName, focus)
+          : buildFleetInspectPrompt(fleet.clusterName),
+        titleHint: focus
+          ? `${fleet.clusterName} · ${focus === 'unhealthy' ? '异常 Pod' : 'Warning'}`
+          : fleet.clusterName,
+        auto,
+        clusterId: fleet.clusterId,
+      }
+      if (
+        fleet.clusterId &&
+        fleet.clusterId !== clusterId &&
+        activeCluster?.name !== fleet.clusterId
+      ) {
+        setClusterId(fleet.clusterId)
+      }
+      navigate('/ai', { replace: true })
+      return
+    }
+    const target = parseInvestigateSearch(searchParams)
+    if (!target) return
+    const auto = searchParams.get('auto') !== '0'
+    investigateJobRef.current = {
+      prompt: buildInvestigatePrompt(target),
+      namespaceOverride: target.namespace,
+      titleHint: resourceRefLabel(target),
+      auto,
+    }
+    navigate('/ai', { replace: true })
+  }, [searchParams, navigate, clusterId, activeCluster?.name, setClusterId])
+
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: skipMotion ? 'auto' : 'smooth' })
   }, [messages, busy, skipMotion])
@@ -179,6 +255,7 @@ export function AiChatPage() {
   }, [messages])
 
   const stopGeneration = useCallback(() => {
+    fleetTourCancelRef.current = true
     abortRef.current?.abort()
     abortRef.current = null
     setBusy(false)
@@ -250,47 +327,62 @@ export function AiChatPage() {
     stopGeneration()
   }
 
-  const send = async (text?: string) => {
+  const send = async (
+    text?: string,
+    skillId?: string,
+    opts?: {
+      baseMessages?: AiChatMessage[]
+      namespaceOverride?: string
+      sessionId?: string
+      /** Skip in-flight guard (e.g. resource-page investigate after stop). */
+      force?: boolean
+    },
+  ): Promise<AiChatMessage[] | undefined> => {
     const content = (text ?? input).trim()
-    if (!content) return
-    if (busy) {
+    if (!content) return undefined
+    if (busy && !opts?.force) {
       setErr('正在生成回复，请先点「停止」再发送')
-      return
+      return undefined
     }
     if (!ready) {
       setErr(statusQ.isError ? '无法连接 AI 服务，请确认后端已启动' : 'AI 暂不可用，请到控制台 Settings → AI 检查配置')
-      return
+      return undefined
     }
 
-    ensureSession()
+    if (!opts?.sessionId) ensureSession()
     setErr('')
     setInput('')
 
-    const history = [...messages, { role: 'user' as const, content }]
+    const prior = opts?.baseMessages ?? messages
+    const history = [...prior, { role: 'user' as const, content }]
     setMessages(history)
     setBusy(true)
 
-    const assistant: AiChatMessage = { role: 'assistant', content: '', tools: [], resources: [] }
+    let assistant: AiChatMessage = { role: 'assistant', content: '', tools: [], resources: [] }
     setMessages([...history, assistant])
 
     abortRef.current?.abort()
     const ac = new AbortController()
     abortRef.current = ac
 
+    const ns =
+      opts?.namespaceOverride !== undefined
+        ? opts.namespaceOverride
+        : namespace === 'all'
+          ? ''
+          : namespace
+
     const patchAssistant = (fn: (m: AiChatMessage) => AiChatMessage) => {
-      setMessages((prev) => {
-        const next = [...prev]
-        const last = next[next.length - 1]
-        if (last?.role === 'assistant') next[next.length - 1] = fn(last)
-        return next
-      })
+      assistant = fn(assistant)
+      setMessages([...history, assistant])
     }
 
     try {
       await streamAiChat(
         history.map((m) => ({ role: m.role, content: m.content })),
         {
-          namespace: namespace === 'all' ? '' : namespace,
+          namespace: ns,
+          skillId,
           signal: ac.signal,
         },
         {
@@ -324,17 +416,169 @@ export function AiChatPage() {
       )
     } catch (e: any) {
       if (e?.name !== 'AbortError') setErr(e?.message || '请求失败')
+      else return undefined
     } finally {
       setBusy(false)
     }
+    return [...history, assistant]
   }
+
+  // Run pending investigate/inspect job after AI is ready (and cluster switch settles).
+  useEffect(() => {
+    const job = investigateJobRef.current
+    if (!job) return
+    if (statusQ.isLoading || switching) return
+    if (
+      job.clusterId &&
+      job.clusterId !== clusterId &&
+      activeCluster?.name !== job.clusterId &&
+      activeCluster?.id !== job.clusterId
+    ) {
+      return
+    }
+
+    investigateJobRef.current = null
+    if (job.namespaceOverride) setNamespace(job.namespaceOverride)
+
+    abortRef.current?.abort()
+    abortRef.current = null
+    setBusy(false)
+    const s = createAiSession({
+      clusterId: clusterId || undefined,
+      clusterName: activeCluster?.name,
+    })
+    hydrateSession(s.id, [])
+    renameAiSession(s.id, `${job.clusterId ? '巡检' : '调查'} · ${job.titleHint}`)
+    refreshSessions()
+    if (!isDesktop) closeHistory()
+
+    if (job.auto) {
+      if (!ready) {
+        setInput(job.prompt)
+        setErr(
+          statusQ.isError
+            ? '无法连接 AI 服务，请确认后端已启动'
+            : 'AI 暂不可用，调查 Prompt 已填入输入框，配置好后可直接发送',
+        )
+        return
+      }
+      void send(job.prompt, undefined, {
+        baseMessages: [],
+        namespaceOverride: job.namespaceOverride || '',
+        sessionId: s.id,
+        force: true,
+      })
+      return
+    }
+    setInput(job.prompt)
+    // job consumed via ref; deps only gate "when AI/cluster settles"
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- run once per queued investigate job
+  }, [
+    ready,
+    statusQ.isLoading,
+    statusQ.isError,
+    switching,
+    clusterId,
+    activeCluster?.name,
+    activeCluster?.id,
+    isDesktop,
+    setNamespace,
+    hydrateSession,
+    refreshSessions,
+  ])
+
+  // Fleet tour: serial inspect across reachable clusters, then summary.
+  useEffect(() => {
+    const pending = fleetTourPendingRef.current
+    if (!pending || fleetTourRunningRef.current) return
+    if (statusQ.isLoading) return
+
+    fleetTourPendingRef.current = null
+    fleetTourRunningRef.current = true
+    fleetTourCancelRef.current = false
+
+    void (async () => {
+      try {
+        const summary = await getFleetSummary()
+        const reachable = [...(summary.clusters || [])]
+          .filter((c) => c.reachable && c.id)
+          .sort((a, b) => fleetIssueScore(b) - fleetIssueScore(a))
+        const targets = reachable.slice(0, 8).map((c) => ({ id: c.id, name: c.name }))
+
+        if (!targets.length) {
+          setErr('没有可达集群可巡检，请先在集群总览确认连通性')
+          return
+        }
+
+        abortRef.current?.abort()
+        abortRef.current = null
+        setBusy(false)
+
+        const s = createAiSession({
+          clusterId: targets[0].id,
+          clusterName: targets[0].name,
+        })
+        hydrateSession(s.id, [])
+        renameAiSession(
+          s.id,
+          `舰队健康 · ${targets.length} 集群${reachable.length > targets.length ? '+' : ''}`,
+        )
+        refreshSessions()
+        if (!isDesktop) closeHistory()
+
+        if (!pending.auto || !ready) {
+          setInput(buildFleetTourSummaryPrompt(targets.map((c) => c.name)))
+          setErr(
+            ready
+              ? '舰队巡检未自动开始，可编辑后发送；或返回集群总览再点「舰队巡检」'
+              : statusQ.isError
+                ? '无法连接 AI 服务，请确认后端已启动'
+                : 'AI 暂不可用，汇总 Prompt 已填入输入框',
+          )
+          return
+        }
+
+        let base: AiChatMessage[] = []
+        for (let i = 0; i < targets.length; i++) {
+          if (fleetTourCancelRef.current) break
+          const c = targets[i]
+          await switchCluster(c.id)
+          if (fleetTourCancelRef.current) break
+          const next = await send(buildFleetTourStepPrompt(c.name, i + 1, targets.length), undefined, {
+            baseMessages: base,
+            namespaceOverride: '',
+            sessionId: s.id,
+            force: true,
+          })
+          if (!next) break
+          base = next
+        }
+
+        if (!fleetTourCancelRef.current && base.length > 0) {
+          await send(buildFleetTourSummaryPrompt(targets.map((c) => c.name)), undefined, {
+            baseMessages: base,
+            namespaceOverride: '',
+            sessionId: s.id,
+            force: true,
+          })
+        }
+      } catch (e: any) {
+        if (!fleetTourCancelRef.current) {
+          setErr(e?.message || '舰队巡检失败')
+        }
+      } finally {
+        fleetTourRunningRef.current = false
+      }
+    })()
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- one-shot tour kickoff
+  }, [ready, statusQ.isLoading, statusQ.isError, isDesktop, hydrateSession, refreshSessions, switchCluster])
 
   const composer = (
     <AiComposer
       value={input}
       onChange={setInput}
-      onSend={(text) => {
-        void send(typeof text === 'string' ? text : input)
+      onSend={(text, skillId) => {
+        void send(typeof text === 'string' ? text : input, skillId)
       }}
       onStop={stop}
       busy={busy}
@@ -343,8 +587,17 @@ export function AiChatPage() {
       clusterLabel={clusterLabel}
       err={err}
       evidence={evidence}
-      probes={PROBES}
+      skills={skills}
+      agent={DEFAULT_AI_AGENT}
       landing={isEmpty}
+      onSaveCustomSkill={(input) => {
+        const saved = upsertCustomSkill(input)
+        if (saved) setSkills(allAiSkills())
+        return saved
+      }}
+      onDeleteCustomSkill={(id) => {
+        if (deleteCustomSkill(id)) setSkills(allAiSkills())
+      }}
     />
   )
 
@@ -483,7 +736,7 @@ export function AiChatPage() {
                 先问清楚
                 <em>再动手改</em>
               </h2>
-              <p className="ai-ops-hero-sub">查状态、找故障、一点进控制台</p>
+              <p className="ai-ops-hero-sub">Skill 查集群 · 一点进控制台</p>
               <div className="ai-ops-landing-composer">{composer}</div>
             </motion.div>
           </div>
@@ -533,20 +786,33 @@ function BrandTitle({ skipMotion }: { skipMotion: boolean }) {
         </span>
         <motion.span
           className="ai-ops-brand-ai"
-          initial={skipMotion ? false : { opacity: 0, scale: 0.85, x: -6 }}
-          animate={{ opacity: 1, scale: 1, x: 0 }}
-          transition={{ delay: skipMotion ? 0 : 0.38, duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
+          initial={skipMotion ? false : { opacity: 0, scale: 0.88, filter: 'blur(8px)' }}
+          animate={{ opacity: 1, scale: 1, filter: 'blur(0px)' }}
+          transition={{ delay: skipMotion ? 0 : 0.34, duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
         >
-          AI
-          <span className="ai-ops-brand-ai-scan" aria-hidden />
+          <span className="ai-ops-brand-ai-corners" aria-hidden>
+            <i />
+            <i />
+            <i />
+            <i />
+          </span>
+          <span className="ai-ops-brand-ai-grid" aria-hidden />
+          <span className="ai-ops-brand-ai-core">
+            <span className="ai-ops-brand-ai-glyph">A</span>
+            <span className="ai-ops-brand-ai-glyph">I</span>
+          </span>
+          <span className="ai-ops-brand-ai-beam" aria-hidden />
+          <span className="ai-ops-brand-ai-sheen" aria-hidden />
         </motion.span>
       </div>
       <motion.div
         className="ai-ops-brand-rule"
         initial={skipMotion ? false : { scaleX: 0, opacity: 0 }}
         animate={{ scaleX: 1, opacity: 1 }}
-        transition={{ delay: skipMotion ? 0 : 0.5, duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
-      />
+        transition={{ delay: skipMotion ? 0 : 0.52, duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
+      >
+        <span className="ai-ops-brand-rule-packet" aria-hidden />
+      </motion.div>
     </div>
   )
 }

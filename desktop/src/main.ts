@@ -11,6 +11,7 @@ import path from 'node:path'
 import crypto from 'node:crypto'
 import http from 'node:http'
 import os from 'node:os'
+import { URL } from 'node:url'
 
 let mainWindow: BrowserWindow | null = null
 let sidecar: ChildProcessWithoutNullStreams | null = null
@@ -38,6 +39,13 @@ function defaultKubeconfig(): string {
   return path.join(os.homedir(), '.kube', 'config')
 }
 
+function kubeconfigHint(): string {
+  if (process.platform === 'win32') {
+    return '%USERPROFILE%\\.kube\\config'
+  }
+  return '~/.kube/config'
+}
+
 async function getFreePort(): Promise<number> {
   return new Promise((resolve, reject) => {
     const srv = createServer()
@@ -56,10 +64,14 @@ async function getFreePort(): Promise<number> {
 }
 
 function ensureDesktopConfig(configPath: string, dbPath: string): void {
-  if (fs.existsSync(configPath)) return
+  if (fs.existsSync(configPath)) {
+    repairDesktopEncryptionKey(configPath)
+    return
+  }
 
+  // AES key must be exactly 32 bytes/chars (see internal/store/encryption.go).
   const jwtSecret = crypto.randomBytes(32).toString('hex')
-  const encKey = crypto.randomBytes(16).toString('hex') + crypto.randomBytes(16).toString('hex')
+  const encKey = crypto.randomBytes(16).toString('hex')
   const kubeconfig = defaultKubeconfig().replace(/\\/g, '/')
   const db = dbPath.replace(/\\/g, '/')
 
@@ -100,7 +112,7 @@ jwt:
 preferences:
   ui:
     default_language: zh
-    default_theme: tron
+    default_theme: paper
 oauth:
   github:
     client_id: ""
@@ -135,6 +147,22 @@ clusters: []
   fs.mkdirSync(path.dirname(configPath), { recursive: true })
   fs.mkdirSync(path.dirname(dbPath), { recursive: true })
   fs.writeFileSync(configPath, yaml, 'utf8')
+}
+
+/** Fix legacy 64-hex encryptionKey (invalid) so release validation / AES can start. */
+function repairDesktopEncryptionKey(configPath: string): void {
+  try {
+    const raw = fs.readFileSync(configPath, 'utf8')
+    const match = raw.match(/^(\s*encryptionKey:\s*")([^"]*)(")/m)
+    if (!match) return
+    if (match[2].length === 32) return
+    const next = crypto.randomBytes(16).toString('hex')
+    const updated = raw.replace(match[0], `${match[1]}${next}${match[3]}`)
+    fs.writeFileSync(configPath, updated, 'utf8')
+    pushLog('repaired desktop encryptionKey length to 32')
+  } catch (err) {
+    pushLog(`encryptionKey repair skipped: ${(err as Error).message}`)
+  }
 }
 
 function waitForHealth(addr: string, timeoutMs: number): Promise<void> {
@@ -172,7 +200,7 @@ function classifySidecarError(raw: string): { title: string; body: string } {
     return {
       title: 'CiliKube 启动失败 · 缺少后端程序',
       body:
-        '未找到内嵌的 cilikube.exe。\n请重新安装或从 GitHub Releases 重新下载完整安装包。\n\n' +
+        '未找到内嵌的 cilikube 后端程序。\n请重新安装或从 GitHub Releases 重新下载完整安装包。\n\n' +
         raw,
     }
   }
@@ -188,7 +216,7 @@ function classifySidecarError(raw: string): { title: string; body: string } {
     return {
       title: 'CiliKube 启动失败 · 集群配置',
       body:
-        '读取 Kubernetes 配置时出错。\n请确认 %USERPROFILE%\\.kube\\config 存在且可读（应用仍可启动后在「集群管理」中导入）。\n\n' +
+        `读取 Kubernetes 配置时出错。\n请确认 ${kubeconfigHint()} 存在且可读（应用仍可启动后在「集群管理」中导入）。\n\n` +
         raw,
     }
   }
@@ -210,6 +238,27 @@ function persistSidecarLog(userData: string): string {
   return logPath
 }
 
+function isSafeExternalUrl(url: string): boolean {
+  try {
+    const u = new URL(url)
+    return u.protocol === 'https:' || u.protocol === 'http:'
+  } catch {
+    return false
+  }
+}
+
+function isLoopbackAppUrl(url: string, addr: string): boolean {
+  try {
+    const u = new URL(url)
+    const expected = new URL(`http://${addr}/`)
+    if (u.protocol !== 'http:' && u.protocol !== 'https:') return false
+    if (u.hostname !== '127.0.0.1' && u.hostname !== 'localhost') return false
+    return u.port === expected.port
+  } catch {
+    return false
+  }
+}
+
 async function startSidecar(): Promise<string> {
   const bin = sidecarBinary()
   if (!fs.existsSync(bin)) {
@@ -226,6 +275,15 @@ async function startSidecar(): Promise<string> {
   const webRoot = path.join(resourcesRoot(), 'web')
   const casbinModel = path.join(resourcesRoot(), 'pkg', 'auth', 'model.conf')
   const cwd = resourcesRoot()
+  const versionFile = path.join(resourcesRoot(), 'VERSION')
+  let appVersion = app.getVersion()
+  try {
+    if (fs.existsSync(versionFile)) {
+      appVersion = fs.readFileSync(versionFile, 'utf8').trim() || appVersion
+    }
+  } catch {
+    /* keep electron version */
+  }
 
   const env = {
     ...process.env,
@@ -234,6 +292,7 @@ async function startSidecar(): Promise<string> {
     CILIKUBE_CONFIG: configPath,
     CILIKUBE_WEB_ROOT: webRoot,
     CILIKUBE_CASBIN_MODEL: casbinModel,
+    CILIKUBE_VERSION: appVersion,
   }
 
   pushLog(`starting sidecar: ${bin}`)
@@ -242,11 +301,16 @@ async function startSidecar(): Promise<string> {
   pushLog(`config=${configPath}`)
   pushLog(`db=${dbPath}`)
   pushLog(`web_root=${webRoot}`)
+  pushLog(`version=${appVersion}`)
 
   sidecar = spawn(bin, ['--config', configPath], {
     cwd,
     env,
     windowsHide: true,
+  })
+
+  sidecar.on('error', (err) => {
+    pushLog(`sidecar spawn error: ${err.message}`)
   })
 
   sidecar.stdout.on('data', (buf) => {
@@ -264,6 +328,13 @@ async function startSidecar(): Promise<string> {
   sidecar.on('exit', (code, signal) => {
     pushLog(`sidecar exited code=${code} signal=${signal}`)
     sidecar = null
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      dialog.showErrorBox(
+        'CiliKube 后端已退出',
+        `内嵌 API 进程意外退出（code=${code} signal=${signal}）。\n应用将关闭，请查看日志后重试。`,
+      )
+      app.quit()
+    }
   })
 
   try {
@@ -319,8 +390,19 @@ async function createWindow(addr: string) {
   })
 
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
-    shell.openExternal(url)
+    if (isSafeExternalUrl(url)) {
+      void shell.openExternal(url)
+    }
     return { action: 'deny' }
+  })
+
+  mainWindow.webContents.on('will-navigate', (event, url) => {
+    if (!isLoopbackAppUrl(url, addr)) {
+      event.preventDefault()
+      if (isSafeExternalUrl(url)) {
+        void shell.openExternal(url)
+      }
+    }
   })
 
   await mainWindow.loadURL(`http://${addr}/`)

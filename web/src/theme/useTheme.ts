@@ -14,7 +14,7 @@ export function useTheme(): {
   themes: Theme[]
   setTheme: (id: string) => void
 } {
-  const themeId = useSyncExternalStore(subscribeTheme, getStoredThemeId, () => 'tron')
+  const themeId = useSyncExternalStore(subscribeTheme, getStoredThemeId, () => 'paper')
   return {
     theme: resolveTheme(themeId),
     themeId,

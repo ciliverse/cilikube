@@ -14,10 +14,11 @@ import (
 )
 
 type JWTClaims struct {
-	UserID    uint   `json:"user_id"`
-	Username  string `json:"username"`
-	Role      string `json:"role"`
-	SessionID string `json:"session_id,omitempty"`
+	UserID             uint   `json:"user_id"`
+	Username           string `json:"username"`
+	Role               string `json:"role"`
+	SessionID          string `json:"session_id,omitempty"`
+	MustChangePassword bool   `json:"must_change_password,omitempty"`
 	jwt.RegisteredClaims
 }
 
@@ -38,10 +39,11 @@ func GenerateToken(user *models.User, sessionID string) (string, time.Time, erro
 	expirationTime := time.Now().Add(configs.GlobalConfig.JWT.ExpireDuration)
 
 	claims := &JWTClaims{
-		UserID:    user.ID,
-		Username:  user.Username,
-		Role:      user.Role,
-		SessionID: sessionID,
+		UserID:             user.ID,
+		Username:           user.Username,
+		Role:               user.Role,
+		SessionID:          sessionID,
+		MustChangePassword: user.MustChangePassword,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(expirationTime),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
@@ -59,6 +61,9 @@ func GenerateToken(user *models.User, sessionID string) (string, time.Time, erro
 // ParseToken parses JWT token
 func ParseToken(tokenString string) (*JWTClaims, error) {
 	token, err := jwt.ParseWithClaims(tokenString, &JWTClaims{}, func(token *jwt.Token) (interface{}, error) {
+		if token.Method != jwt.SigningMethodHS256 {
+			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
+		}
 		return []byte(configs.GlobalConfig.JWT.SecretKey), nil
 	})
 
@@ -71,6 +76,41 @@ func ParseToken(tokenString string) (*JWTClaims, error) {
 	}
 
 	return nil, jwt.ErrInvalidKey
+}
+
+// RequirePasswordChangedUnless blocks API access until the user changes a forced default password.
+// skipPaths are exact matches or filepath.Match patterns (same rules as JWTAuthUnless).
+func RequirePasswordChangedUnless(skipPaths ...string) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		mustChange, exists := c.Get("must_change_password")
+		if !exists {
+			c.Next()
+			return
+		}
+		flag, _ := mustChange.(bool)
+		if !flag {
+			c.Next()
+			return
+		}
+
+		path := c.Request.URL.Path
+		for _, skip := range skipPaths {
+			if path == skip {
+				c.Next()
+				return
+			}
+			if matched, _ := filepath.Match(skip, path); matched {
+				c.Next()
+				return
+			}
+		}
+
+		c.JSON(http.StatusForbidden, gin.H{
+			"code":    403,
+			"message": "Password change required before accessing the API",
+		})
+		c.Abort()
+	}
 }
 
 // JWTAuthUnless runs JWT auth for all paths except the provided prefixes/patterns.
@@ -170,6 +210,7 @@ func JWTAuthMiddleware() gin.HandlerFunc {
 		c.Set("username", claims.Username)
 		c.Set("user_role", claims.Role)
 		c.Set("session_id", claims.SessionID)
+		c.Set("must_change_password", claims.MustChangePassword)
 
 		c.Next()
 	}

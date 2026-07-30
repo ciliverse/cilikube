@@ -64,7 +64,7 @@ func (s *PodMetricsService) ListPodMetrics(config *rest.Config, namespace string
 		return out
 	}
 	if k8s.IsShowcaseConfig(config) {
-		return showcasePodMetrics(namespace)
+		return showcasePodMetrics(config, namespace)
 	}
 
 	metricsClientset, err := versioned.NewForConfig(config)

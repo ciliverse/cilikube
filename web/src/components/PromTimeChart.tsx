@@ -20,6 +20,9 @@ type Props = {
   hours?: number
   step?: string
   color?: string
+  /** Axis / tooltip unit, shown beside numeric ticks (e.g. cores, GiB). */
+  unit?: string
+  /** Format numeric tick/tooltip value only — do not append unit here. */
   yFormatter?: (v: number) => string
 }
 
@@ -40,6 +43,7 @@ export function PromTimeChart({
   hours = 1,
   step = '60s',
   color,
+  unit,
   yFormatter = (v) => v.toFixed(2),
 }: Props) {
   const { clusterId } = useCluster()
@@ -74,7 +78,8 @@ export function PromTimeChart({
   if (!statusQ.data?.enabled) {
     return (
       <EmptyState>
-        Prometheus is not configured. Enable `prometheus.enabled` for time-series charts.
+        Prometheus 未配置。管理员可到 Settings → Prometheus 填写 URL，或开启公网 Showcase
+        模拟时序。
       </EmptyState>
     )
   }
@@ -89,11 +94,15 @@ export function PromTimeChart({
   }
 
   const gradId = `prom-${theme.id}-${stroke.replace('#', '')}`
+  const formatValue = (v: number) => {
+    const n = yFormatter(v)
+    return unit ? `${n} ${unit}` : n
+  }
 
   return (
-    <div className="h-56 w-full min-w-0">
+    <div className="h-64 w-full min-w-0">
       <ResponsiveContainer width="100%" height="100%">
-        <AreaChart data={data} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
+        <AreaChart data={data} margin={{ top: 8, right: 12, left: 4, bottom: 4 }}>
           <defs>
             <linearGradient id={gradId} x1="0" y1="0" x2="0" y2="1">
               <stop offset="5%" stopColor={stroke} stopOpacity={0.4} />
@@ -101,15 +110,23 @@ export function PromTimeChart({
             </linearGradient>
           </defs>
           <CartesianGrid stroke={theme.colors.primary} strokeOpacity={0.12} vertical={false} />
-          <XAxis dataKey="t" tick={{ fontSize: 10, fill: dim }} stroke={axis} minTickGap={24} />
+          <XAxis
+            dataKey="t"
+            tick={{ fontSize: 11, fill: dim }}
+            stroke={axis}
+            minTickGap={28}
+            tickMargin={8}
+          />
           <YAxis
             tick={{ fontSize: 11, fill: dim }}
             stroke={axis}
-            tickFormatter={yFormatter}
-            width={48}
+            tickFormatter={(v) => yFormatter(Number(v))}
+            width={56}
+            tickMargin={8}
+            domain={['auto', 'auto']}
           />
           <Tooltip
-            formatter={(value) => [yFormatter(Number(value ?? 0)), 'value']}
+            formatter={(value) => [formatValue(Number(value ?? 0)), 'value']}
             labelFormatter={(label) => `Time ${label}`}
             contentStyle={{
               background: theme.terminal.bg,
@@ -124,6 +141,7 @@ export function PromTimeChart({
             stroke={stroke}
             fill={`url(#${gradId})`}
             strokeWidth={2}
+            isAnimationActive={false}
           />
         </AreaChart>
       </ResponsiveContainer>

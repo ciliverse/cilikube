@@ -33,5 +33,9 @@ func RegisterSystemSettingsRoutes(router *gin.RouterGroup, config *configs.Confi
 		// AI assistant
 		settingsRoutes.GET("/ai", settingsHandler.GetAISettings)
 		settingsRoutes.PUT("/ai", settingsHandler.UpdateAISettings)
+
+		// Prometheus (time-series charts)
+		settingsRoutes.GET("/prometheus", settingsHandler.GetPrometheusSettings)
+		settingsRoutes.PUT("/prometheus", settingsHandler.UpdatePrometheusSettings)
 	}
 }

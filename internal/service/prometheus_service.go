@@ -15,6 +15,7 @@ import (
 )
 
 // PrometheusService queries an external Prometheus server via its HTTP API.
+// In public showcase mode (no real URL), it serves synthetic PromQL responses.
 type PrometheusService struct {
 	config *configs.Config
 	client *http.Client
@@ -32,10 +33,16 @@ func NewPrometheusService(config *configs.Config) *PrometheusService {
 }
 
 func (s *PrometheusService) Enabled() bool {
+	if s.showcasePrometheusActive() {
+		return true
+	}
 	return s.config != nil && s.config.Prometheus.Enabled && s.config.Prometheus.URL != ""
 }
 
 func (s *PrometheusService) baseURL() string {
+	if s.showcasePrometheusActive() {
+		return "showcase://prometheus"
+	}
 	if s.config == nil {
 		return ""
 	}
@@ -52,6 +59,12 @@ type PromQueryResult struct {
 
 // Query executes an instant PromQL query.
 func (s *PrometheusService) Query(ctx context.Context, query string, ts *time.Time) (*PromQueryResult, error) {
+	if s.showcasePrometheusActive() {
+		if query == "" {
+			return nil, fmt.Errorf("query is required")
+		}
+		return showcaseQueryResult(query, ts)
+	}
 	if !s.Enabled() {
 		return nil, fmt.Errorf("prometheus integration is disabled or URL is not configured")
 	}
@@ -69,6 +82,12 @@ func (s *PrometheusService) Query(ctx context.Context, query string, ts *time.Ti
 
 // QueryRange executes a range PromQL query.
 func (s *PrometheusService) QueryRange(ctx context.Context, query string, start, end time.Time, step string) (*PromQueryResult, error) {
+	if s.showcasePrometheusActive() {
+		if query == "" {
+			return nil, fmt.Errorf("query is required")
+		}
+		return showcaseQueryRangeResult(query, start, end, step)
+	}
 	if !s.Enabled() {
 		return nil, fmt.Errorf("prometheus integration is disabled or URL is not configured")
 	}
@@ -89,11 +108,15 @@ func (s *PrometheusService) QueryRange(ctx context.Context, query string, start,
 
 // GetStatus returns basic connectivity info for the configured Prometheus.
 func (s *PrometheusService) GetStatus(ctx context.Context) (map[string]interface{}, error) {
-	if !s.Enabled() {
+	if s.showcasePrometheusActive() {
+		return showcasePromStatus(), nil
+	}
+	if s.config == nil || !s.config.Prometheus.Enabled || s.config.Prometheus.URL == "" {
 		return map[string]interface{}{
 			"enabled": false,
 			"url":     "",
 			"healthy": false,
+			"mode":    "off",
 		}, nil
 	}
 
@@ -103,6 +126,7 @@ func (s *PrometheusService) GetStatus(ctx context.Context) (map[string]interface
 			"enabled": true,
 			"url":     s.baseURL(),
 			"healthy": false,
+			"mode":    "remote",
 			"error":   err.Error(),
 		}, nil
 	}
@@ -111,12 +135,13 @@ func (s *PrometheusService) GetStatus(ctx context.Context) (map[string]interface
 		"enabled": true,
 		"url":     s.baseURL(),
 		"healthy": result.Status == "success",
+		"mode":    "remote",
 		"data":    result.Data,
 	}, nil
 }
 
 func (s *PrometheusService) doGet(ctx context.Context, path string, params url.Values) (*PromQueryResult, error) {
-	base := strings.TrimRight(s.baseURL(), "/")
+	base := strings.TrimRight(s.config.Prometheus.URL, "/")
 	if !strings.HasPrefix(path, "/") {
 		path = "/" + path
 	}

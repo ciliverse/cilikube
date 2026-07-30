@@ -12,7 +12,8 @@ data:
       read_timeout: 30
       write_timeout: 30
       mode: release
-      encryptionKey: change-me-in-production-32chars!!
+      # Overridden by ENCRYPTION_KEY env from Secret when set.
+      encryptionKey: ""
     kubernetes:
       kubeconfig: in-cluster
     database:
@@ -20,7 +21,8 @@ data:
       type: sqlite
       database: /app/data/cilikube.db
     jwt:
-      secret_key: change-me-jwt-secret-in-production
+      # Overridden by JWT_SECRET env from Secret when set.
+      secret_key: ""
       expire_duration: 24h0m0s
       issuer: cilikube
     installer:

@@ -13,6 +13,7 @@ func RegisterClusterRoutes(router *gin.RouterGroup, handler *handlers.ClusterHan
 		clusterRoutes.POST("", handler.CreateCluster)
 
 		// Static paths must be registered before /:id
+		clusterRoutes.GET("/fleet-summary", handler.GetFleetSummary)
 		clusterRoutes.GET("/local-contexts", handler.ListLocalKubeContexts)
 		clusterRoutes.POST("/import-local", handler.ImportLocalClusters)
 

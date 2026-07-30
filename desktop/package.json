@@ -1,6 +1,6 @@
 {
   "name": "cilikube-desktop",
-  "version": "0.9.2",
+  "version": "1.0.0",
   "private": true,
   "description": "CiliKube desktop shell (Electron + Go sidecar)",
   "main": "dist/main.js",
@@ -14,10 +14,10 @@
     "build": "tsc -p tsconfig.json",
     "prepare:resources": "node scripts/prepare-sidecar.mjs",
     "start": "pnpm build && electron .",
-    "pack:win": "pnpm build && electron-builder --win --x64 --publish never",
-    "pack:mac": "pnpm build && electron-builder --mac --arm64 --publish never",
-    "pack:linux": "pnpm build && electron-builder --linux --x64 --publish never",
-    "pack:dir": "pnpm build && electron-builder --dir --publish never"
+    "pack:win": "pnpm prepare:resources && pnpm build && electron-builder --win --x64 --publish never",
+    "pack:mac": "pnpm prepare:resources && pnpm build && electron-builder --mac --arm64 --publish never",
+    "pack:linux": "pnpm prepare:resources && pnpm build && electron-builder --linux --x64 --publish never",
+    "pack:dir": "pnpm prepare:resources && pnpm build && electron-builder --dir --publish never"
   },
   "devDependencies": {
     "@types/node": "^22.13.10",

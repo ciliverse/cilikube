@@ -93,9 +93,13 @@ export async function getMonitoringDashboard() {
 }
 
 export async function getPrometheusStatus() {
-  return apiGet<{ enabled: boolean; url: string; healthy: boolean; error?: string }>(
-    '/api/v1/prometheus/status',
-  )
+  return apiGet<{
+    enabled: boolean
+    url: string
+    healthy: boolean
+    mode?: string
+    error?: string
+  }>('/api/v1/prometheus/status')
 }
 
 export async function getSummary() {
@@ -104,6 +108,33 @@ export async function getSummary() {
   } catch {
     return null
   }
+}
+
+export type FleetClusterCard = {
+  id: string
+  name: string
+  server?: string
+  version?: string
+  status?: string
+  source?: string
+  environment?: string
+  reachable: boolean
+  nodes?: number
+  not_ready_nodes?: number
+  namespaces?: number
+  pods?: number
+  unhealthy_pods?: number
+  warning_events?: number
+  error?: string
+}
+
+export type FleetSummary = {
+  active_cluster_id: string
+  clusters: FleetClusterCard[]
+}
+
+export async function getFleetSummary() {
+  return apiGet<FleetSummary>('/api/v1/clusters/fleet-summary')
 }
 
 export async function getObjectEvents(kind: string, name: string, namespace?: string) {

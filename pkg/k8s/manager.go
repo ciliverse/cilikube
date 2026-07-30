@@ -153,6 +153,9 @@ func (cm *ClusterManager) RefreshAllClusterStatus() {
 			if IsShowcaseConfig(client.Config) {
 				status = "Available"
 				version = ShowcaseVersion
+				if client.clusterInfo != nil && client.clusterInfo.ServerVersion != "" {
+					version = client.clusterInfo.ServerVersion
+				}
 			} else if serverVersion, err := client.Clientset.Discovery().ServerVersion(); err != nil {
 				status = fmt.Sprintf("Unavailable: %v", err)
 				version = "N/A"
@@ -325,7 +328,24 @@ func (cm *ClusterManager) UpdateDBCluster(id string, req models.UpdateClusterReq
 	if req.Name != "" {
 		cluster.Name = req.Name
 	}
-	// ... other field updates ...
+	if req.Provider != "" {
+		cluster.Provider = req.Provider
+	}
+	if req.Description != "" {
+		cluster.Description = req.Description
+	}
+	if req.Environment != nil {
+		cluster.Environment = *req.Environment
+	}
+	if req.Region != "" {
+		cluster.Region = req.Region
+	}
+	if req.Status != "" {
+		cluster.Status = req.Status
+	}
+	if req.Labels != nil {
+		cluster.Labels = store.Labels(req.Labels)
+	}
 	if req.KubeconfigData != "" {
 		kubeconfigBytes, err := base64.StdEncoding.DecodeString(req.KubeconfigData)
 		if err != nil {
@@ -347,6 +367,10 @@ func (cm *ClusterManager) UpdateDBCluster(id string, req models.UpdateClusterReq
 		delete(cm.statusCache, id)
 		cm.addClientLocked(id, cluster.Name, cluster.KubeconfigData, "database", cluster.Environment, "")
 		go cm.RefreshAllClusterStatus()
+	} else if cached, ok := cm.statusCache[id]; ok {
+		cached.Name = cluster.Name
+		cached.Environment = cluster.Environment
+		cm.statusCache[id] = cached
 	}
 	return nil
 }

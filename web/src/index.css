@@ -460,6 +460,88 @@ html[data-theme-mode='light'] aside {
   border-color: var(--color-line);
 }
 
+/* Login surface: same ambient + grid as body */
+.login-page {
+  background:
+    radial-gradient(1200px 800px at 70% -10%, var(--color-ambient), transparent),
+    linear-gradient(var(--color-grid-line) 1px, transparent 1px) 0 0 / 100% 28px,
+    linear-gradient(90deg, var(--color-grid-line) 1px, transparent 1px) 0 0 / 28px 100%,
+    var(--color-bg);
+  background-attachment: fixed;
+}
+
+.login-page aside.login-brand,
+html[data-theme-mode='light'] .login-page aside.login-brand,
+html[data-theme-mode='dark'] .login-page aside.login-brand {
+  background: transparent;
+  border: none;
+}
+
+.login-page .login-brand {
+  position: relative;
+}
+
+.login-page .login-brand::before,
+.login-page .login-brand::after {
+  content: none;
+  display: none;
+}
+
+.login-page .login-card {
+  border: 1px solid color-mix(in srgb, var(--color-line) 75%, transparent);
+  background: color-mix(in srgb, var(--color-panel-solid) 78%, var(--color-bg));
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  /* Drop HUD corner brackets + inset double-stroke (those read as twin vertical rails) */
+  box-shadow: 0 14px 42px rgba(12, 20, 28, 0.08);
+}
+
+.login-page .login-card::before,
+.login-page .login-card::after {
+  content: none;
+  display: none;
+}
+
+html[data-theme-mode='light'] .login-page .login-card {
+  background: color-mix(in srgb, var(--color-panel-solid) 70%, var(--color-bg));
+  box-shadow: 0 14px 42px rgba(12, 20, 28, 0.07);
+}
+
+.login-page .login-footer {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem 0.7rem;
+  padding: 0.75rem 1rem max(1.1rem, env(safe-area-inset-bottom));
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  color: var(--color-text-dim);
+}
+
+.login-page .login-footer a {
+  color: var(--color-cyan);
+  text-decoration: underline;
+  text-decoration-color: color-mix(in srgb, var(--color-cyan) 45%, transparent);
+  text-underline-offset: 3px;
+}
+
+.login-page .login-footer a:hover {
+  text-decoration-color: var(--color-cyan);
+}
+
+.login-page .login-footer-sep {
+  opacity: 0.4;
+}
+
+/* Soft ambient only — avoid hard vertical banding around the content column */
+.login-page > .pointer-events-none {
+  opacity: 0.85;
+}
+
 html[data-font='maple'] body,
 html[data-font='maple'] .hud-field,
 html[data-font='maple'] .hud-label,
@@ -1244,9 +1326,9 @@ html[data-font='maple'] .hud-table {
 .ai-ops-brand-row {
   display: flex;
   flex-wrap: wrap;
-  align-items: baseline;
+  align-items: center;
   justify-content: center;
-  gap: 0.35rem 0.65rem;
+  gap: 0.45rem 0.7rem;
 }
 
 .ai-ops-brand-main {
@@ -1271,59 +1353,193 @@ html[data-font='maple'] .hud-table {
   color: var(--color-cyan);
 }
 
+/* HUD product mark — sci-fi, one visual system */
 .ai-ops-brand-ai {
+  --ai-mark: var(--ai-signal);
+  --ai-mark-2: var(--color-cyan);
   position: relative;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 2.6em;
-  padding: 0.12em 0.42em 0.18em;
-  border: 1px solid color-mix(in srgb, var(--ai-signal) 55%, transparent);
-  border-radius: 4px;
-  background: linear-gradient(
-    120deg,
-    color-mix(in srgb, var(--ai-signal) 18%, transparent),
-    color-mix(in srgb, var(--color-cyan) 10%, transparent)
-  );
-  color: var(--ai-signal);
+  margin-top: 0.08em;
+  min-width: 2.75em;
+  padding: 0.28em 0.52em 0.3em;
+  border: 1px solid color-mix(in srgb, var(--ai-mark) 55%, transparent);
+  border-radius: 2px;
+  background:
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--ai-mark) 16%, transparent),
+      color-mix(in srgb, var(--color-panel-solid) 88%, transparent) 55%,
+      color-mix(in srgb, var(--ai-mark-2) 10%, transparent)
+    );
   font-family: var(--font-display);
-  font-size: clamp(1.35rem, 3.8vw, 2.1rem);
+  font-size: clamp(1.15rem, 3vw, 1.7rem);
   font-weight: 800;
-  letter-spacing: 0.18em;
+  letter-spacing: 0.2em;
   line-height: 1;
   overflow: hidden;
+  isolation: isolate;
   box-shadow:
-    0 0 0 1px color-mix(in srgb, var(--ai-signal) 12%, transparent),
-    0 0 28px color-mix(in srgb, var(--ai-signal) 22%, transparent);
+    0 0 0 1px color-mix(in srgb, var(--ai-mark) 10%, transparent),
+    0 0 24px color-mix(in srgb, var(--ai-mark) 18%, transparent),
+    inset 0 1px 0 color-mix(in srgb, #fff 8%, transparent);
+  animation: ai-ops-brand-ai-pulse 2.6s ease-in-out infinite;
 }
 
-.ai-ops-brand-ai-scan {
+.ai-ops-brand-ai-corners {
   pointer-events: none;
   position: absolute;
-  inset: -20% -40%;
+  inset: 3px;
+  z-index: 3;
+}
+
+.ai-ops-brand-ai-corners i {
+  position: absolute;
+  width: 0.42em;
+  height: 0.42em;
+  border-color: var(--ai-mark-2);
+  border-style: solid;
+  opacity: 0.85;
+  animation: ai-ops-brand-corner 2.6s ease-in-out infinite;
+}
+
+.ai-ops-brand-ai-corners i:nth-child(1) {
+  top: 0;
+  left: 0;
+  border-width: 1.5px 0 0 1.5px;
+}
+
+.ai-ops-brand-ai-corners i:nth-child(2) {
+  top: 0;
+  right: 0;
+  border-width: 1.5px 1.5px 0 0;
+  animation-delay: 0.15s;
+}
+
+.ai-ops-brand-ai-corners i:nth-child(3) {
+  bottom: 0;
+  left: 0;
+  border-width: 0 0 1.5px 1.5px;
+  animation-delay: 0.3s;
+}
+
+.ai-ops-brand-ai-corners i:nth-child(4) {
+  right: 0;
+  bottom: 0;
+  border-width: 0 1.5px 1.5px 0;
+  animation-delay: 0.45s;
+}
+
+.ai-ops-brand-ai-grid {
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  opacity: 0.35;
+  background-image:
+    linear-gradient(color-mix(in srgb, var(--ai-mark-2) 22%, transparent) 1px, transparent 1px),
+    linear-gradient(90deg, color-mix(in srgb, var(--ai-mark) 18%, transparent) 1px, transparent 1px);
+  background-size: 7px 7px;
+  mask-image: linear-gradient(180deg, #000 0%, transparent 88%);
+  animation: ai-ops-brand-grid 3.2s linear infinite;
+}
+
+.ai-ops-brand-ai-core {
+  position: relative;
+  z-index: 2;
+  display: inline-flex;
+  gap: 0.02em;
+}
+
+.ai-ops-brand-ai-glyph {
+  display: inline-block;
   background: linear-gradient(
-    105deg,
-    transparent 35%,
-    color-mix(in srgb, #fff 55%, transparent) 48%,
-    transparent 62%
+    180deg,
+    color-mix(in srgb, #fff 88%, var(--ai-mark-2)) 0%,
+    var(--ai-mark-2) 38%,
+    var(--ai-mark) 72%,
+    color-mix(in srgb, var(--ai-mark) 70%, #fff) 100%
   );
-  transform: translateX(-60%);
-  animation: ai-ops-brand-scan 2.8s ease-in-out infinite;
+  background-size: 100% 220%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  text-shadow: none;
+  filter: drop-shadow(0 0 10px color-mix(in srgb, var(--ai-mark) 35%, transparent));
+  animation: ai-ops-brand-glyph 3.4s ease-in-out infinite;
+}
+
+.ai-ops-brand-ai-glyph:last-child {
+  animation-delay: 0.18s;
+}
+
+.ai-ops-brand-ai-beam {
+  pointer-events: none;
+  position: absolute;
+  z-index: 2;
+  left: -10%;
+  right: -10%;
+  top: 0;
+  height: 35%;
+  background: linear-gradient(
+    180deg,
+    transparent,
+    color-mix(in srgb, var(--ai-mark-2) 45%, transparent),
+    transparent
+  );
+  opacity: 0;
+  animation: ai-ops-brand-beam 2.2s ease-in-out infinite;
+}
+
+.ai-ops-brand-ai-sheen {
+  pointer-events: none;
+  position: absolute;
+  z-index: 2;
+  inset: -30% -50%;
+  background: linear-gradient(
+    115deg,
+    transparent 40%,
+    color-mix(in srgb, #fff 55%, transparent) 49%,
+    color-mix(in srgb, var(--ai-mark-2) 40%, transparent) 51%,
+    transparent 60%
+  );
+  transform: translateX(-80%) skewX(-12deg);
+  animation: ai-ops-brand-sheen 2.8s cubic-bezier(0.4, 0, 0.2, 1) infinite;
 }
 
 .ai-ops-brand-rule {
-  width: min(100%, 18rem);
+  position: relative;
+  width: min(100%, 17rem);
   height: 2px;
+  overflow: hidden;
   transform-origin: center;
   background: linear-gradient(
     90deg,
     transparent,
-    var(--color-cyan) 20%,
-    var(--ai-signal) 50%,
-    var(--color-cyan) 80%,
+    color-mix(in srgb, var(--color-cyan) 40%, transparent) 20%,
+    color-mix(in srgb, var(--ai-signal) 75%, transparent) 50%,
+    color-mix(in srgb, var(--color-cyan) 40%, transparent) 80%,
     transparent
   );
-  box-shadow: 0 0 12px color-mix(in srgb, var(--color-cyan) 45%, transparent);
+  box-shadow: 0 0 10px color-mix(in srgb, var(--color-cyan) 30%, transparent);
+}
+
+.ai-ops-brand-rule-packet {
+  position: absolute;
+  top: -1px;
+  left: 0;
+  width: 28%;
+  height: 4px;
+  border-radius: 999px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in srgb, #fff 70%, var(--color-cyan)),
+    transparent
+  );
+  filter: blur(0.2px);
+  animation: ai-ops-brand-packet 2.4s linear infinite;
 }
 
 .ai-ops-hero-title {
@@ -1353,28 +1569,130 @@ html[data-font='maple'] .hud-table {
   opacity: 0.9;
 }
 
-@keyframes ai-ops-brand-scan {
+@keyframes ai-ops-brand-ai-pulse {
   0%,
-  35% {
-    transform: translateX(-70%);
+  100% {
+    border-color: color-mix(in srgb, var(--ai-signal) 50%, transparent);
+    box-shadow:
+      0 0 0 1px color-mix(in srgb, var(--ai-signal) 10%, transparent),
+      0 0 18px color-mix(in srgb, var(--ai-signal) 16%, transparent),
+      inset 0 1px 0 color-mix(in srgb, #fff 6%, transparent);
+  }
+  50% {
+    border-color: color-mix(in srgb, var(--color-cyan) 70%, var(--ai-signal));
+    box-shadow:
+      0 0 0 1px color-mix(in srgb, var(--color-cyan) 22%, transparent),
+      0 0 34px color-mix(in srgb, var(--ai-signal) 34%, transparent),
+      0 0 52px color-mix(in srgb, var(--color-cyan) 16%, transparent),
+      inset 0 1px 0 color-mix(in srgb, #fff 12%, transparent);
+  }
+}
+
+@keyframes ai-ops-brand-corner {
+  0%,
+  100% {
+    opacity: 0.45;
+    transform: scale(0.92);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes ai-ops-brand-grid {
+  0% {
+    background-position: 0 0, 0 0;
+  }
+  100% {
+    background-position: 0 14px, 14px 0;
+  }
+}
+
+@keyframes ai-ops-brand-glyph {
+  0%,
+  100% {
+    background-position: 50% 0%;
+    filter: drop-shadow(0 0 8px color-mix(in srgb, var(--ai-signal) 28%, transparent));
+  }
+  50% {
+    background-position: 50% 100%;
+    filter: drop-shadow(0 0 14px color-mix(in srgb, var(--color-cyan) 45%, transparent));
+  }
+}
+
+@keyframes ai-ops-brand-beam {
+  0%,
+  12% {
+    top: -10%;
     opacity: 0;
   }
-  45% {
-    opacity: 0.85;
+  18% {
+    opacity: 0.75;
   }
-  70% {
-    transform: translateX(70%);
+  48% {
+    top: 85%;
     opacity: 0;
   }
   100% {
-    transform: translateX(70%);
+    top: 85%;
+    opacity: 0;
+  }
+}
+
+@keyframes ai-ops-brand-sheen {
+  0%,
+  35% {
+    transform: translateX(-85%) skewX(-12deg);
+    opacity: 0;
+  }
+  42% {
+    opacity: 0.9;
+  }
+  58% {
+    transform: translateX(85%) skewX(-12deg);
+    opacity: 0;
+  }
+  100% {
+    transform: translateX(85%) skewX(-12deg);
+    opacity: 0;
+  }
+}
+
+@keyframes ai-ops-brand-packet {
+  0% {
+    transform: translateX(-40%);
+    opacity: 0;
+  }
+  15% {
+    opacity: 1;
+  }
+  85% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateX(360%);
     opacity: 0;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .ai-ops-brand-ai-scan {
-    animation: none;
+  .ai-ops-brand-ai,
+  .ai-ops-brand-ai-corners i,
+  .ai-ops-brand-ai-grid,
+  .ai-ops-brand-ai-glyph,
+  .ai-ops-brand-ai-beam,
+  .ai-ops-brand-ai-sheen,
+  .ai-ops-brand-rule-packet {
+    animation: none !important;
+  }
+
+  .ai-ops-brand-ai-glyph {
+    color: var(--ai-signal);
+    background: none;
+    -webkit-background-clip: unset;
+    background-clip: unset;
+    filter: none;
   }
 }
 
@@ -1585,28 +1903,317 @@ html[data-font='maple'] .hud-table {
     0 16px 48px color-mix(in srgb, var(--color-bg) 40%, transparent);
 }
 
-.ai-ops-composer-probes {
+.ai-ops-skills {
   border-bottom: 1px solid var(--color-line);
-  background: color-mix(in srgb, var(--color-mist) 80%, transparent);
-  padding: 0.85rem 0.95rem 0.75rem;
+  background: color-mix(in srgb, var(--color-mist) 55%, transparent);
+  padding: 0.75rem 0.9rem 0.8rem;
 }
 
-.ai-ops-composer-probes-label {
-  margin-bottom: 0.5rem;
-  font-family: var(--font-mono);
-  font-size: 0.62rem;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
+.ai-ops-skills-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.65rem;
+}
+
+.ai-ops-skills-top-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-shrink: 0;
+}
+
+.ai-ops-skill-create {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  flex-shrink: 0;
+  border: 1px solid color-mix(in srgb, var(--color-cyan) 35%, var(--color-line));
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--color-cyan) 10%, transparent);
+  color: var(--color-cyan);
+  padding: 0.28rem 0.65rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.ai-ops-skill-create:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--color-cyan) 18%, transparent);
+}
+
+.ai-ops-skill-create:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.ai-ops-skill-create.is-ghost {
+  border-style: dashed;
+  background: transparent;
+}
+
+.ai-ops-skills-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.55rem;
+  min-height: 2.6rem;
+  padding: 0.15rem 0;
+  color: var(--color-text-dim);
+  font-size: 0.78rem;
+}
+
+.ai-ops-skill-wrap {
+  position: relative;
+  display: inline-flex;
+}
+
+.ai-ops-skill-wrap.is-custom .ai-ops-skill {
+  padding-right: 1.55rem;
+}
+
+.ai-ops-skill-del {
+  position: absolute;
+  top: 50%;
+  right: 0.25rem;
+  display: grid;
+  place-items: center;
+  width: 1.15rem;
+  height: 1.15rem;
+  transform: translateY(-50%);
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--color-text-dim);
+  cursor: pointer;
+  opacity: 0.55;
+}
+
+.ai-ops-skill-wrap:hover .ai-ops-skill-del,
+.ai-ops-skill-del:focus-visible {
+  opacity: 1;
+  color: var(--color-danger, #d65a5a);
+}
+
+.ai-ops-slash-create {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  border: 0;
+  border-top: 1px solid var(--color-line);
+  background: color-mix(in srgb, var(--color-cyan) 6%, transparent);
+  color: var(--color-cyan);
+  padding: 0.55rem 0.7rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.ai-ops-slash-create:hover {
+  background: color-mix(in srgb, var(--color-cyan) 12%, transparent);
+}
+
+.ai-ops-slash-trigger.is-muted {
+  border-color: var(--color-line);
+  background: transparent;
   color: var(--color-text-dim);
 }
 
-.ai-ops-composer-chips {
+.ai-ops-slash-trigger.is-muted:hover:not(:disabled) {
+  color: var(--color-cyan);
+  border-color: color-mix(in srgb, var(--color-cyan) 35%, var(--color-line));
+  background: color-mix(in srgb, var(--color-cyan) 8%, transparent);
+}
+
+.ai-ops-skill-editor-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+  background: color-mix(in srgb, var(--color-bg) 72%, transparent);
+  backdrop-filter: blur(4px);
+}
+
+.ai-ops-skill-editor {
+  width: min(100%, 28rem);
   display: flex;
-  flex-wrap: wrap;
+  flex-direction: column;
+  gap: 0.75rem;
+  border: 1px solid color-mix(in srgb, var(--color-cyan) 28%, var(--color-line));
+  border-radius: 16px;
+  background: var(--color-panel-solid);
+  box-shadow: 0 24px 64px color-mix(in srgb, var(--color-bg) 55%, transparent);
+  padding: 1rem 1.1rem 1.05rem;
+}
+
+.ai-ops-skill-editor-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.ai-ops-skill-editor-title {
+  margin: 0.15rem 0 0;
+  font-size: 1.05rem;
+  font-weight: 650;
+}
+
+.ai-ops-skill-editor-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  font-size: 0.72rem;
+  color: var(--color-text-dim);
+}
+
+.ai-ops-skill-editor-field input,
+.ai-ops-skill-editor-field textarea {
+  width: 100%;
+  border: 1px solid var(--color-line);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--color-mist) 55%, transparent);
+  color: var(--color-text);
+  padding: 0.55rem 0.7rem;
+  font: inherit;
+  font-size: 0.88rem;
+  resize: vertical;
+}
+
+.ai-ops-skill-editor-field input:focus,
+.ai-ops-skill-editor-field textarea:focus {
+  outline: none;
+  border-color: color-mix(in srgb, var(--color-cyan) 45%, var(--color-line));
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-cyan) 12%, transparent);
+}
+
+.ai-ops-skill-editor-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-top: 0.15rem;
+}
+
+.ai-ops-skill-editor-note {
+  margin: 0;
+  font-size: 0.68rem;
+  color: var(--color-text-dim);
+}
+
+.ai-ops-skill-editor-actions {
+  display: flex;
+  align-items: center;
   gap: 0.4rem;
 }
 
-.ai-ops-chip-btn {
+.ai-ops-skill-editor-cancel {
+  border: 1px solid var(--color-line);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--color-text-dim);
+  padding: 0.4rem 0.85rem;
+  font-size: 0.78rem;
+  cursor: pointer;
+}
+
+.ai-ops-skill-editor-cancel:hover {
+  color: var(--color-text);
+  border-color: color-mix(in srgb, var(--color-text) 25%, var(--color-line));
+}
+
+.ai-ops-skills-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  min-width: 0;
+}
+
+.ai-ops-skills-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--color-text-dim);
+  padding: 0.28rem 0.65rem;
+  font-size: 0.74rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition:
+    color 0.15s,
+    background 0.15s,
+    border-color 0.15s;
+}
+
+.ai-ops-skills-tab:hover {
+  color: var(--color-text);
+  background: color-mix(in srgb, var(--color-panel-solid) 70%, transparent);
+}
+
+.ai-ops-skills-tab.is-active {
+  border-color: color-mix(in srgb, var(--color-cyan) 40%, var(--color-line));
+  background: color-mix(in srgb, var(--color-cyan) 12%, var(--color-panel-solid));
+  color: var(--color-cyan);
+}
+
+.ai-ops-skills-tab-count {
+  font-family: var(--font-mono);
+  font-size: 0.58rem;
+  opacity: 0.7;
+}
+
+.ai-ops-agent-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  flex-shrink: 0;
+  border: 1px solid color-mix(in srgb, var(--ai-signal) 35%, var(--color-line));
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--ai-signal) 8%, transparent);
+  color: var(--ai-signal);
+  padding: 0.22rem 0.55rem;
+  font-size: 0.7rem;
+  font-weight: 600;
+}
+
+.ai-ops-skills-panel {
+  min-height: 2.6rem;
+}
+
+.ai-ops-skills-hint {
+  margin: 0.55rem 0 0;
+  font-size: 0.68rem;
+  color: var(--color-text-dim);
+}
+
+.ai-ops-skills-hint kbd {
+  display: inline-grid;
+  place-items: center;
+  min-width: 1.15rem;
+  margin: 0 0.15rem;
+  border: 1px solid var(--color-line);
+  border-radius: 4px;
+  background: var(--color-panel-solid);
+  padding: 0.05rem 0.28rem;
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  color: var(--color-cyan);
+}
+
+.ai-ops-skills-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.ai-ops-skill {
   display: inline-flex;
   align-items: center;
   gap: 0.4rem;
@@ -1614,38 +2221,194 @@ html[data-font='maple'] .hud-table {
   border-radius: 999px;
   background: var(--color-panel-solid);
   color: var(--color-text);
-  padding: 0.4rem 0.7rem 0.4rem 0.5rem;
+  padding: 0.38rem 0.75rem 0.38rem 0.45rem;
   font-size: 0.78rem;
   cursor: pointer;
-  transition: border-color 0.15s, color 0.15s, background 0.15s;
+  transition:
+    border-color 0.15s,
+    color 0.15s,
+    background 0.15s;
 }
 
-.ai-ops-chip-btn:hover:not(:disabled) {
-  border-color: color-mix(in srgb, var(--color-cyan) 50%, transparent);
+.ai-ops-skill:hover:not(:disabled) {
+  border-color: color-mix(in srgb, var(--color-cyan) 45%, transparent);
   color: var(--color-cyan);
   background: color-mix(in srgb, var(--color-cyan) 8%, var(--color-panel-solid));
 }
 
-.ai-ops-chip-btn:disabled {
+.ai-ops-skill:disabled {
   opacity: 0.4;
 }
 
-.ai-ops-chip-id {
+.ai-ops-skill-code {
   display: inline-grid;
   place-items: center;
-  min-width: 1.35rem;
-  height: 1.35rem;
+  min-width: 1.25rem;
+  height: 1.25rem;
   border-radius: 999px;
+  background: color-mix(in srgb, var(--ai-signal) 14%, transparent);
+  color: var(--ai-signal);
+  font-family: var(--font-mono);
+  font-size: 0.58rem;
+  letter-spacing: 0.02em;
+}
+
+.ai-ops-skill-label {
+  font-weight: 550;
+  letter-spacing: 0.01em;
+}
+
+.ai-ops-composer-main {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+}
+
+.ai-ops-slash {
+  z-index: 12;
+  margin: 0.55rem 0.65rem 0;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--color-cyan) 28%, var(--color-line));
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--color-mist) 70%, var(--color-panel-solid));
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-cyan) 6%, transparent);
+}
+
+.ai-ops-slash-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  border-bottom: 1px solid var(--color-line);
+  padding: 0.45rem 0.7rem;
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-text-dim);
+}
+
+.ai-ops-slash-head em {
+  font-style: normal;
+  color: var(--color-cyan);
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.ai-ops-slash-keys {
+  opacity: 0.75;
+  text-transform: none;
+  letter-spacing: 0;
+  font-size: 0.6rem;
+}
+
+.ai-ops-slash-list {
+  max-height: min(18rem, 42vh);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 0.3rem;
+}
+
+.ai-ops-slash-empty {
+  padding: 0.85rem 0.7rem;
+  font-size: 0.75rem;
+  color: var(--color-text-dim);
+  text-align: center;
+}
+
+.ai-ops-slash-item {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: 0.55rem;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--color-text);
+  padding: 0.45rem 0.5rem;
+  text-align: left;
+  cursor: pointer;
+}
+
+.ai-ops-slash-item:hover,
+.ai-ops-slash-item.is-active {
+  background: color-mix(in srgb, var(--color-cyan) 10%, var(--color-mist));
+}
+
+.ai-ops-slash-code {
+  display: inline-grid;
+  place-items: center;
+  min-width: 1.5rem;
+  height: 1.5rem;
+  flex-shrink: 0;
+  border-radius: 6px;
   background: color-mix(in srgb, var(--ai-signal) 16%, transparent);
   color: var(--ai-signal);
   font-family: var(--font-mono);
   font-size: 0.6rem;
-  letter-spacing: 0.04em;
 }
 
-.ai-ops-composer-main {
+.ai-ops-slash-body {
   display: flex;
+  min-width: 0;
+  flex: 1;
   flex-direction: column;
+  gap: 0.1rem;
+}
+
+.ai-ops-slash-title {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.ai-ops-slash-group {
+  border: 1px solid var(--color-line);
+  border-radius: 999px;
+  padding: 0.02rem 0.35rem;
+  font-size: 0.58rem;
+  font-weight: 500;
+  color: var(--color-text-dim);
+}
+
+.ai-ops-slash-blurb {
+  font-size: 0.68rem;
+  color: var(--color-text-dim);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ai-ops-slash-enter {
+  flex-shrink: 0;
+  color: var(--color-cyan);
+  opacity: 0.8;
+}
+
+.ai-ops-slash-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  flex-shrink: 0;
+  border: 1px solid color-mix(in srgb, var(--color-cyan) 35%, var(--color-line));
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--color-cyan) 8%, transparent);
+  color: var(--color-cyan);
+  padding: 0.12rem 0.45rem;
+  font-size: 0.65rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.ai-ops-slash-trigger:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--color-cyan) 16%, transparent);
+}
+
+.ai-ops-slash-trigger:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
 }
 
 .ai-ops-input {
@@ -1664,8 +2427,8 @@ html[data-font='maple'] .hud-table {
 }
 
 .ai-ops-composer.has-probes .ai-ops-input {
-  min-height: 7.5rem;
-  font-size: 1.02rem;
+  min-height: 3.75rem;
+  font-size: 0.96rem;
 }
 
 .ai-ops-input::placeholder {
@@ -1678,6 +2441,27 @@ html[data-font='maple'] .hud-table {
   justify-content: space-between;
   gap: 0.75rem;
   padding: 0.45rem 0.75rem 0.75rem 1.05rem;
+}
+
+.ai-ops-composer-meta {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 0.55rem;
+}
+
+.ai-ops-agent-inline {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  flex-shrink: 0;
+  border: 1px solid color-mix(in srgb, var(--ai-signal) 30%, var(--color-line));
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--ai-signal) 8%, transparent);
+  color: var(--ai-signal);
+  padding: 0.12rem 0.45rem;
+  font-size: 0.65rem;
+  font-weight: 600;
 }
 
 .ai-ops-hint {

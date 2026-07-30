@@ -16,6 +16,8 @@ type ClusterContextValue = {
   clusters: ClusterItem[]
   clusterId: string
   setClusterId: (id: string) => void
+  /** Switch active cluster and resolve after server sync + cache invalidation. */
+  switchCluster: (id: string) => Promise<void>
   loading: boolean
   switching: boolean
   activeCluster?: ClusterItem
@@ -45,33 +47,35 @@ export function ClusterProvider({ children }: { children: ReactNode }) {
     }
   }, [data, clusterId])
 
-  const setClusterId = useCallback(
-    (id: string) => {
-      if (!id || id === clusterId) return
+  const switchCluster = useCallback(
+    async (id: string) => {
+      if (!id || id === getClusterId()) return
       setClusterIdState(id)
       persistClusterId(id)
       setSwitching(true)
-
-      void (async () => {
-        try {
-          // Keep server "active" cluster in sync (informers / fallbacks)
-          await apiPost('/api/v1/clusters/active', { id })
-        } catch {
-          /* still switch client-side; resource APIs carry ?clusterId= */
-        } finally {
-          // Drop cached K8s views so lists refetch for the new cluster
-          await queryClient.invalidateQueries({
-            predicate: (q) => {
-              const key = q.queryKey[0]
-              return key !== 'clusters' && key !== 'settings-system' && key !== 'settings-oauth'
-            },
-          })
-          void queryClient.invalidateQueries({ queryKey: ['clusters'] })
-          setSwitching(false)
-        }
-      })()
+      try {
+        await apiPost('/api/v1/clusters/active', { id })
+      } catch {
+        /* still switch client-side; resource APIs carry ?clusterId= */
+      } finally {
+        await queryClient.invalidateQueries({
+          predicate: (q) => {
+            const key = q.queryKey[0]
+            return key !== 'clusters' && key !== 'settings-system' && key !== 'settings-oauth'
+          },
+        })
+        void queryClient.invalidateQueries({ queryKey: ['clusters'] })
+        setSwitching(false)
+      }
     },
-    [clusterId, queryClient],
+    [queryClient],
+  )
+
+  const setClusterId = useCallback(
+    (id: string) => {
+      void switchCluster(id)
+    },
+    [switchCluster],
   )
 
   const activeCluster = data.find((c) => c.id === clusterId || c.name === clusterId)
@@ -81,11 +85,12 @@ export function ClusterProvider({ children }: { children: ReactNode }) {
       clusters: data,
       clusterId,
       setClusterId,
+      switchCluster,
       loading: isLoading,
       switching,
       activeCluster,
     }),
-    [data, clusterId, setClusterId, isLoading, switching, activeCluster],
+    [data, clusterId, setClusterId, switchCluster, isLoading, switching, activeCluster],
   )
 
   return <ClusterContext.Provider value={value}>{children}</ClusterContext.Provider>

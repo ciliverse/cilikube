@@ -129,7 +129,18 @@ export function OverviewPage() {
       <PageHeader
         title={t('overview.title')}
         subtitle={t('overview.subtitle')}
-        action={<Badge tone="accent">{activeCluster?.name || clusterId || '—'}</Badge>}
+        action={
+          <div className="flex flex-wrap items-center gap-2">
+            <Badge tone="accent">{activeCluster?.name || clusterId || '—'}</Badge>
+            <Link
+              to="/fleet"
+              className="text-xs text-cyan hover:underline"
+              title={t('overview.viewFleet')}
+            >
+              {t('overview.viewFleet')}
+            </Link>
+          </div>
+        }
       />
 
       <motion.div

@@ -7,6 +7,8 @@ type ChatRequest struct {
 	Messages  []ChatMessage `json:"messages"`
 	Namespace string        `json:"namespace,omitempty"`
 	Language  string        `json:"language,omitempty"`
+	// SkillID is optional telemetry from the UI skill chips (logging / mock routing).
+	SkillID string `json:"skill_id,omitempty"`
 }
 
 type ChatMessage struct {

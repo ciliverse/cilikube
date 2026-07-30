@@ -43,7 +43,14 @@ export function MonitoringPage() {
         subtitle="Security posture, Prometheus health, and node telemetry"
         action={
           <Badge tone={prom?.healthy ? 'ok' : prom?.enabled ? 'danger' : 'neutral'}>
-            Prometheus {prom?.enabled ? (prom.healthy ? 'healthy' : 'down') : 'off'}
+            Prometheus{' '}
+            {prom?.mode === 'showcase'
+              ? 'showcase'
+              : prom?.enabled
+                ? prom.healthy
+                  ? 'healthy'
+                  : 'down'
+                : 'off'}
           </Badge>
         }
       />
@@ -67,32 +74,45 @@ export function MonitoringPage() {
         ))}
       </div>
 
-      <div className="grid w-full gap-4 lg:grid-cols-2">
-        <Card className="min-w-0 p-5">
-          <div className="mb-2 flex items-center justify-between">
+      <div className="grid w-full gap-4 lg:grid-cols-2 lg:items-stretch">
+        <Card className="flex min-w-0 flex-col p-5">
+          <div className="mb-2 flex items-center justify-between gap-2">
             <h2 className="font-display text-lg font-bold tracking-[0.12em]">CLUSTER CPU (1h)</h2>
-            <Badge tone="neutral">time axis</Badge>
+            <Badge tone="neutral">cores</Badge>
           </div>
-          <p className="mb-3 text-xs text-text-dim">
-            Prometheus query_range · endpoint {prom?.url || 'not configured'}
+          <p className="mb-3 min-h-[1.25rem] truncate text-xs text-text-dim" title={prom?.url || undefined}>
+            query_range · {prom?.url || 'not configured'}
           </p>
-          <PromTimeChart
-            query={'sum(rate(container_cpu_usage_seconds_total{container!="",container!="POD"}[5m]))'}
-            hours={1}
-            yFormatter={(v) => `${v.toFixed(2)} cores`}
-          />
-        </Card>
-        <Card className="min-w-0 p-5">
-          <div className="mb-2 flex items-center justify-between">
-            <h2 className="font-display text-lg font-bold tracking-[0.12em]">CLUSTER MEMORY (1h)</h2>
-            <Badge tone="neutral">time axis</Badge>
+          <div className="min-w-0 flex-1">
+            <PromTimeChart
+              query={
+                'sum(rate(container_cpu_usage_seconds_total{container!="",container!="POD"}[5m]))'
+              }
+              hours={1}
+              unit="cores"
+              yFormatter={(v) => v.toFixed(2)}
+            />
           </div>
-          <PromTimeChart
-            query={'sum(container_memory_working_set_bytes{container!="",container!="POD"}) / 1024 / 1024 / 1024'}
-            hours={1}
-            color="#ffae00"
-            yFormatter={(v) => `${v.toFixed(1)} GiB`}
-          />
+        </Card>
+        <Card className="flex min-w-0 flex-col p-5">
+          <div className="mb-2 flex items-center justify-between gap-2">
+            <h2 className="font-display text-lg font-bold tracking-[0.12em]">CLUSTER MEMORY (1h)</h2>
+            <Badge tone="neutral">GiB</Badge>
+          </div>
+          <p className="mb-3 min-h-[1.25rem] truncate text-xs text-text-dim" title={prom?.url || undefined}>
+            query_range · {prom?.url || 'not configured'}
+          </p>
+          <div className="min-w-0 flex-1">
+            <PromTimeChart
+              query={
+                'sum(container_memory_working_set_bytes{container!="",container!="POD"}) / 1024 / 1024 / 1024'
+              }
+              hours={1}
+              color="#ffae00"
+              unit="GiB"
+              yFormatter={(v) => v.toFixed(1)}
+            />
+          </div>
         </Card>
       </div>
 
@@ -108,8 +128,9 @@ export function MonitoringPage() {
             </div>
           ) : (
             <div className="mt-3 text-sm text-text-dim">
-              Time-series charts above require a healthy Prometheus. Snapshot node table below uses
-              metrics-server.
+              {prom?.mode === 'showcase'
+                ? 'Showcase 模拟时序（非真实 Prometheus）。节点表仍用 metrics-server / 模拟快照。'
+                : 'Time-series charts require a healthy Prometheus. Snapshot node table below uses metrics-server.'}
             </div>
           )}
         </Card>

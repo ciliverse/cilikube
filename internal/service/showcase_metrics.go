@@ -3,22 +3,47 @@ package service
 import (
 	"fmt"
 	"math"
+	"strings"
 	"time"
 
 	"k8s.io/client-go/rest"
 )
 
+func showcaseHost(config *rest.Config) string {
+	if config == nil {
+		return ""
+	}
+	return config.Host
+}
+
 // showcaseNodeMetrics returns synthetic, gently oscillating node metrics for the public demo.
 func showcaseNodeMetrics(config *rest.Config) (*NodesMetricsResponse, error) {
-	_ = config
 	t := float64(time.Now().Unix())
-	nodes := []string{"demo-master-1", "demo-worker-1", "demo-worker-2"}
-	capsCPU := []float64{4, 8, 8}
-	capsMemGi := []float64{8, 16, 16}
+	host := showcaseHost(config)
+
+	var nodes []string
+	var capsCPU, capsMemGi []float64
+	switch {
+	case strings.Contains(host, "prod-east"):
+		nodes = []string{"prod-cp-1", "prod-worker-1", "prod-worker-2", "prod-worker-3"}
+		capsCPU = []float64{8, 16, 16, 16}
+		capsMemGi = []float64{16, 64, 64, 64}
+	case strings.Contains(host, "staging-lab"):
+		nodes = []string{"stg-cp-1", "stg-worker-1"}
+		capsCPU = []float64{4, 8}
+		capsMemGi = []float64{8, 16}
+	default:
+		nodes = []string{"demo-master-1", "demo-worker-1", "demo-worker-2"}
+		capsCPU = []float64{4, 8, 8}
+		capsMemGi = []float64{8, 16, 16}
+	}
 
 	out := make([]NodeMetrics, 0, len(nodes))
 	for i, name := range nodes {
 		cpuPct := 18 + 12*math.Sin(t/7+float64(i)) + 6*math.Sin(t/3+float64(i)*1.7)
+		if strings.Contains(host, "prod-east") {
+			cpuPct += 15
+		}
 		if cpuPct < 5 {
 			cpuPct = 5
 		}
@@ -69,24 +94,48 @@ func showcaseSingleNodeMetrics(config *rest.Config, nodeName string) (*NodeMetri
 	return nil, fmt.Errorf("showcase node %q not found", nodeName)
 }
 
-func showcasePodMetrics(namespace string) *PodsMetricsResponse {
+func showcasePodMetrics(config *rest.Config, namespace string) *PodsMetricsResponse {
 	t := float64(time.Now().Unix())
+	host := showcaseHost(config)
 	type seed struct {
 		ns, name string
 		cpuBase  float64
 		memMi    float64
 	}
-	seeds := []seed{
-		{"default", "web-frontend-7d9f8b-abc12", 45, 96},
-		{"default", "web-frontend-7d9f8b-def34", 52, 110},
-		{"default", "api-gateway-6c4d5-jkl78", 80, 128},
-		{"production", "orders-api-8f2a1-aa111", 120, 180},
-		{"production", "orders-api-8f2a1-bb222", 95, 160},
-		{"production", "postgres-0", 70, 512},
-		{"production", "postgres-1", 65, 480},
-		{"monitoring", "prometheus-0abc1", 200, 640},
-		{"kube-system", "coredns-xyz01", 15, 48},
-		{"cilibase", "cilikube-demo-1a2b3", 40, 90},
+	var seeds []seed
+	switch {
+	case strings.Contains(host, "prod-east"):
+		seeds = []seed{
+			{"production", "orders-api-a1b2c-11111", 140, 200},
+			{"production", "orders-api-a1b2c-55555", 220, 280},
+			{"production", "checkout-c9d8e-aaaa1", 90, 140},
+			{"production", "inventory-f1e2d-dddd1", 70, 120},
+			{"payments", "pay-gateway-9x8y7-p1111", 110, 160},
+			{"payments", "pay-gateway-9x8y7-p3333", 180, 210},
+			{"observability", "prometheus-0", 240, 700},
+			{"kube-system", "coredns-prod01", 18, 52},
+		}
+	case strings.Contains(host, "staging-lab"):
+		seeds = []seed{
+			{"staging", "web-frontend-stg-aaa01", 40, 90},
+			{"staging", "web-frontend-stg-bbb02", 48, 100},
+			{"staging", "api-gateway-stg-ccc03", 70, 110},
+			{"preview", "feature-x-pr42-ddd04", 55, 96},
+			{"kube-system", "coredns-stg01", 12, 40},
+		}
+	default:
+		seeds = []seed{
+			{"default", "web-frontend-7d9f8b-abc12", 45, 96},
+			{"default", "web-frontend-7d9f8b-def34", 52, 110},
+			{"default", "api-gateway-6c4d5-jkl78", 80, 128},
+			{"production", "orders-api-8f2a1-aa111", 120, 180},
+			{"production", "orders-api-8f2a1-bb222", 95, 160},
+			{"production", "postgres-0", 70, 512},
+			{"production", "postgres-1", 65, 480},
+			{"monitoring", "prometheus-0abc1", 200, 640},
+			{"kube-system", "coredns-xyz01", 15, 48},
+			{"cilibase", "cilikube-demo-1a2b3", 40, 90},
+		}
 	}
 	items := make([]PodMetrics, 0, len(seeds))
 	for i, s := range seeds {

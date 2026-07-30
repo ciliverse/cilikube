@@ -33,7 +33,7 @@ func PublicShowcaseInfo() ShowcasePublicInfo {
 	}
 	return ShowcasePublicInfo{
 		Showcase: true,
-		Message:  "",
+		Message:  "Multi-cluster showcase fleet: demo · prod-east · staging-lab (simulated)",
 		Cluster:  ShowcaseClusterName,
 		Accounts: []ShowcaseAccount{
 			{

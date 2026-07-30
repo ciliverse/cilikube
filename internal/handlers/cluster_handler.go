@@ -24,6 +24,11 @@ func (h *ClusterHandler) ListClusters(c *gin.Context) {
 	utils.ApiSuccess(c, clusters, "successfully retrieved cluster list")
 }
 
+// GetFleetSummary returns a multi-cluster health rollup for the fleet page.
+func (h *ClusterHandler) GetFleetSummary(c *gin.Context) {
+	utils.ApiSuccess(c, h.service.GetFleetSummary(), "successfully retrieved fleet summary")
+}
+
 // GetCluster gets single cluster details
 func (h *ClusterHandler) GetCluster(c *gin.Context) {
 	clusterID := c.Param("id")

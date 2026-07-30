@@ -37,6 +37,11 @@ spec:
                 secretKeyRef:
                   name: cilikube-secrets
                   key: JWT_SECRET
+            - name: ENCRYPTION_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: cilikube-secrets
+                  key: ENCRYPTION_KEY
           volumeMounts:
             - name: config
               mountPath: /app/configs

@@ -217,7 +217,7 @@ export const BUILTIN_THEMES: Theme[] = [
   },
 ]
 
-export const DEFAULT_THEME_ID = 'tron'
+export const DEFAULT_THEME_ID = 'paper'
 export const THEME_STORAGE_KEY = 'cilikube_theme'
 
 export function hexToRgba(hex: string, alpha: number): string {
@@ -230,7 +230,11 @@ export function hexToRgba(hex: string, alpha: number): string {
 }
 
 export function resolveTheme(id?: string | null): Theme {
-  return BUILTIN_THEMES.find((t) => t.id === id) || BUILTIN_THEMES[0]
+  return (
+    BUILTIN_THEMES.find((t) => t.id === id) ||
+    BUILTIN_THEMES.find((t) => t.id === DEFAULT_THEME_ID) ||
+    BUILTIN_THEMES[0]
+  )
 }
 
 /** Map our terminal pack into xterm.js `ITheme`. */
