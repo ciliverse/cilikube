@@ -1,4 +1,5 @@
 import { Fragment, useMemo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useQuery } from '@tanstack/react-query'
 import { apiGet } from '@/lib/api'
 import { useAuth } from '@/store/auth'
@@ -124,6 +125,7 @@ const PRESETS: { label: string; hours: number }[] = [
 const COL_COUNT = 9
 
 export function AuditPage() {
+  const { t } = useTranslation()
   const { isAdmin } = useAuth()
   const [action, setAction] = useState('')
   const [userId, setUserId] = useState('')
@@ -211,10 +213,7 @@ export function AuditPage() {
 
   return (
     <div className="flex w-full min-w-0 flex-col gap-4">
-      <PageHeader
-        title="AUDIT LOGS"
-        subtitle="API activity (login / writes / errors / browse GETs) · auto-refresh ~8s · click a row for details"
-      />
+      <PageHeader title={t('audit.title')} subtitle={t('audit.subtitle')} />
 
       <Card className="space-y-3 p-5">
         <div className="flex flex-wrap items-center gap-2">

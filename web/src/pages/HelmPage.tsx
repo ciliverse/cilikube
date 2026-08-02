@@ -7,6 +7,7 @@ import { ALL_NAMESPACES, useNamespace } from '@/store/namespace'
 import { Badge, Button, Card, EmptyState, PageHeader } from '@/components/ui'
 import { HudTable, HudTableScroll } from '@/components/HudTableScroll'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
+import { useTranslation } from 'react-i18next'
 
 type HelmRelease = {
   name: string
@@ -19,6 +20,7 @@ type HelmRelease = {
 }
 
 export function HelmPage() {
+  const { t } = useTranslation()
   const { canEdit, isViewerOnly } = useAuth()
   const { clusterId } = useCluster()
   const { namespace } = useNamespace()
@@ -107,7 +109,7 @@ export function HelmPage() {
 
   return (
     <div className="flex w-full min-w-0 flex-col gap-3">
-      <PageHeader title="HELM" subtitle="Release lifecycle via helm CLI on API host" />
+      <PageHeader title={t('helm.title')} subtitle={t('helm.subtitle')} />
       {missingHelmCli ? (
         <div className="rounded border border-orange/40 bg-orange/10 px-4 py-3 text-sm text-text">
           <p className="font-semibold text-orange">Helm CLI not found on API host</p>

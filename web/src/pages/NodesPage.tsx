@@ -8,6 +8,7 @@ import { HudTable, HudTablePanel, ListPageFrame } from '@/components/HudTableScr
 import { Badge, EmptyState, PageHeader } from '@/components/ui'
 import { metaCreated } from '@/api/resources'
 import { shouldSkipEnterAnim } from '@/lib/motionPrefs'
+import { useTranslation } from 'react-i18next'
 
 function nodeReady(node: any) {
   const conditions = node?.status?.conditions || []
@@ -16,6 +17,7 @@ function nodeReady(node: any) {
 }
 
 export function NodesPage() {
+  const { t } = useTranslation()
   const { clusterId } = useCluster()
   const { data = [], isLoading } = useQuery({
     queryKey: ['nodes', clusterId],
@@ -25,7 +27,7 @@ export function NodesPage() {
 
   return (
     <ListPageFrame>
-      <PageHeader title="NODES" subtitle="Cluster compute fabric" />
+      <PageHeader title={t('nodes.title')} subtitle={t('nodes.subtitle')} />
       <HudTablePanel>
           <HudTable>
             <thead>

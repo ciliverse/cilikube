@@ -36,6 +36,7 @@ import { ConnDot, HudSelect } from './ui'
 import { BrandMark } from './BrandMark'
 import { GlobalSearchPalette } from './GlobalSearchPalette'
 import { OAuthAccountBanner } from './OAuthAccountBanner'
+import { StarSupportFloat } from './StarSupportCta'
 import { UserMenu } from './UserMenu'
 import { cn } from '@/lib/utils'
 
@@ -306,7 +307,7 @@ export function AppShell() {
             >
               <Terminal className="h-3.5 w-3.5" />
               <span className="hidden sm:inline">{t('nav.console')}</span>
-              <span className="sm:hidden">控制台</span>
+              <span className="sm:hidden">{t('nav.console')}</span>
             </Link>
           ) : (
             <Link
@@ -480,6 +481,7 @@ export function AppShell() {
           </motion.div>
         </main>
       </div>
+      <StarSupportFloat />
     </div>
   )
 }

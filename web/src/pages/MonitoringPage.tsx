@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
+import { useTranslation } from 'react-i18next'
 import { motion } from 'framer-motion'
 import {
   getMonitoringDashboard,
@@ -13,6 +14,7 @@ import { shouldSkipEnterAnim } from '@/lib/motionPrefs'
 import { formatPercent } from '@/lib/utils'
 
 export function MonitoringPage() {
+  const { t } = useTranslation()
   const { clusterId } = useCluster()
 
   const dashQ = useQuery({
@@ -39,8 +41,8 @@ export function MonitoringPage() {
   return (
     <div className="flex w-full min-w-0 flex-col gap-4">
       <PageHeader
-        title="MONITORING"
-        subtitle="Security posture, Prometheus health, and node telemetry"
+        title={t('monitoring.title')}
+        subtitle={t('monitoring.subtitle')}
         action={
           <Badge tone={prom?.healthy ? 'ok' : prom?.enabled ? 'danger' : 'neutral'}>
             Prometheus{' '}

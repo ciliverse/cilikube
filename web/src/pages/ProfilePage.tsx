@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useSearchParams } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import {
   fetchOAuthAuthURL,
   fetchOAuthProviders,
@@ -25,6 +26,7 @@ type Profile = {
 }
 
 export function ProfilePage() {
+  const { t } = useTranslation()
   const [params, setParams] = useSearchParams()
   const [email, setEmail] = useState('')
   const [displayName, setDisplayName] = useState('')
@@ -148,7 +150,7 @@ export function ProfilePage() {
 
   return (
     <div className="flex w-full min-w-0 flex-col gap-4">
-      <PageHeader title="PROFILE" subtitle="Account details, password, and linked logins" />
+      <PageHeader title={t('profilePage.title')} subtitle={t('profilePage.subtitle')} />
       {err ? (
         <div className="rounded border border-danger/30 bg-danger/10 px-4 py-2 text-sm text-danger">{err}</div>
       ) : null}

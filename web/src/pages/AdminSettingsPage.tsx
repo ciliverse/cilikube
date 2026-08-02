@@ -8,8 +8,10 @@ import { FONT_PACKS, getStoredFontId, setFontId } from '@/theme/fonts'
 import { switchTheme } from '@/theme/switchTheme'
 import { useTheme } from '@/theme/useTheme'
 import { APP_VERSION, formatAppVersion } from '@/lib/version'
+import { useTranslation } from 'react-i18next'
 
 export function AdminSettingsPage() {
+  const { t } = useTranslation()
   const { isAdmin } = useAuth()
   const { themeId } = useTheme()
   const [msg, setMsg] = useState('')
@@ -257,7 +259,7 @@ export function AdminSettingsPage() {
 
   return (
     <div className="flex w-full min-w-0 flex-col gap-4">
-      <PageHeader title="SYSTEM SETTINGS" subtitle="OAuth, security, AI and Prometheus" />
+      <PageHeader title={t('adminPages.settingsTitle')} subtitle={t('adminPages.settingsSubtitle')} />
       {err ? (
         <div className="rounded border border-danger/30 bg-danger/10 px-4 py-2 text-sm text-danger">{err}</div>
       ) : null}

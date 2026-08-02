@@ -105,10 +105,101 @@ const en = {
     needAccount: 'Need an account? Register',
     continueGithub: 'Continue with GitHub',
     accounts: 'Accounts',
+    clickToFill: 'Click to fill',
+    or: 'or',
+    pitch:
+      'Ask first, then change. After login you land on the AI workspace; the console remains the source of truth.',
+    pitchBullet1: 'Skills inspect the cluster; clues jump into the console',
+    pitchBullet2: 'Multi-cluster fleet overview and AI inspect',
+    pitchBullet3: 'Try in the browser · connect real clusters on desktop',
+    oauthViewerHint:
+      'First-time GitHub sign-in creates a viewer account unless the email matches an existing user (auto-link). To keep admin access, sign in as admin and link GitHub from Profile.',
+    oauthLinkedOnly: 'GitHub accounts must already be linked or provisioned by an admin.',
     requestFailed: 'Request failed',
     oauthMissing:
       'GitHub login is enabled but Client ID is missing. Set credentials in Admin → Settings.',
     oauthLoadFailed: 'Could not load OAuth providers',
+  },
+  cta: {
+    badge: 'OSS',
+    starLine1: 'Open source takes time — star the repo to cheer Cillian on',
+    starLine2: 'Like CiliKube? Leave a Star on GitHub',
+    starLine3: 'Your Star keeps this hobby open-source project going',
+    starMessage:
+      'Open source is hard. If CiliKube helps you, a Star encourages author Cillian to keep building.',
+    starMessageShowcase:
+      'This is the public demo. Open source is hard — a Star encourages Cillian to keep polishing the AI console.',
+    starAction: 'Star on GitHub',
+    later: 'Maybe later',
+  },
+  oauthBanner: {
+    newViewer: 'New account: {{username}} (viewer)',
+    signedInViewer: 'Signed in as {{username}} (viewer)',
+    body: 'Admin data stays on the admin account. Options: sign out and log in as admin; ask an admin to promote this user; or link GitHub from Profile while logged in as admin.',
+    more: 'More info',
+    less: 'Show less',
+    openProfile: 'Open Profile',
+    signOut: 'Sign out',
+    dismiss: 'Dismiss',
+  },
+  ai: {
+    online: 'Online',
+    offline: 'Offline',
+    console: 'Console',
+    unavailable: 'AI unavailable — check Console Settings → AI.',
+    connectFailed: 'Could not reach the AI service — is the API running?',
+    heroTitle: 'Ask first',
+    heroTitleEm: 'then change',
+    heroSub: 'Skills inspect · one click into the console',
+    openHistory: 'Open history',
+    closeHistory: 'Hide history',
+    investigate: 'Investigate with AI',
+  },
+  audit: {
+    title: 'Audit logs',
+    subtitle:
+      'Login / writes / errors / browse APIs · auto-refresh ~8s · click a row for details',
+  },
+  monitoring: {
+    title: 'Monitoring',
+    subtitle: 'Security posture, Prometheus health, and node telemetry',
+  },
+  helm: {
+    title: 'Helm',
+    subtitle: 'Release lifecycle via helm CLI on the API host',
+  },
+  events: {
+    title: 'Events',
+    subtitle: 'Cluster signal stream',
+  },
+  nodes: {
+    title: 'Nodes',
+    subtitle: 'Cluster compute fabric',
+  },
+  proxy: {
+    title: 'API Proxy',
+    subtitle: 'Forward requests through /api/v1/proxy (cluster kube-apiserver)',
+  },
+  crds: {
+    title: 'CRDs',
+    subtitle: 'CustomResourceDefinitions and instances',
+  },
+  profilePage: {
+    title: 'Profile',
+    subtitle: 'Account details, password, and linked logins',
+  },
+  adminPages: {
+    settingsTitle: 'System settings',
+    settingsSubtitle: 'OAuth, security, AI and Prometheus',
+    rolesSubtitle: 'Application roles and permissions',
+  },
+  searchPage: {
+    title: 'Global search',
+    subtitle: 'Client-side search in {{ns}} (+ cluster nodes). Tip: ⌘K / Ctrl+K from any page.',
+  },
+  userMenu: {
+    theme: 'Theme',
+    font: 'Font',
   },
   forcePassword: {
     title: 'Password change required',

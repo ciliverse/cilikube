@@ -3,10 +3,12 @@ import { api, getClusterId } from '@/lib/api'
 import { useAuth } from '@/store/auth'
 import { Button, Card, HudSelect, PageHeader } from '@/components/ui'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
+import { useTranslation } from 'react-i18next'
 
 type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'
 
 export function ProxyConsolePage() {
+  const { t } = useTranslation()
   const { canEdit } = useAuth()
   const [path, setPath] = useState('/api/v1/namespaces')
   const [method, setMethod] = useState<HttpMethod>('GET')
@@ -81,8 +83,8 @@ export function ProxyConsolePage() {
   return (
     <div className="flex w-full min-w-0 flex-col gap-4">
       <PageHeader
-        title="API PROXY"
-        subtitle="Forward requests through /api/v1/proxy (cluster kube-apiserver)"
+        title={t('proxy.title')}
+        subtitle={t('proxy.subtitle')}
       />
       <Card className="space-y-3 p-5">
         <div className="flex flex-wrap gap-3">

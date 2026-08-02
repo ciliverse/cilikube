@@ -6,8 +6,10 @@ import { listEvents, listNamespaces } from '@/api/cluster'
 import { useCluster } from '@/store/cluster'
 import { Badge, Card, EmptyState, HudSelect, PageHeader } from '@/components/ui'
 import { shouldSkipEnterAnim } from '@/lib/motionPrefs'
+import { useTranslation } from 'react-i18next'
 
 export function EventsPage() {
+  const { t } = useTranslation()
   const { clusterId } = useCluster()
   const [namespace, setNamespace] = useState('')
   const [type, setType] = useState('')
@@ -32,8 +34,8 @@ export function EventsPage() {
   return (
     <div>
       <PageHeader
-        title="EVENTS"
-        subtitle="Cluster signal stream"
+        title={t('events.title')}
+        subtitle={t('events.subtitle')}
         action={<Badge tone="neutral">{events.length} events</Badge>}
       />
 

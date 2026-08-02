@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { AnimatePresence, motion } from 'framer-motion'
@@ -68,6 +69,7 @@ function useIsDesktopHistory() {
 }
 
 export function AiChatPage() {
+  const { t } = useTranslation()
   const { clusterId, activeCluster, setClusterId, switchCluster, switching } = useCluster()
   const { namespace, setNamespace } = useNamespace()
   const navigate = useNavigate()
@@ -345,7 +347,7 @@ export function AiChatPage() {
       return undefined
     }
     if (!ready) {
-      setErr(statusQ.isError ? '无法连接 AI 服务，请确认后端已启动' : 'AI 暂不可用，请到控制台 Settings → AI 检查配置')
+      setErr(statusQ.isError ? t('ai.connectFailed') : t('ai.unavailable'))
       return undefined
     }
 
@@ -700,14 +702,14 @@ export function AiChatPage() {
               type="button"
               className="ai-ops-icon-btn ai-ops-history-btn"
               onClick={toggleHistory}
-              aria-label={historyOpen ? '收起历史' : '打开历史'}
+              aria-label={historyOpen ? t('ai.closeHistory') : t('ai.openHistory')}
               aria-expanded={historyOpen}
             >
               {historyOpen && isDesktop ? <PanelLeftClose className="h-4 w-4" /> : <History className="h-4 w-4" />}
             </button>
             <span className={cn('ai-ops-status', ready ? 'is-on' : 'is-off')}>
               <i />
-              {ready ? '在线' : '离线'}
+              {ready ? t('ai.online') : t('ai.offline')}
             </span>
             <span className="ai-ops-cluster" title={clusterLabel}>
               {clusterLabel}
@@ -715,12 +717,12 @@ export function AiChatPage() {
           </div>
           <Link to="/overview" className="ai-ops-console-btn">
             <Terminal className="h-3.5 w-3.5" />
-            控制台
+            {t('ai.console')}
           </Link>
         </div>
 
         {!ready ? (
-          <div className="ai-ops-banner">AI 暂不可用，请到控制台 Settings → AI 检查配置。</div>
+          <div className="ai-ops-banner">{t('ai.unavailable')}</div>
         ) : null}
 
         {isEmpty ? (
@@ -733,10 +735,10 @@ export function AiChatPage() {
             >
               <BrandTitle skipMotion={skipMotion} />
               <h2 className="ai-ops-hero-title">
-                先问清楚
-                <em>再动手改</em>
+                {t('ai.heroTitle')}
+                <em>{t('ai.heroTitleEm')}</em>
               </h2>
-              <p className="ai-ops-hero-sub">Skill 查集群 · 一点进控制台</p>
+              <p className="ai-ops-hero-sub">{t('ai.heroSub')}</p>
               <div className="ai-ops-landing-composer">{composer}</div>
             </motion.div>
           </div>

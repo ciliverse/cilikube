@@ -105,10 +105,98 @@ const zh = {
     needAccount: '没有账号？去注册',
     continueGithub: '使用 GitHub 继续',
     accounts: '账号',
+    clickToFill: '点击填入',
+    or: '或',
+    pitch: '先问清楚，再动手改。登录后先进 AI 工作台，控制台仍是真相源。',
+    pitchBullet1: 'Skill 查集群，线索一点进控制台',
+    pitchBullet2: '多集群舰队总览与 AI 巡检',
+    pitchBullet3: '浏览器试用 · 桌面连真实集群',
+    oauthViewerHint:
+      '首次用 GitHub 登录会创建 viewer 账号（除非邮箱已绑定现有用户）。要保留管理员权限，请先用 admin 登录，再在个人资料里关联 GitHub。',
+    oauthLinkedOnly: 'GitHub 账号需由管理员预先关联或开通。',
     requestFailed: '请求失败',
     oauthMissing:
       '已启用 GitHub 登录但缺少 Client ID。请在 管理 → 设置 中配置。',
     oauthLoadFailed: '无法加载 OAuth 提供商',
+  },
+  cta: {
+    badge: '开源',
+    starLine1: '开源不易，点个 Star，鼓励作者 Cillian 持续开发',
+    starLine2: '喜欢 CiliKube？去 GitHub 点亮一颗 Star',
+    starLine3: '你的 Star，是业余开源继续走下去的燃料',
+    starMessage: '开源不易。若 CiliKube 对你有帮助，欢迎点个 Star，鼓励作者 Cillian 持续开发。',
+    starMessageShowcase:
+      '这是公网 Demo。开源不易，点个 Star，鼓励作者 Cillian 把 AI 控制台继续打磨下去。',
+    starAction: 'Star on GitHub',
+    later: '稍后再说',
+  },
+  oauthBanner: {
+    newViewer: '新账号：{{username}}（viewer）',
+    signedInViewer: '已登录：{{username}}（viewer）',
+    body: '管理员数据仍在 admin 账号。可选：退出后用 admin 登录；请管理员提升本用户；或在 admin 登录后于个人资料关联 GitHub。',
+    more: '更多',
+    less: '收起',
+    openProfile: '打开个人资料',
+    signOut: '退出登录',
+    dismiss: '关闭',
+  },
+  ai: {
+    online: '在线',
+    offline: '离线',
+    console: '控制台',
+    unavailable: 'AI 暂不可用，请到控制台 设置 → AI 检查配置。',
+    connectFailed: '无法连接 AI 服务，请确认后端已启动',
+    heroTitle: '先问清楚',
+    heroTitleEm: '再动手改',
+    heroSub: 'Skill 查集群 · 一点进控制台',
+    openHistory: '打开历史',
+    closeHistory: '收起历史',
+    investigate: '用 AI 调查',
+  },
+  audit: {
+    title: '审计日志',
+    subtitle: '登录 / 写入 / 错误 / 浏览类 API · 约 8 秒自动刷新 · 点击行查看详情',
+  },
+  monitoring: {
+    title: '监控',
+    subtitle: '安全态势、Prometheus 健康与节点遥测',
+  },
+  helm: {
+    title: 'Helm',
+    subtitle: '通过 API 主机上的 helm CLI 管理 Release',
+  },
+  events: {
+    title: '事件',
+    subtitle: '集群信号流',
+  },
+  nodes: {
+    title: '节点',
+    subtitle: '集群计算资源',
+  },
+  proxy: {
+    title: 'API 代理',
+    subtitle: '经 /api/v1/proxy 转发到集群 kube-apiserver',
+  },
+  crds: {
+    title: 'CRD',
+    subtitle: 'CustomResourceDefinition 与实例',
+  },
+  profilePage: {
+    title: '个人资料',
+    subtitle: '账号详情、密码与关联登录',
+  },
+  adminPages: {
+    settingsTitle: '系统设置',
+    settingsSubtitle: 'OAuth、安全、AI 与 Prometheus',
+    rolesSubtitle: '应用角色与权限',
+  },
+  searchPage: {
+    title: '全局搜索',
+    subtitle: '在 {{ns}}（及集群节点）中本地搜索。提示：任意页按 ⌘K / Ctrl+K',
+  },
+  userMenu: {
+    theme: '主题',
+    font: '字体',
   },
   forcePassword: {
     title: '必须修改密码',

@@ -143,9 +143,9 @@ export function UserMenu({
           <div className="my-1 border-t border-line" />
           <div className="flex items-center gap-2 px-3 pt-2 text-[10px] tracking-[0.14em] text-text-dim uppercase">
             <Palette className="h-3 w-3 text-cyan" />
-            Theme
+            {t('userMenu.theme')}
           </div>
-          <div className="theme-swatches" role="group" aria-label="Theme">
+          <div className="theme-swatches" role="group" aria-label={t('userMenu.theme')}>
             {themes.map((th) => (
               <button
                 key={th.id}
@@ -168,7 +168,7 @@ export function UserMenu({
           <div className="my-1 border-t border-line" />
           <div className="flex items-center gap-2 px-3 pt-2 text-[10px] tracking-[0.14em] text-text-dim uppercase">
             <Type className="h-3 w-3 text-cyan" />
-            Font
+            {t('userMenu.font')}
           </div>
           <div className="flex flex-col gap-0.5 px-2 pb-2 pt-1">
             {fonts.map((f) => (

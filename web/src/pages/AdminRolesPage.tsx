@@ -1,5 +1,6 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect, useMemo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import {
   createAdminRole,
   deleteAdminRole,
@@ -16,6 +17,7 @@ import { HudTable, HudTableScroll } from '@/components/HudTableScroll'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
 
 export function AdminRolesPage() {
+  const { t } = useTranslation()
   const { isAdmin } = useAuth()
   const queryClient = useQueryClient()
   const [selected, setSelected] = useState<AdminRole | null>(null)
@@ -132,8 +134,8 @@ export function AdminRolesPage() {
   return (
     <div className="flex w-full min-w-0 flex-col gap-4">
       <PageHeader
-        title="ADMIN ROLES"
-        subtitle="Application roles and permissions"
+        title={t('admin.roles')}
+        subtitle={t('adminPages.rolesSubtitle')}
         action={
           <Button
             type="button"

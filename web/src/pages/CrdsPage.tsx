@@ -7,6 +7,7 @@ import { useCluster } from '@/store/cluster'
 import { Badge, Button, Card, EmptyState, Modal, PageHeader } from '@/components/ui'
 import { HudTable, HudTableScroll } from '@/components/HudTableScroll'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
+import { useTranslation } from 'react-i18next'
 
 type CrdRow = {
   name?: string
@@ -93,6 +94,7 @@ function toCrRequest(parsed: any) {
 }
 
 export function CrdsPage() {
+  const { t } = useTranslation()
   const { clusterId } = useCluster()
   const { canEdit, isAdmin } = useAuth()
   const queryClient = useQueryClient()
@@ -244,7 +246,7 @@ ${scoped ? '  namespace: default\n' : ''}spec: {}
 
   return (
     <div className="flex w-full min-w-0 flex-col gap-4">
-      <PageHeader title="CRDs" subtitle="CustomResourceDefinitions and instances" />
+      <PageHeader title={t('crds.title')} subtitle={t('crds.subtitle')} />
       <label className="block max-w-md space-y-1">
         <span className="hud-label">Filter</span>
         <input

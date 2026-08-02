@@ -5,6 +5,7 @@ import { fetchOAuthProviders, register, type OAuthProviderInfo } from '@/api/aut
 import { fetchShowcaseInfo, type ShowcaseInfo } from '@/api/showcase'
 import { useAuth } from '@/store/auth'
 import { BrandMark } from '@/components/BrandMark'
+import { StarSupportRotator } from '@/components/StarSupportCta'
 import { Button, Input } from '@/components/ui'
 import { APP_REPO_URL, APP_VERSION, formatAppVersion } from '@/lib/version'
 
@@ -123,21 +124,24 @@ export function LoginPage() {
             <p className="mt-2 max-w-md text-sm tracking-[0.12em] text-text-dim uppercase sm:mt-3 sm:text-[13px]">
               {t('boot.subtitle')}
             </p>
+            <div className="mt-4">
+              <StarSupportRotator />
+            </div>
             <p className="mt-5 hidden max-w-md text-[15px] leading-relaxed text-text lg:block">
-              先问清楚，再动手改。登录后先进 AI 工作台，控制台仍是真相源。
+              {t('login.pitch')}
             </p>
             <ul className="mt-7 hidden max-w-md space-y-3 text-sm leading-snug text-text-dim lg:block">
               <li className="flex gap-2.5">
                 <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-cyan" />
-                Skill 查集群，线索一点进控制台
+                {t('login.pitchBullet1')}
               </li>
               <li className="flex gap-2.5">
                 <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-orange" />
-                多集群舰队总览与 AI 巡检
+                {t('login.pitchBullet2')}
               </li>
               <li className="flex gap-2.5">
                 <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-cyan" />
-                浏览器试用 · 桌面连真实集群
+                {t('login.pitchBullet3')}
               </li>
             </ul>
           </div>
@@ -163,7 +167,7 @@ export function LoginPage() {
               <div className="rounded border border-cyan/30 bg-cyan/5 px-3 py-2.5">
                 <div className="mb-2 flex items-center justify-between gap-2">
                   <div className="hud-label text-cyan">{t('login.accounts')}</div>
-                  <span className="shrink-0 text-[10px] text-text-dim">点击填入</span>
+                  <span className="shrink-0 text-[10px] text-text-dim">{t('login.clickToFill')}</span>
                 </div>
                 <div className="flex flex-col gap-2">
                   {showcase.accounts.map((a) => (
@@ -264,7 +268,7 @@ export function LoginPage() {
               <>
                 <div className="flex items-center gap-3 text-[11px] tracking-[0.14em] text-text-dim uppercase">
                   <span className="h-px flex-1 bg-line" />
-                  or
+                  {t('login.or')}
                   <span className="h-px flex-1 bg-line" />
                 </div>
                 {readyProviders.map((p) => (
@@ -284,15 +288,9 @@ export function LoginPage() {
                   </Button>
                 ))}
                 {allowRegistration ? (
-                  <p className="text-center text-[10px] text-text-dim">
-                    First-time GitHub sign-in creates a new <span className="text-warn">viewer</span>{' '}
-                    account unless the email matches an existing user (auto-link). To keep admin
-                    access, sign in as admin and link GitHub from Profile.
-                  </p>
+                  <p className="text-center text-[10px] text-text-dim">{t('login.oauthViewerHint')}</p>
                 ) : (
-                  <p className="text-center text-[10px] text-text-dim">
-                    GitHub accounts must already be linked or provisioned by an admin.
-                  </p>
+                  <p className="text-center text-[10px] text-text-dim">{t('login.oauthLinkedOnly')}</p>
                 )}
               </>
             ) : null}
@@ -301,6 +299,12 @@ export function LoginPage() {
       </div>
 
       <footer className="login-footer">
+        <a href={APP_REPO_URL} target="_blank" rel="noreferrer noopener">
+          ★ {t('cta.starAction')}
+        </a>
+        <span className="login-footer-sep" aria-hidden>
+          ·
+        </span>
         <a href={APP_REPO_URL} target="_blank" rel="noreferrer noopener">
           cilikube-2026@ciliverse
         </a>
