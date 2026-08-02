@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -9,8 +10,108 @@ import (
 
 	"github.com/ciliverse/cilikube/internal/service"
 	"github.com/ciliverse/cilikube/internal/store"
+	"github.com/ciliverse/cilikube/pkg/geoip"
 	"github.com/gin-gonic/gin"
 )
+
+// auditLogView is the admin UI payload: parsed details + IP region.
+type auditLogView struct {
+	ID         uint                   `json:"id"`
+	UserID     *uint                  `json:"user_id"`
+	Username   string                 `json:"username,omitempty"`
+	Action     string                 `json:"action"`
+	Resource   string                 `json:"resource"`
+	ResourceID string                 `json:"resource_id"`
+	IPAddress  string                 `json:"ip_address"`
+	UserAgent  string                 `json:"user_agent"`
+	Details    map[string]interface{} `json:"details"`
+	CreatedAt  time.Time              `json:"created_at"`
+
+	Path       string  `json:"path,omitempty"`
+	Method     string  `json:"method,omitempty"`
+	StatusCode int     `json:"status_code,omitempty"`
+	Result     string  `json:"result,omitempty"`
+	DurationMs float64 `json:"duration_ms,omitempty"`
+
+	Region   string `json:"region,omitempty"`
+	Country  string `json:"country,omitempty"`
+	Province string `json:"province,omitempty"`
+	City     string `json:"city,omitempty"`
+	ISP      string `json:"isp,omitempty"`
+}
+
+func toAuditLogView(log *store.AuditLog) auditLogView {
+	if log == nil {
+		return auditLogView{}
+	}
+	details := map[string]interface{}{}
+	if strings.TrimSpace(log.Details) != "" {
+		_ = json.Unmarshal([]byte(log.Details), &details)
+	}
+	username, _ := details["username"].(string)
+	path, _ := details["path"].(string)
+	method, _ := details["method"].(string)
+	result, _ := details["result"].(string)
+	var statusCode int
+	switch v := details["status_code"].(type) {
+	case float64:
+		statusCode = int(v)
+	case int:
+		statusCode = v
+	case json.Number:
+		if n, err := v.Int64(); err == nil {
+			statusCode = int(n)
+		}
+	}
+	var durationMs float64
+	switch v := details["duration_ms"].(type) {
+	case float64:
+		durationMs = v
+	case int:
+		durationMs = float64(v)
+	case json.Number:
+		if n, err := v.Float64(); err == nil {
+			durationMs = n
+		}
+	}
+	ua := log.UserAgent
+	if ua == "" {
+		if s, ok := details["user_agent"].(string); ok {
+			ua = s
+		}
+	}
+	ip := log.IPAddress
+	if ip == "" {
+		if s, ok := details["ip"].(string); ok {
+			ip = s
+		}
+	}
+	view := auditLogView{
+		ID:         log.ID,
+		UserID:     log.UserID,
+		Username:   username,
+		Action:     log.Action,
+		Resource:   log.Resource,
+		ResourceID: log.ResourceID,
+		IPAddress:  ip,
+		UserAgent:  ua,
+		Details:    details,
+		CreatedAt:  log.CreatedAt,
+		Path:       path,
+		Method:     method,
+		StatusCode: statusCode,
+		Result:     result,
+		DurationMs: durationMs,
+	}
+	if loc := geoip.Default().Lookup(ip); loc != nil {
+		view.Region = loc.Label
+		view.Country = loc.Country
+		view.Province = loc.Province
+		view.City = loc.City
+		view.ISP = loc.ISP
+	}
+	return view
+}
 
 // parseAuditPeriod accepts Go durations plus day units (e.g. 7d → 168h).
 func parseAuditPeriod(periodStr string) (time.Duration, error) {
@@ -117,7 +218,7 @@ func (h *AuditHandler) GetAuditLogs(c *gin.Context) {
 		q.UserID = &uid
 	}
 
-	logs, total, err := h.auditService.QueryAuditLogs(q)
+	rawLogs, total, err := h.auditService.QueryAuditLogs(q)
 
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
@@ -127,11 +228,17 @@ func (h *AuditHandler) GetAuditLogs(c *gin.Context) {
 		return
 	}
 
+	logs, _ := rawLogs.([]*store.AuditLog)
+	views := make([]auditLogView, 0, len(logs))
+	for _, log := range logs {
+		views = append(views, toAuditLogView(log))
+	}
+
 	c.JSON(http.StatusOK, gin.H{
 		"code":    200,
 		"message": "Retrieved successfully",
 		"data": gin.H{
-			"logs":      logs,
+			"logs":      views,
 			"total":     total,
 			"page":      page,
 			"page_size": pageSize,

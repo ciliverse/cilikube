@@ -1,9 +1,10 @@
-import { useMemo, useState } from 'react'
+import { Fragment, useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { apiGet } from '@/lib/api'
 import { useAuth } from '@/store/auth'
 import { Badge, Button, Card, EmptyState, PageHeader, StatCard } from '@/components/ui'
 import { HudTable, HudTableScroll } from '@/components/HudTableScroll'
+import { cn } from '@/lib/utils'
 
 /** Format Date as datetime-local value (local timezone, minute precision). */
 function toLocalInput(d: Date): string {
@@ -47,6 +48,72 @@ function formatLocalWindow(startLocal: string, endLocal: string): string {
   return `${a.toLocaleString(undefined, opts)} → ${b.toLocaleString(undefined, opts)}`
 }
 
+function formatTime(raw: string | undefined): string {
+  if (!raw) return '-'
+  const d = new Date(raw)
+  if (Number.isNaN(d.getTime())) return raw
+  return d.toLocaleString(undefined, {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false,
+  })
+}
+
+function parseDetails(log: any): Record<string, unknown> | null {
+  let details = log?.details
+  if (typeof details === 'string' && details) {
+    try {
+      details = JSON.parse(details)
+    } catch {
+      return null
+    }
+  }
+  if (details && typeof details === 'object') return details as Record<string, unknown>
+  return null
+}
+
+function shortUA(ua: string): string {
+  if (!ua) return '-'
+  // Keep browser / OS hints readable without dumping the full UA string.
+  const chrome = ua.match(/Chrome\/([\d.]+)/)
+  const firefox = ua.match(/Firefox\/([\d.]+)/)
+  const safari = !chrome && ua.match(/Version\/([\d.]+).*Safari/)
+  const edge = ua.match(/Edg\/([\d.]+)/)
+  const browser = edge
+    ? `Edge ${edge[1]}`
+    : chrome
+      ? `Chrome ${chrome[1]}`
+      : firefox
+        ? `Firefox ${firefox[1]}`
+        : safari
+          ? `Safari ${safari[1]}`
+          : ua.slice(0, 48)
+  const os = ua.includes('Windows')
+    ? 'Windows'
+    : ua.includes('Mac OS')
+      ? 'macOS'
+      : ua.includes('Android')
+        ? 'Android'
+        : ua.includes('iPhone') || ua.includes('iPad')
+          ? 'iOS'
+          : ua.includes('Linux')
+            ? 'Linux'
+            : ''
+  return os ? `${browser} · ${os}` : browser
+}
+
+function resultTone(result: string, status?: number): 'ok' | 'danger' | 'warn' | 'accent' {
+  const r = (result || '').toLowerCase()
+  if (r === 'success' || r === 'ok' || (status != null && status >= 200 && status < 400)) return 'ok'
+  if (r === 'failed' || r === 'failure' || r === 'denied' || (status != null && status >= 400)) return 'danger'
+  if (status != null) return 'warn'
+  return 'accent'
+}
+
 const PRESETS: { label: string; hours: number }[] = [
   { label: '1h', hours: 1 },
   { label: '24h', hours: 24 },
@@ -54,11 +121,14 @@ const PRESETS: { label: string; hours: number }[] = [
   { label: '30d', hours: 24 * 30 },
 ]
 
+const COL_COUNT = 9
+
 export function AuditPage() {
   const { isAdmin } = useAuth()
   const [action, setAction] = useState('')
   const [userId, setUserId] = useState('')
   const [page, setPage] = useState(1)
+  const [expanded, setExpanded] = useState<Record<string, boolean>>({})
   const initial = useMemo(() => defaultRange(24), [])
   const [startLocal, setStartLocal] = useState(initial.start)
   const [endLocal, setEndLocal] = useState(initial.end)
@@ -139,7 +209,10 @@ export function AuditPage() {
 
   return (
     <div className="flex w-full min-w-0 flex-col gap-4">
-      <PageHeader title="AUDIT LOGS" subtitle="API and security activity" />
+      <PageHeader
+        title="AUDIT LOGS"
+        subtitle="API and security activity · click a row for full path / UA / details"
+      />
 
       <Card className="space-y-3 p-5">
         <div className="flex flex-wrap items-center gap-2">
@@ -166,7 +239,7 @@ export function AuditPage() {
                 setPage(1)
                 setAction(e.target.value)
               }}
-              placeholder="login"
+              placeholder="login / api_request"
             />
           </label>
           <label className="block space-y-1">
@@ -280,56 +353,149 @@ export function AuditPage() {
       ) : null}
 
       <Card className="overflow-hidden">
-        <HudTableScroll>
-          <HudTable>
+        <HudTableScroll wide>
+          <HudTable className="min-w-[1100px]">
             <thead>
               <tr>
+                <th className="w-10" />
                 <th>Time</th>
                 <th>User</th>
                 <th>Action</th>
                 <th>Resource</th>
+                <th>Result</th>
                 <th>IP</th>
+                <th>Region</th>
                 <th>Client</th>
               </tr>
             </thead>
             <tbody>
               {(logs as any[]).map((log: any, i: number) => {
-                let details: any = log.details
-                if (typeof details === 'string' && details) {
-                  try {
-                    details = JSON.parse(details)
-                  } catch {
-                    details = null
-                  }
-                }
+                const details = parseDetails(log)
+                const key = String(log.id ?? i)
+                const open = Boolean(expanded[key])
                 const username =
                   log.username ||
-                  details?.username ||
+                  (details?.username as string | undefined) ||
                   (log.user_id != null ? `#${log.user_id}` : '-')
-                const ua = log.user_agent || details?.user_agent || ''
+                const ua = log.user_agent || (details?.user_agent as string | undefined) || ''
+                const ip = log.ip_address || log.ip || (details?.ip as string | undefined) || '-'
+                const region =
+                  log.region ||
+                  [log.country, log.province, log.city].filter(Boolean).join(' ') ||
+                  '-'
+                const resourceBits = [log.resource || log.path, log.resource_id].filter(Boolean)
+                const resourceLabel = resourceBits.length ? resourceBits.join(' / ') : '-'
+                const status =
+                  log.status_code ??
+                  (typeof details?.status_code === 'number' ? details.status_code : undefined)
+                const result =
+                  (log.result as string | undefined) ||
+                  (details?.result as string | undefined) ||
+                  (status != null ? String(status) : '')
+                const path =
+                  (log.path as string | undefined) || (details?.path as string | undefined) || ''
+                const method =
+                  (log.method as string | undefined) || (details?.method as string | undefined) || ''
+                const duration =
+                  log.duration_ms ??
+                  (typeof details?.duration_ms === 'number' ? details.duration_ms : undefined)
+
                 return (
-                  <tr key={log.id || i}>
-                    <td className="text-text-dim">{log.created_at || log.timestamp || '-'}</td>
-                    <td className="font-mono text-xs">{username}</td>
-                    <td>
-                      <Badge tone="accent">{log.action || '-'}</Badge>
-                    </td>
-                    <td className="max-w-xs truncate">
-                      {log.resource || log.path || '-'}
-                      {log.resource_id ? `/${log.resource_id}` : ''}
-                    </td>
-                    <td className="font-mono text-xs text-cyan">
-                      {log.ip_address || log.ip || details?.ip || '-'}
-                    </td>
-                    <td className="max-w-[10rem] truncate text-[11px] text-text-dim" title={ua}>
-                      {ua || '-'}
-                    </td>
-                  </tr>
+                  <Fragment key={key}>
+                    <tr
+                      className="cursor-pointer hover:bg-panel/80"
+                      onClick={() => setExpanded((prev) => ({ ...prev, [key]: !prev[key] }))}
+                    >
+                      <td className="!overflow-visible text-center text-text-dim">{open ? '▾' : '▸'}</td>
+                      <td className="font-mono text-[11px] text-text-dim">
+                        {formatTime(log.created_at || log.timestamp)}
+                      </td>
+                      <td className="font-mono text-xs">{username}</td>
+                      <td>
+                        <Badge tone="accent">{log.action || '-'}</Badge>
+                        {log.action === 'api_request' && log.resource_id ? (
+                          <span className="ml-1 font-mono text-[10px] text-text-dim">
+                            {log.resource_id}
+                          </span>
+                        ) : null}
+                      </td>
+                      <td
+                        className="audit-cell-wrap max-w-[16rem] font-mono text-[11px]"
+                        title={resourceLabel}
+                      >
+                        {resourceLabel}
+                      </td>
+                      <td>
+                        {result ? (
+                          <Badge tone={resultTone(String(result), status as number | undefined)}>
+                            {String(result)}
+                          </Badge>
+                        ) : (
+                          <span className="text-text-dim">-</span>
+                        )}
+                      </td>
+                      <td className="font-mono text-xs text-cyan">{ip}</td>
+                      <td
+                        className="audit-cell-wrap max-w-[12rem] text-xs text-text"
+                        title={[region, log.isp].filter(Boolean).join(' · ')}
+                      >
+                        {region}
+                        {log.isp ? (
+                          <span className="mt-0.5 block text-[10px] text-text-dim">{log.isp}</span>
+                        ) : null}
+                      </td>
+                      <td className="audit-cell-wrap max-w-[12rem] text-[11px] text-text-dim" title={ua}>
+                        {shortUA(ua)}
+                      </td>
+                    </tr>
+                    {open ? (
+                      <tr className="bg-panel/40">
+                        <td
+                          colSpan={COL_COUNT}
+                          className={cn('audit-cell-wrap px-4 py-3')}
+                        >
+                          <div className="grid gap-3 text-xs md:grid-cols-2">
+                            <div className="space-y-1">
+                              <div className="hud-label">Request</div>
+                              <div className="font-mono text-[11px] text-text break-all">
+                                {[method, path || resourceLabel].filter(Boolean).join(' ') || '-'}
+                              </div>
+                              {duration != null ? (
+                                <div className="text-text-dim">Duration: {Number(duration).toFixed(1)} ms</div>
+                              ) : null}
+                              {status != null ? (
+                                <div className="text-text-dim">HTTP status: {String(status)}</div>
+                              ) : null}
+                              <div className="text-text-dim break-all">
+                                IP: {ip}
+                                {region !== '-' ? ` · ${region}` : ''}
+                                {log.isp ? ` · ${log.isp}` : ''}
+                              </div>
+                            </div>
+                            <div className="space-y-1">
+                              <div className="hud-label">User-Agent</div>
+                              <div className="break-all text-[11px] text-text-dim">{ua || '-'}</div>
+                            </div>
+                            <div className="md:col-span-2 space-y-1">
+                              <div className="hud-label">Details (JSON)</div>
+                              <pre className="max-h-56 overflow-auto rounded border border-line bg-panel-solid p-3 font-mono text-[11px] leading-relaxed text-text whitespace-pre-wrap break-all">
+                                {details
+                                  ? JSON.stringify(details, null, 2)
+                                  : log.details
+                                    ? String(log.details)
+                                    : '(empty)'}
+                              </pre>
+                            </div>
+                          </div>
+                        </td>
+                      </tr>
+                    ) : null}
+                  </Fragment>
                 )
               })}
               {!logsQ.isLoading && !(logs as any[]).length ? (
                 <tr>
-                  <td colSpan={6}>
+                  <td colSpan={COL_COUNT}>
                     <EmptyState>
                       {logsQ.isError
                         ? 'Failed to load audit logs (is /api/v1/audit registered?)'

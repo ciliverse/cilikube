@@ -44,4 +44,7 @@ cmd/server/server
 configs/config.prod.yaml
 /readonly.kubeconfig
 *.kubeconfig
+# Offline IP geo DB (downloaded at runtime; ~11MB)
+/data/*.xdb
+/data/*.xdb.tmp
 

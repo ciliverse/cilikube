@@ -5,7 +5,7 @@
 </div>
 
 <div align="center">
-  <img src="https://img.shields.io/badge/Release-v0.9.0-green?style=flat-square" alt="Release v0.9.0">
+  <img src="https://img.shields.io/badge/Release-v1.0.0-green?style=flat-square" alt="Release v1.0.0">
   <img src="https://img.shields.io/badge/Frontend-React%2019-61DAFB?style=flat-square&logo=react" alt="React 19">
   <img src="https://img.shields.io/badge/Frontend-TypeScript%207-blue?style=flat-square&logo=typescript" alt="TypeScript 7">
   <img src="https://img.shields.io/badge/Frontend-Vite%208-blue?style=flat-square&logo=vite" alt="Vite 8">
@@ -22,7 +22,7 @@
 
 We appreciate your interest in CiliKube. If you find this project valuable for your Kubernetes management needs, please consider starring the repository ⭐. Community support drives continuous development and improvement.
 
-Stay updated with the latest releases and technical insights by following our WeChat Official Account **cilliantech**.
+Stay updated with the latest releases and technical insights by following our WeChat Official Account **希里安**.
 
 ## 🤝 Contributors
 
@@ -42,118 +42,138 @@ This project's CDN acceleration and security protection services are generously 
 
 ## 📖 Overview
 
-CiliKube is an enterprise-grade, open-source Kubernetes multi-cluster management platform built with modern web technologies including React, TypeScript, Go, and Gin. The platform provides an intuitive, streamlined interface for comprehensive Kubernetes resource management while maintaining extensibility for custom requirements. CiliKube serves as an ideal foundation for organizations seeking efficient cluster operations and developers learning cloud-native technologies.
+CiliKube is an open-source Kubernetes multi-cluster management platform built with React, TypeScript, Go, and Gin.  
+**From v1.0, login lands on the AI workspace first; the resource console is still there — just no longer the only door.**
 
-### v0.9.0 (current)
+In one line:
 
-Highlights since v0.8.0: Gateway API (GatewayClass / Gateway / HTTPRoute), Chinese UI + Maple Mono CN, desktop apps (Windows / macOS / Linux), forced password change on first desktop login.
+**AI is the navigator / read-only investigator; the console remains the source of truth.**
+
+Ask “how is it now / what’s broken,” follow resource clues into detail, logs, or a terminal — AI stays read-only by default and does not mutate the cluster for you.
+
+### v1.0.0 (current)
+
+Highlights vs earlier releases:
+
+- **AI workspace**: home after login, Skills (Featured / Inspect / Troubleshoot / Navigate + `/` menu + custom prompts), **Investigate with AI** from resources
+- **Fleet overview**: multi-cluster health cards, per-card / fleet inspect
+- **Resource console**: workloads / networking (incl. Gateway API) / config / storage / RBAC, logs & web terminal
+- **Monitoring**: metrics-server snapshots + Prometheus series (Showcase curves on the public demo)
+- **Desktop apps**: Windows / macOS / Linux with embedded backend reading local kubeconfig
+- **Themes**: tron / paper / matrix / amber / nord / sakura / midnight-violet / solarized
 
 <div align="center">
-  <img src="docs/v0.8/overview.png" alt="Cluster Overview" width="100%">
-  <p><strong>Cluster Overview</strong></p>
+  <img src="docs/v1.0/01-ai-landing.png" alt="AI landing" width="100%">
+  <p><strong>AI landing · Skill categories</strong></p>
 </div>
 
 <div align="center">
-  <img src="docs/v0.8/admin-users.png" alt="Admin Users" width="100%">
-  <p><strong>Admin · Users</strong></p>
+  <img src="docs/v1.0/03-ai-chat-clues.png" alt="AI chat with resource clues" width="100%">
+  <p><strong>AI chat · resource clues into the console</strong></p>
 </div>
 
 <div align="center">
-  <img src="docs/v0.8/admin-settings.png" alt="System Settings" width="100%">
-  <p><strong>Admin · Settings</strong></p>
+  <img src="docs/v1.0/04-fleet-overview.png" alt="Fleet overview" width="100%">
+  <p><strong>Fleet overview · multi-cluster cards</strong></p>
+</div>
+
+<div align="center">
+  <img src="docs/v1.0/05-monitoring.png" alt="Monitoring" width="100%">
+  <p><strong>Monitoring · CPU / Memory series</strong></p>
 </div>
 
 <details>
-<summary>Cluster overview across themes (TRON / Paper / Matrix / Amber / Nord)</summary>
+<summary>More screenshots (login · Skill · investigate · themes)</summary>
 
 <br>
 
 <div align="center">
-  <img src="docs/v0.8/overview-tron.png" alt="TRON theme overview" width="100%">
-  <p><strong>TRON</strong></p>
+  <img src="docs/v1.0/00-login.png" alt="Login" width="100%">
+  <p><strong>Login</strong></p>
 </div>
 
 <div align="center">
-  <img src="docs/v0.8/overview-paper.png" alt="Paper theme overview" width="100%">
-  <p><strong>Paper</strong></p>
+  <img src="docs/v1.0/02-ai-skill-slash.png" alt="Skill menu" width="100%">
+  <p><strong>Type <code>/</code> for Skills</strong></p>
 </div>
 
 <div align="center">
-  <img src="docs/v0.8/overview-matrix.png" alt="Matrix theme overview" width="100%">
-  <p><strong>Matrix</strong></p>
+  <img src="docs/v1.0/07-pods-investigate.png" alt="Investigate with AI" width="100%">
+  <p><strong>Pods list · Investigate with AI</strong></p>
 </div>
 
 <div align="center">
-  <img src="docs/v0.8/overview-amber.png" alt="Amber theme overview" width="100%">
-  <p><strong>Amber</strong></p>
+  <img src="docs/v1.0/08-pod-detail.png" alt="Pod detail" width="100%">
+  <p><strong>Pod detail</strong></p>
 </div>
 
 <div align="center">
-  <img src="docs/v0.8/overview-nord.png" alt="Nord theme overview" width="100%">
-  <p><strong>Nord</strong></p>
+  <img src="docs/v1.0/09-themes-overview-collage.png" alt="Eight themes" width="100%">
+  <p><strong>Eight themes</strong></p>
 </div>
 
 </details>
 
-
 ## ✨ Key Differentiators
 
-CiliKube distinguishes itself from complex enterprise solutions by prioritizing simplicity and usability without sacrificing functionality:
-
-1. **Streamlined Interface**: Provides an intuitive, clean interface for essential Kubernetes resource management operations.
-2. **Developer-Centric Design**: Built with modern development practices and clean architecture, making it an excellent reference for **React/Go web development** and **Kubernetes API integration**.
-3. **Extensible Architecture**: Designed with modularity in mind, enabling seamless integration of custom features and workflows.
+1. **Triage first, deep dive second**: land on AI after login; console in the top bar; resource pages and fleet cards can throw context back to the investigator
+2. **Clear read-only boundary**: default agent is the cluster investigator; writes, approvals, and backups still go through the console and your existing process
+3. **Developer-friendly**: clean React / Go architecture — a solid reference for Kubernetes API integration and modern full-stack panels
+4. **Browser + desktop**: same UI; desktop reads local kubeconfig without standing up a web stack first
 
 ## 🎯 Target Audience
 
-- **Frontend Developers**: Seeking hands-on experience with **React + TypeScript + Tailwind** ecosystem
-- **Backend Developers**: Learning **Go + Gin** web development and microservices architecture
-- **Cloud-Native Engineers**: Exploring **Kubernetes API** integration and **client-go** library implementation
-- **DevOps Teams**: Requiring a lightweight, customizable Kubernetes management interface
-- **Educational Institutions**: Teaching modern web development and cloud-native technologies
+- **Cloud-native / DevOps**: lightweight, customizable multi-cluster UI with ask-first workflows
+- **Frontend developers**: hands-on **React + TypeScript + Tailwind**
+- **Backend developers**: **Go + Gin** and **client-go** integration
+- **Learners**: understand Kubernetes resource models and troubleshooting paths by using them
 
 ## 💡 Project Genesis
 
-CiliKube emerged from a comprehensive full-stack development learning initiative, combining practical web development skills with deep Kubernetes expertise. The project represents both a technical achievement and an educational resource, designed to serve as a gateway for developers entering the cloud-native ecosystem. Our mission extends beyond providing a management tool—we aim to foster a community of learners and contributors in the open-source landscape.
+CiliKube started as a full-stack learning project that grew into a product you can actually open.  
+v1.0 adds an entry that matches how people troubleshoot — ask first, then change.
 
 ## 🌐 Online Demo
 
-- Online Demo: https://cilikube.cillian.website
+- Demo: https://cilikube.cillian.website  
+  (Public demo is a Showcase **fake fleet**; login can fill demo accounts in one click — not a production ops console)
 
 ## 📚 Documentation
 
-- Online demo / product site: [cilikube.cillian.website](https://cilikube.cillian.website)
+- Demo / product site: [cilikube.cillian.website](https://cilikube.cillian.website)
+- Intro post: [CiliKube 1.0.0](https://www.cillian.website/en/post/20260730/)
 
 ## 🚀 Technology Stack
 
-CiliKube leverages industry-standard technologies and frameworks to ensure reliability, maintainability, and developer productivity.
-
 **System Requirements**:
-- Node.js >= 20.0.0 (Developed and tested with v24.14.1)
-- Go >= 1.26.0 (Developed and tested with v1.26.4)
-- PNPM >= 10.x (Package management)
+- Node.js >= 20.0.0 (developed and tested with v24.14.1)
+- Go >= 1.26.0 (developed and tested with v1.26.4)
+- PNPM >= 10.x
 - Kubernetes / kubectl 1.36.2 (client-go aligned)
 
-**Frontend Architecture**: 
+**Frontend Architecture**:
 - **Core**: `React 19` `TypeScript 7` `Vite 8` `Tailwind CSS 4`
 - **Data / Routing**: `TanStack Query` `React Router`
 - **Motion / Charts**: `Framer Motion` `Recharts`
 - **HTTP Client**: `Axios`
-- The previous Vue UI remains available in the separate [cilikube-web](https://github.com/cillianxtech/cilikube-web) repository.
+- The previous Vue UI remains in [cilikube-web](https://github.com/ciliverse/cilikube-web)
 
-**Backend Architecture**: 
+**Backend Architecture**:
 - **Framework**: `Go` `Gin`
 - **Kubernetes Integration**: `client-go`
 - **Authentication**: `JWT`
 - **Real-time Communication**: `Gorilla WebSocket`
 - **Configuration**: `Viper`
 - **Logging**: `Zap Logger`
+- **AI**: mock / OpenAI-compatible SSE (read-only tool calls)
 
 ## ✨ Current Features
 
+- **AI workspace**: home after login, SSE chat, read-only tools, Skills (`/` + custom), Investigate-with-AI, session history, jump into console
+- **Fleet overview**: multi-cluster health cards, env tags, per-card / fleet AI inspect
 - **Auth & RBAC**: JWT login, optional GitHub OAuth, Casbin roles; user / role / settings admin; security audit log
-- **Multi-cluster**: Import and switch clusters, local kubeconfig context import, active cluster selection
-- **Overview & search**: Cluster overview dashboard, global resource search, Events stream
+- **Multi-cluster**: import and switch clusters, local kubeconfig context import
+- **Overview & search**: global resource search, Events stream
 - **Cluster resources**:
   - Nodes / Namespaces / CRDs
   - Workloads: Pods (logs / web terminal), Deployments, StatefulSets, DaemonSets, Jobs, CronJobs, HPA, PDB
@@ -161,27 +181,28 @@ CiliKube leverages industry-standard technologies and frameworks to ensure relia
   - Config: ConfigMaps, Secrets, ServiceAccounts, ResourceQuotas, LimitRanges
   - Storage: PV / PVC / StorageClass
   - Access: Roles, RoleBindings, ClusterRoles, ClusterRoleBindings
-- **Observe & ops**: Monitoring (Prometheus metrics), Helm releases, API Proxy console, resource YAML view / edit
+- **Observe & ops**: Monitoring (Prometheus), Helm releases, API Proxy, resource YAML view / edit
+- **Themes / Chinese UI**
 
 ## 🖥️ Desktop (Windows / macOS / Linux)
 
 Double-click app: Electron shell + embedded Go API, using your local kubeconfig (`~/.kube/config` or `%USERPROFILE%\.kube\config`).
 
-Latest: **[v0.9.2-desktop.1](https://github.com/ciliverse/cilikube/releases/tag/v0.9.2-desktop.1)**
+Latest: **[v1.0.0-desktop.1](https://github.com/ciliverse/cilikube/releases/tag/v1.0.0-desktop.1)**
 
 | Platform | Asset |
 | --- | --- |
-| Windows x64 | [setup](https://github.com/ciliverse/cilikube/releases/download/v0.9.2-desktop.1/CiliKube-0.9.2-win-x64-setup.exe) / [portable](https://github.com/ciliverse/cilikube/releases/download/v0.9.2-desktop.1/CiliKube-0.9.2-win-x64-portable.exe) |
-| macOS Apple Silicon | [DMG](https://github.com/ciliverse/cilikube/releases/download/v0.9.2-desktop.1/CiliKube-0.9.2-mac-arm64.dmg) |
-| Linux x64 | [AppImage](https://github.com/ciliverse/cilikube/releases/download/v0.9.2-desktop.1/CiliKube-0.9.2-linux-x86_64.AppImage) |
+| Windows x64 | [setup](https://github.com/ciliverse/cilikube/releases/download/v1.0.0-desktop.1/CiliKube-1.0.0-win-x64-setup.exe) / [portable](https://github.com/ciliverse/cilikube/releases/download/v1.0.0-desktop.1/CiliKube-1.0.0-win-x64-portable.exe) |
+| macOS Apple Silicon | [DMG](https://github.com/ciliverse/cilikube/releases/download/v1.0.0-desktop.1/CiliKube-1.0.0-mac-arm64.dmg) |
+| Linux x64 | [AppImage](https://github.com/ciliverse/cilikube/releases/download/v1.0.0-desktop.1/CiliKube-1.0.0-linux-x86_64.AppImage) |
 
 - **First login**: `admin` / `12345678` (forced password change on first login)
 - **Notes**: builds are unsigned (Windows SmartScreen / macOS Gatekeeper may warn). Intel Mac DMG not yet published.
 - **Build**: push a desktop tag (CI builds all three platforms; SQLite needs CGO on each runner):
 
 ```bash
-git tag v0.9.2-desktop.1
-git push origin v0.9.2-desktop.1
+git tag v1.0.0-desktop.1
+git push origin v1.0.0-desktop.1
 ```
 
 ## 💻 Local Development
@@ -229,10 +250,10 @@ go build -o bin/cilikube cmd/server/main.go
 ### Using Official Images
 ```bash
 # Backend
-docker run -d --name cilikube -p 8080:8080 -v ~/.kube:/root/.kube:ro ghcr.io/ciliverse/cilikube:v0.9.0
+docker run -d --name cilikube -p 8080:8080 -v ~/.kube:/root/.kube:ro ghcr.io/ciliverse/cilikube:v1.0.0
 
 # Frontend
-docker run -d --name cilikube-web -p 80:80 ghcr.io/ciliverse/cilikube-web:v0.9.0
+docker run -d --name cilikube-web -p 80:80 ghcr.io/ciliverse/cilikube-web:v1.0.0
 ```
 
 ### Using Docker Compose
@@ -336,7 +357,7 @@ Please follow the Conventional Commits specification:
 
 - Email: cilliantech@gmail.com
 - Website: https://www.cillian.website
-- WeChat: cillianoffical
+- WeChat: 希里安
 
 <img src="docs/wechat400x400.png" width="100" height="100" />
 

@@ -331,6 +331,14 @@ body {
   white-space: nowrap;
 }
 
+/* Audit / detail cells: allow wrap so path / region / JSON are readable */
+.hud-table td.audit-cell-wrap {
+  overflow: visible;
+  text-overflow: clip;
+  white-space: normal;
+  word-break: break-word;
+}
+
 /* Prefer readable Name column under table-layout: fixed */
 .hud-table th:first-child,
 .hud-table td:first-child {

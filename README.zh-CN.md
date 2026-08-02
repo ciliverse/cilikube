@@ -5,7 +5,7 @@
 </div>
 
 <div align="center">
-  <img src="https://img.shields.io/badge/Release-v0.9.0-green?style=flat-square" alt="Release v0.9.0">
+  <img src="https://img.shields.io/badge/Release-v1.0.0-green?style=flat-square" alt="Release v1.0.0">
   <img src="https://img.shields.io/badge/Frontend-React%2019-61DAFB?style=flat-square&logo=react" alt="React 19">
   <img src="https://img.shields.io/badge/Frontend-TypeScript%207-blue?style=flat-square&logo=typescript" alt="TypeScript 7">
   <img src="https://img.shields.io/badge/Frontend-Vite%208-blue?style=flat-square&logo=vite" alt="Vite 8">
@@ -42,90 +42,108 @@
 
 ## 📖 产品概述
 
-CiliKube 是一个企业级开源 Kubernetes 多集群管理平台，采用现代化 Web 技术栈构建，包括 React、TypeScript、Go 和 Gin。该平台为全面的 Kubernetes 资源管理提供直观、简化的界面，同时保持自定义需求的可扩展性。CiliKube 为寻求高效集群运维的组织和学习云原生技术的开发者提供了理想的基础平台。
+CiliKube 是开源的 Kubernetes 多集群管理平台，技术栈为 React + TypeScript + Go / Gin。  
+**v1.0 起，登录后先进 AI 工作台；资源控制台仍在，但不再是唯一入口。**
 
-### v0.9.0（当前）
+定位一句话：
 
-相对 v0.8.0 的主要更新：Gateway API（GatewayClass / Gateway / HTTPRoute）、中文界面 + Maple Mono CN、桌面客户端（Windows / macOS / Linux）、桌面首次登录强制改密。
+**AI 是领航员 / 只读调查员，控制台仍是真相源。**
+
+问清楚「现在怎么样、哪儿挂了」，再顺着线索进详情、日志或终端动手；AI 默认只读查证，不替你在集群里乱改。
+
+### v1.0.0（当前）
+
+相对此前版本的主要变化：
+
+- **AI 工作台**：登录首页、Skill（精选 / 巡检 / 排障 / 导航 + `/` 菜单 + 自定义 Prompt）、资源页「用 AI 调查」
+- **集群总览**：多集群健康卡片、单卡 / 舰队巡检
+- **资源控制台**：工作负载 / 网络（含 Gateway API）/ 配置 / 存储 / RBAC、日志与 Web 终端
+- **Monitoring**：metrics-server 快照 + Prometheus 时序（Demo 为 Showcase 曲线）
+- **桌面客户端**：Windows / macOS / Linux，内嵌后端读本机 kubeconfig
+- **多主题**：tron / paper / matrix / amber / nord / sakura / midnight-violet / solarized
 
 <div align="center">
-  <img src="docs/v0.8/overview.png" alt="集群概览" width="100%">
-  <p><strong>集群概览</strong></p>
+  <img src="docs/v1.0/01-ai-landing.png" alt="AI 落地页" width="100%">
+  <p><strong>AI 落地页 · Skill 分类</strong></p>
 </div>
 
 <div align="center">
-  <img src="docs/v0.8/admin-users.png" alt="用户管理" width="100%">
-  <p><strong>管理 · 用户</strong></p>
+  <img src="docs/v1.0/03-ai-chat-clues.png" alt="AI 对话与资源线索" width="100%">
+  <p><strong>AI 对话 · 资源线索进控制台</strong></p>
 </div>
 
 <div align="center">
-  <img src="docs/v0.8/admin-settings.png" alt="系统设置" width="100%">
-  <p><strong>管理 · 设置</strong></p>
+  <img src="docs/v1.0/04-fleet-overview.png" alt="集群总览" width="100%">
+  <p><strong>集群总览 · 多集群卡片</strong></p>
+</div>
+
+<div align="center">
+  <img src="docs/v1.0/05-monitoring.png" alt="Monitoring" width="100%">
+  <p><strong>Monitoring · CPU / Memory 时序</strong></p>
 </div>
 
 <details>
-<summary>不同主题下的集群概览（TRON / Paper / Matrix / Amber / Nord）</summary>
+<summary>更多界面（登录 · Skill · 调查 · 主题）</summary>
 
 <br>
 
 <div align="center">
-  <img src="docs/v0.8/overview-tron.png" alt="TRON 主题概览" width="100%">
-  <p><strong>TRON</strong></p>
+  <img src="docs/v1.0/00-login.png" alt="登录页" width="100%">
+  <p><strong>登录页</strong></p>
 </div>
 
 <div align="center">
-  <img src="docs/v0.8/overview-paper.png" alt="Paper 主题概览" width="100%">
-  <p><strong>Paper</strong></p>
+  <img src="docs/v1.0/02-ai-skill-slash.png" alt="Skill 菜单" width="100%">
+  <p><strong>输入 <code>/</code> 弹出 Skill</strong></p>
 </div>
 
 <div align="center">
-  <img src="docs/v0.8/overview-matrix.png" alt="Matrix 主题概览" width="100%">
-  <p><strong>Matrix</strong></p>
+  <img src="docs/v1.0/07-pods-investigate.png" alt="用 AI 调查" width="100%">
+  <p><strong>Pods 列表 ·「用 AI 调查」</strong></p>
 </div>
 
 <div align="center">
-  <img src="docs/v0.8/overview-amber.png" alt="Amber 主题概览" width="100%">
-  <p><strong>Amber</strong></p>
+  <img src="docs/v1.0/08-pod-detail.png" alt="Pod 详情" width="100%">
+  <p><strong>Pod 详情</strong></p>
 </div>
 
 <div align="center">
-  <img src="docs/v0.8/overview-nord.png" alt="Nord 主题概览" width="100%">
-  <p><strong>Nord</strong></p>
+  <img src="docs/v1.0/09-themes-overview-collage.png" alt="八套主题" width="100%">
+  <p><strong>八套主题概览</strong></p>
 </div>
 
 </details>
 
 ## ✨ 核心优势
 
-CiliKube 通过专注于简洁性和可用性而非复杂的企业级解决方案，在不牺牲功能性的前提下实现了差异化：
-
-1. **精简界面**: 为核心 Kubernetes 资源管理操作提供直观、清晰的界面
-2. **开发者导向设计**: 采用现代开发实践和清晰架构构建，是学习 **React/Go Web 开发** 和 **Kubernetes API 集成** 的优秀参考
-3. **可扩展架构**: 采用模块化设计，支持自定义功能和工作流的无缝集成
+1. **先问诊，再深潜**: 登录先进 AI，控制台在顶栏；资源页与舰队卡都能把上下文扔回调查员
+2. **只读边界清晰**: 默认 Agent 是集群调查员；写操作、审批、备份仍走控制台与既有流程
+3. **开发者友好**: React / Go 清晰架构，适合学习 Kubernetes API 集成与现代全栈面板
+4. **浏览器 + 桌面**: 同一套界面；桌面双击连本机 kubeconfig，不必先搭 Web
 
 ## 🎯 目标用户
 
-- **前端开发者**: 寻求 **React + TypeScript + Tailwind** 生态系统实践经验
-- **后端开发者**: 学习 **Go + Gin** Web 开发和微服务架构
-- **云原生工程师**: 探索 **Kubernetes API** 集成和 **client-go** 库实现
-- **DevOps 团队**: 需要轻量级、可定制的 Kubernetes 管理界面
-- **教育机构**: 教授现代 Web 开发和云原生技术
+- **云原生 / DevOps**: 需要轻量、可定制的多集群界面，并愿意先问诊再动手
+- **前端开发者**: 寻求 **React + TypeScript + Tailwind** 实践经验
+- **后端开发者**: 学习 **Go + Gin** 与 **client-go** 集成
+- **学习者**: 边用边理解 Kubernetes 资源模型与排障路径
 
 ## 💡 项目起源
 
-CiliKube 源于一个全面的全栈开发学习计划，将实用的 Web 开发技能与深度的 Kubernetes 专业知识相结合。该项目既是技术成就的体现，也是教育资源，旨在为进入云原生生态系统的开发者提供入门途径。我们的使命不仅仅是提供管理工具，更致力于在开源领域培育学习者和贡献者社区。
+CiliKube 源于全栈学习与云原生实践：把想法做成能点开的产品。  
+v1.0 在资源控制台之上，补了一层更接近真实排障顺序的入口——先问清楚，再动手改。
 
 ## 🌐 在线预览
 
-- 在线演示: https://cilikube.cillian.website
+- 在线演示: https://cilikube.cillian.website  
+  （公网 Demo 为 Showcase **模拟舰队**，登录页可一键填演示账号；勿当生产运维台）
 
 ## 📚 文档
 
-- 在线演示 / 产品站点: [cilikube.cillian.website](https://cilikube.cillian.website)
+- 演示 / 产品站: [cilikube.cillian.website](https://cilikube.cillian.website)
+- 介绍文: [CiliKube 1.0.0 博客](https://www.cillian.website/post/20260730/)
 
 ## 🚀 技术架构
-
-CiliKube 采用行业标准技术和框架，确保可靠性、可维护性和开发者生产力。
 
 **系统要求**:
 - Node.js >= 20.0.0 (开发和测试版本 v24.14.1)
@@ -133,27 +151,29 @@ CiliKube 采用行业标准技术和框架，确保可靠性、可维护性和�
 - PNPM >= 10.x
 - Kubernetes / kubectl 1.36.2（与 client-go 对齐）
 
-**前端架构**: 
+**前端架构**:
 - **核心技术**: `React 19` `TypeScript 7` `Vite 8` `Tailwind CSS 4`
 - **数据 / 路由**: `TanStack Query` `React Router`
 - **动效 / 图表**: `Framer Motion` `Recharts`
 - **HTTP 客户端**: `Axios`
-- 原 Vue 前端仍保留在独立仓库 [cilikube-web](https://github.com/cillianxtech/cilikube-web)。
+- 原 Vue 前端仍保留在独立仓库 [cilikube-web](https://github.com/ciliverse/cilikube-web)
 
-
-**后端架构**: 
+**后端架构**:
 - **框架**: `Go` `Gin`
 - **Kubernetes 集成**: `client-go`
 - **身份认证**: `JWT`
 - **实时通信**: `Gorilla WebSocket`
 - **配置管理**: `Viper`
 - **日志系统**: `Zap Logger`
+- **AI**: mock / OpenAI 兼容 SSE（只读工具调用）
 
 ## ✨ 现有功能
 
-- **认证与权限**: JWT 登录、GitHub OAuth（可选）、Casbin RBAC；用户 / 角色 / 系统设置管理；安全审计日志
-- **多集群**: 集群导入与切换、本地 kubeconfig 上下文导入、活动集群切换
-- **概览与检索**: 集群概览仪表盘、全局资源搜索、Events 事件流
+- **AI 工作台**: 登录首页、SSE 对话、只读工具、Skill（含 `/` 与自定义）、资源页「用 AI 调查」、会话历史、一键进控制台
+- **集群总览**: 多集群健康卡片、环境标签、单卡 AI 巡检 / 舰队巡检
+- **认证与权限**: JWT 登录、GitHub OAuth（可选）、Casbin RBAC；用户 / 角色 / 系统设置；安全审计
+- **多集群**: 集群导入与切换、本地 kubeconfig 上下文导入
+- **概览与检索**: 全局资源搜索、Events 事件流
 - **集群资源**:
   - Nodes / Namespaces / CRDs
   - Workloads：Pods（日志 / Web 终端）、Deployments、StatefulSets、DaemonSets、Jobs、CronJobs、HPA、PDB
@@ -161,27 +181,28 @@ CiliKube 采用行业标准技术和框架，确保可靠性、可维护性和�
   - Config：ConfigMaps、Secrets、ServiceAccounts、ResourceQuotas、LimitRanges
   - Storage：PV / PVC / StorageClass
   - Access：Roles、RoleBindings、ClusterRoles、ClusterRoleBindings
-- **可观测与运维**: Monitoring（Prometheus 指标）、Helm Release 管理、API Proxy 控制台、资源 YAML 查看 / 编辑
+- **可观测与运维**: Monitoring（Prometheus）、Helm Release、API Proxy、资源 YAML 查看 / 编辑
+- **多主题 / 中文界面**
 
 ## 🖥️ 桌面版（Windows / macOS / Linux）
 
 双击即用：Electron 壳 + 内嵌 Go 后端，自动读取本机 kubeconfig（`~/.kube/config` 或 `%USERPROFILE%\.kube\config`）。
 
-最新版：**[v0.9.2-desktop.1](https://github.com/ciliverse/cilikube/releases/tag/v0.9.2-desktop.1)**
+最新版：**[v1.0.0-desktop.1](https://github.com/ciliverse/cilikube/releases/tag/v1.0.0-desktop.1)**
 
 | 平台 | 下载 |
 | --- | --- |
-| Windows x64 | [安装包](https://github.com/ciliverse/cilikube/releases/download/v0.9.2-desktop.1/CiliKube-0.9.2-win-x64-setup.exe) / [便携版](https://github.com/ciliverse/cilikube/releases/download/v0.9.2-desktop.1/CiliKube-0.9.2-win-x64-portable.exe) |
-| macOS Apple Silicon | [DMG](https://github.com/ciliverse/cilikube/releases/download/v0.9.2-desktop.1/CiliKube-0.9.2-mac-arm64.dmg) |
-| Linux x64 | [AppImage](https://github.com/ciliverse/cilikube/releases/download/v0.9.2-desktop.1/CiliKube-0.9.2-linux-x86_64.AppImage) |
+| Windows x64 | [安装包](https://github.com/ciliverse/cilikube/releases/download/v1.0.0-desktop.1/CiliKube-1.0.0-win-x64-setup.exe) / [便携版](https://github.com/ciliverse/cilikube/releases/download/v1.0.0-desktop.1/CiliKube-1.0.0-win-x64-portable.exe) |
+| macOS Apple Silicon | [DMG](https://github.com/ciliverse/cilikube/releases/download/v1.0.0-desktop.1/CiliKube-1.0.0-mac-arm64.dmg) |
+| Linux x64 | [AppImage](https://github.com/ciliverse/cilikube/releases/download/v1.0.0-desktop.1/CiliKube-1.0.0-linux-x86_64.AppImage) |
 
 - **首次登录**：`admin` / `12345678`（首次登录会强制改密）
 - **说明**：当前未代码签名（Windows SmartScreen / macOS 可能提示拦截）。Intel Mac DMG 暂未发布。
 - **自己打包**：推送带 `desktop` 的 tag，CI 会同时打三端（各 runner 上需 CGO 编 SQLite）：
 
 ```bash
-git tag v0.9.2-desktop.1
-git push origin v0.9.2-desktop.1
+git tag v1.0.0-desktop.1
+git push origin v1.0.0-desktop.1
 ```
 
 ## 💻 本地开发
@@ -229,10 +250,10 @@ go build -o bin/cilikube cmd/server/main.go
 ### 使用官方镜像
 ```bash
 # 后端
-docker run -d --name cilikube -p 8080:8080 -v ~/.kube:/root/.kube:ro ghcr.io/ciliverse/cilikube:v0.9.0
+docker run -d --name cilikube -p 8080:8080 -v ~/.kube:/root/.kube:ro ghcr.io/ciliverse/cilikube:v1.0.0
 
 # 前端
-docker run -d --name cilikube-web -p 80:80 ghcr.io/ciliverse/cilikube-web:v0.9.0
+docker run -d --name cilikube-web -p 80:80 ghcr.io/ciliverse/cilikube-web:v1.0.0
 ```
 
 ### 使用 Docker Compose
