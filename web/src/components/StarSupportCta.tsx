@@ -4,22 +4,7 @@ import { fetchShowcaseInfo } from '@/api/showcase'
 import { APP_REPO_URL } from '@/lib/version'
 import { cn } from '@/lib/utils'
 
-const DISMISS_KEY = 'cilikube_star_cta_dismissed_until'
-const DISMISS_DAYS = 14
-
-function dismissedUntil(): number {
-  const raw = localStorage.getItem(DISMISS_KEY)
-  const n = raw ? Number(raw) : 0
-  return Number.isFinite(n) ? n : 0
-}
-
-function isDismissed() {
-  return Date.now() < dismissedUntil()
-}
-
-function dismissForDays(days: number) {
-  localStorage.setItem(DISMISS_KEY, String(Date.now() + days * 86_400_000))
-}
+const LEGACY_DISMISS_KEY = 'cilikube_star_cta_dismissed_until'
 
 /** Rotating support line for login brand / document-adjacent copy. */
 export function StarSupportRotator({ className }: { className?: string }) {
@@ -59,28 +44,33 @@ export function StarSupportRotator({ className }: { className?: string }) {
   )
 }
 
-/** Dismissible floating tip — prefer showcase; still polite on self-host. */
+/** Floating tip — close only hides for this page view; every fresh open shows again. */
 export function StarSupportFloat() {
   const { t } = useTranslation()
   const [show, setShow] = useState(false)
   const [showcase, setShowcase] = useState(false)
 
   useEffect(() => {
+    // Drop the old 14-day localStorage dismiss so prior closes don't stick.
+    try {
+      localStorage.removeItem(LEGACY_DISMISS_KEY)
+    } catch {
+      /* ignore */
+    }
+
     let cancelled = false
     ;(async () => {
-      if (isDismissed()) return
       try {
         const info = await fetchShowcaseInfo()
         if (cancelled) return
         setShowcase(Boolean(info.showcase))
-        // Showcase: show after a short beat. Self-host: only if never dismissed this session window.
         window.setTimeout(() => {
-          if (!cancelled && !isDismissed()) setShow(true)
+          if (!cancelled) setShow(true)
         }, info.showcase ? 1200 : 4000)
       } catch {
-        if (!cancelled && !isDismissed()) {
+        if (!cancelled) {
           window.setTimeout(() => {
-            if (!cancelled && !isDismissed()) setShow(true)
+            if (!cancelled) setShow(true)
           }, 5000)
         }
       }
@@ -107,10 +97,7 @@ export function StarSupportFloat() {
         <button
           type="button"
           className="text-[10px] tracking-[0.12em] text-text-dim uppercase hover:text-text"
-          onClick={() => {
-            dismissForDays(DISMISS_DAYS)
-            setShow(false)
-          }}
+          onClick={() => setShow(false)}
         >
           {t('common.close')}
         </button>
@@ -124,20 +111,14 @@ export function StarSupportFloat() {
           target="_blank"
           rel="noreferrer noopener"
           className="inline-flex items-center gap-1.5 rounded border border-cyan/40 bg-cyan/10 px-2.5 py-1 text-[11px] font-semibold tracking-[0.12em] text-cyan uppercase hover:bg-cyan/15"
-          onClick={() => {
-            dismissForDays(DISMISS_DAYS)
-            setShow(false)
-          }}
+          onClick={() => setShow(false)}
         >
           ★ {t('cta.starAction')}
         </a>
         <button
           type="button"
           className="text-[11px] text-text-dim hover:text-text hover:underline"
-          onClick={() => {
-            dismissForDays(DISMISS_DAYS)
-            setShow(false)
-          }}
+          onClick={() => setShow(false)}
         >
           {t('cta.later')}
         </button>
