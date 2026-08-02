@@ -147,6 +147,8 @@ export function AuditPage() {
   const logsQ = useQuery({
     queryKey: ['audit-logs', page, action, userId, startTime, endTime],
     enabled: isAdmin,
+    refetchInterval: 8_000,
+    refetchOnWindowFocus: true,
     queryFn: () => {
       const params: Record<string, unknown> = {
         page,
@@ -211,7 +213,7 @@ export function AuditPage() {
     <div className="flex w-full min-w-0 flex-col gap-4">
       <PageHeader
         title="AUDIT LOGS"
-        subtitle="API and security activity · click a row for full path / UA / details"
+        subtitle="API activity (login / writes / errors / browse GETs) · auto-refresh ~8s · click a row for details"
       />
 
       <Card className="space-y-3 p-5">

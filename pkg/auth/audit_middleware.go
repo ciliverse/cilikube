@@ -3,11 +3,20 @@ package auth
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"io"
+	"strings"
+	"sync"
 	"time"
 
 	"github.com/gin-gonic/gin"
 )
+
+// Successful GET polls (overview / fleet / monitoring) would flood audit logs.
+// Keep one row per user+method+path+status within this window.
+const auditReadDedupeWindow = 60 * time.Second
+
+var auditReadDedupe sync.Map // key -> time.Time
 
 // APIAuditLogger records API audit events without importing internal packages.
 type APIAuditLogger interface {
@@ -53,21 +62,34 @@ func AuditMiddleware(auditLogger APIAuditLogger) gin.HandlerFunc {
 		}
 
 		action, resource := parsePathForAudit(c.Request.Method, c.Request.URL.Path)
-		success := c.Writer.Status() < 400
+		status := c.Writer.Status()
+		success := status < 400
 
-		if !shouldLogEvent(c.Request.Method, c.Request.URL.Path, c.Writer.Status()) {
+		if !shouldLogEvent(c.Request.Method, c.Request.URL.Path, status) {
 			return
 		}
 
+		uidPtr := getUserIDForAudit(userID, hasAuth)
+		// Deduplicate successful API reads so 15–30s UI polls don't spam the table.
+		if success && c.Request.Method == "GET" && isAPIPath(c.Request.URL.Path) {
+			uidKey := "anon"
+			if uidPtr != nil {
+				uidKey = fmt.Sprintf("%d", *uidPtr)
+			}
+			if shouldDedupeAuditRead(uidKey, c.Request.Method, c.Request.URL.Path, status) {
+				return
+			}
+		}
+
 		_ = auditLogger.LogAPIRequest(
-			getUserIDForAudit(userID, hasAuth),
+			uidPtr,
 			username,
 			AuditClientIP(c),
 			c.GetHeader("User-Agent"),
 			resource,
 			action,
 			getResultFromStatus(success),
-			getSeverityFromStatus(c.Writer.Status()),
+			getSeverityFromStatus(status),
 			details,
 		)
 	}
@@ -201,6 +223,41 @@ func shouldLogEvent(method, path string, statusCode int) bool {
 	if method == "POST" || method == "PUT" || method == "PATCH" || method == "DELETE" {
 		return true
 	}
+	// Browse activity: successful API GETs (pods / AI / fleet / …).
+	// Previously only mutations/auth/admin were kept, so "I opened the demo"
+	// often looked like it was never recorded.
+	if method == "GET" && isAPIPath(path) && !isNoisyAuditReadPath(path) {
+		return true
+	}
+	return false
+}
+
+func isAPIPath(path string) bool {
+	return strings.HasPrefix(path, "/api/")
+}
+
+func isNoisyAuditReadPath(path string) bool {
+	// High-frequency or self-referential reads — skip even when GET audit is on.
+	noisy := []string{
+		"/watch",
+		"/stream",
+		"/metrics",
+		"/prometheus",
+		"/monitoring",
+		"/api/v1/audit/",
+	}
+	return containsString(path, noisy)
+}
+
+func shouldDedupeAuditRead(userKey, method, path string, statusCode int) bool {
+	key := fmt.Sprintf("%s|%s|%s|%d", userKey, method, path, statusCode)
+	now := time.Now()
+	if prev, ok := auditReadDedupe.Load(key); ok {
+		if t, ok := prev.(time.Time); ok && now.Sub(t) < auditReadDedupeWindow {
+			return true
+		}
+	}
+	auditReadDedupe.Store(key, now)
 	return false
 }
 
