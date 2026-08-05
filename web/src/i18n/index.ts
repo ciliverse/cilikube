@@ -14,8 +14,8 @@ export function getStoredLang(): AppLang {
   } catch {
     /* ignore */
   }
-  // Default Chinese for product + desktop users
-  return 'zh'
+  // Default English for public demo + new visitors (boot / login)
+  return 'en'
 }
 
 export function setStoredLang(lang: AppLang) {

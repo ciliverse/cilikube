@@ -115,17 +115,17 @@ export function LoginPage() {
 
       <div className="login-enter relative mx-auto grid w-full max-w-[1100px] flex-1 lg:grid-cols-[1fr_minmax(0,26rem)] lg:items-center lg:gap-x-10 xl:gap-x-16">
         {/* Brand / pitch — top on mobile, left on desktop */}
-        <aside className="login-brand flex flex-col px-5 pb-3 pt-[max(1.25rem,env(safe-area-inset-top))] sm:px-8 lg:justify-center lg:px-6 lg:py-8 xl:px-2">
-          <div className="flex flex-col justify-center">
+        <aside className="login-brand flex flex-col items-center px-5 pb-3 pt-[max(1.25rem,env(safe-area-inset-top))] text-center sm:px-8 lg:items-start lg:justify-center lg:px-6 lg:py-8 lg:text-left xl:px-2">
+          <div className="flex w-full max-w-md flex-col items-center justify-center lg:items-start">
             <BrandMark
               brandClassName="text-3xl sm:text-4xl lg:text-[2.75rem]"
-              className="items-baseline gap-2 sm:gap-2.5"
+              className="items-baseline justify-center gap-2 sm:gap-2.5 lg:justify-start"
             />
             <p className="mt-2 max-w-md text-sm tracking-[0.12em] text-text-dim uppercase sm:mt-3 sm:text-[13px]">
               {t('boot.subtitle')}
             </p>
-            <div className="mt-4">
-              <StarSupportRotator />
+            <div className="mt-4 flex justify-center lg:justify-start">
+              <StarSupportRotator className="justify-center text-center lg:justify-start lg:text-left" />
             </div>
             <p className="mt-5 hidden max-w-md text-[15px] leading-relaxed text-text lg:block">
               {t('login.pitch')}

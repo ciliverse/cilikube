@@ -31,6 +31,9 @@ func ProcessChat(ctx context.Context, cfg *configs.Config, client *k8s.Client, r
 		send(SSEEvent{Event: "error", Data: map[string]string{"message": "No messages"}})
 		return
 	}
+	if req != nil {
+		req.Language = normalizeLang(req.Language)
+	}
 	provider := strings.ToLower(cfg.AI.Provider)
 	if provider == "" {
 		provider = "mock"
@@ -47,20 +50,36 @@ func ProcessChat(ctx context.Context, cfg *configs.Config, client *k8s.Client, r
 	}
 }
 
-func systemPrompt(namespace string) string {
+func systemPrompt(namespace, lang string) string {
 	nsHint := "all namespaces"
+	nsHintZh := "全部命名空间"
 	if namespace != "" {
 		nsHint = "prefer namespace " + namespace
+		nsHintZh = "优先命名空间 " + namespace
+	}
+	if isZh(lang) {
+		return strings.TrimSpace(`
+你是 CiliKube「集群调查员」——只读巡检与导航助手。
+职责：用工具取证，用中文给出简洁结论，并指出控制台下一步入口。
+规则：
+- 涉及集群现状时必须先调用工具，禁止编造资源名。
+- 全程用简体中文回答（资源名、Pod phase、事件 Reason 等 Kubernetes 专有名词可保留原文）。
+- Pod / Deployment / Service / Node 名称必须原样写出，方便前端生成可点击卡片。
+- 不能变更集群（禁止 create/update/delete/scale/exec）。若用户要求改动，拒绝并提示进控制台操作。
+- 落地页 Skills（智能点检 / 快速调查 / 工作负载快照等）按多步工具计划执行。
+范围提示：` + nsHintZh + `
+工具：get_cluster_overview、list_resources、get_resource、get_pod_logs。
+`)
 	}
 	return strings.TrimSpace(`
-You are CiliKube「集群调查员」(cluster investigator) — a read-only navigation and triage agent.
-Your job: gather evidence with tools, summarize clearly, and point the user into the console for details.
+You are CiliKube's cluster investigator — a read-only triage and navigation agent.
+Your job: gather evidence with tools, summarize clearly in English, and point the user into the console for details.
 Rules:
 - Always call tools before concluding about live cluster state. Never invent resource names.
-- Prefer concise Chinese unless the user writes in English.
+- Reply in concise English (Kubernetes resource names and phases may stay as-is).
 - Keep pod/deployment/service/node names exact so the UI can render clickable resource cards.
 - You cannot mutate the cluster (no create/update/delete/scale/exec). If asked to change something, refuse and suggest the console path.
-- Skills on the landing page are investigation playbooks; treat combo asks (智能点检 / 快速调查 / 工作负载快照) as multi-step tool plans.
+- Landing-page skills (Smart inspect / Quick triage / Workload snapshot, etc.) are multi-step tool playbooks.
 Scope hint: ` + nsHint + `
 Tools: get_cluster_overview, list_resources, get_resource, get_pod_logs.
 `)

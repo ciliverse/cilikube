@@ -4,6 +4,21 @@ const STORAGE_KEY = 'cilikube_ai_sessions_v1'
 const MAX_SESSIONS = 40
 const MAX_TITLE = 64
 
+/** Language-neutral marker for an empty chat; UI maps it via i18n (`ai.newChat`). */
+export const EMPTY_CHAT_TITLE_KEY = '__new_chat__'
+
+const LEGACY_EMPTY_TITLES = new Set(['新对话', 'New chat', '未命名', 'Untitled', EMPTY_CHAT_TITLE_KEY])
+
+export function isEmptyChatTitle(title?: string | null): boolean {
+  const t = (title || '').trim()
+  return !t || LEGACY_EMPTY_TITLES.has(t)
+}
+
+/** Resolve a stored title for the current UI language. */
+export function displayChatTitle(title: string | undefined, emptyLabel: string): string {
+  return isEmptyChatTitle(title) ? emptyLabel : (title || emptyLabel)
+}
+
 export type AiSession = {
   id: string
   title: string
@@ -51,10 +66,13 @@ export function sanitizeSessionTitle(raw: string): string {
   return t.length > MAX_TITLE ? `${t.slice(0, MAX_TITLE)}…` : t
 }
 
-export function titleFromMessages(messages: AiChatMessage[]): string {
+export function titleFromMessages(
+  messages: AiChatMessage[],
+  emptyTitle = EMPTY_CHAT_TITLE_KEY,
+): string {
   const first = messages.find((m) => m.role === 'user' && m.content.trim())
-  if (!first) return '新对话'
-  return sanitizeSessionTitle(first.content) || '新对话'
+  if (!first) return EMPTY_CHAT_TITLE_KEY
+  return sanitizeSessionTitle(first.content) || emptyTitle || EMPTY_CHAT_TITLE_KEY
 }
 
 export function listAiSessions(): AiSession[] {
@@ -65,10 +83,14 @@ export function getAiSession(id: string): AiSession | undefined {
   return readAll().find((s) => s.id === id)
 }
 
-export function createAiSession(meta?: { clusterId?: string; clusterName?: string }): AiSession {
+export function createAiSession(meta?: {
+  clusterId?: string
+  clusterName?: string
+  emptyTitle?: string
+}): AiSession {
   const session: AiSession = {
     id: uid(),
-    title: '新对话',
+    title: EMPTY_CHAT_TITLE_KEY,
     titleCustom: false,
     createdAt: Date.now(),
     updatedAt: Date.now(),
@@ -80,22 +102,44 @@ export function createAiSession(meta?: { clusterId?: string; clusterName?: strin
   return session
 }
 
-export function saveAiSession(session: AiSession) {
+export function saveAiSession(session: AiSession, emptyTitle = EMPTY_CHAT_TITLE_KEY) {
   const prev = readAll().find((s) => s.id === session.id)
   const titleCustom = Boolean(session.titleCustom ?? prev?.titleCustom)
   const all = readAll().filter((s) => s.id !== session.id)
+  let title: string
+  if (titleCustom) {
+    const cleaned = sanitizeSessionTitle(session.title)
+    title = isEmptyChatTitle(cleaned) ? EMPTY_CHAT_TITLE_KEY : cleaned || prev?.title || EMPTY_CHAT_TITLE_KEY
+  } else if (session.messages.length) {
+    title = titleFromMessages(session.messages, emptyTitle)
+  } else if (isEmptyChatTitle(session.title) || isEmptyChatTitle(prev?.title)) {
+    title = EMPTY_CHAT_TITLE_KEY
+  } else {
+    title = session.title || prev?.title || EMPTY_CHAT_TITLE_KEY
+  }
   const next: AiSession = {
     ...session,
     titleCustom,
-    title: titleCustom
-      ? sanitizeSessionTitle(session.title) || prev?.title || '新对话'
-      : session.messages.length
-        ? titleFromMessages(session.messages)
-        : session.title || prev?.title || '新对话',
+    title,
     updatedAt: Date.now(),
   }
   writeAll([next, ...all])
   return next
+}
+
+/** Normalize legacy localized empty titles ("新对话" / "New chat") to the sentinel. */
+export function migrateEmptyChatTitles(): AiSession[] {
+  const all = readAll()
+  let changed = false
+  const next = all.map((s) => {
+    if (!s.titleCustom && isEmptyChatTitle(s.title) && s.title !== EMPTY_CHAT_TITLE_KEY) {
+      changed = true
+      return { ...s, title: EMPTY_CHAT_TITLE_KEY }
+    }
+    return s
+  })
+  if (changed) writeAll(next)
+  return next.sort((a, b) => b.updatedAt - a.updatedAt)
 }
 
 export function renameAiSession(id: string, title: string): AiSession | undefined {
@@ -110,13 +154,20 @@ export function renameAiSession(id: string, title: string): AiSession | undefine
   })
 }
 
-export function duplicateAiSession(id: string): AiSession | undefined {
+export function duplicateAiSession(
+  id: string,
+  opts?: { emptyTitle?: string; copySuffix?: string },
+): AiSession | undefined {
   const cur = getAiSession(id)
   if (!cur) return undefined
+  const emptyLabel = opts?.emptyTitle || 'New chat'
+  const suffix = opts?.copySuffix || ' (copy)'
+  const shown = displayChatTitle(cur.title, emptyLabel)
+  const base = shown.replace(/\s*(\(copy\)|（副本）)$/u, '')
   const copy: AiSession = {
     ...cur,
     id: uid(),
-    title: sanitizeSessionTitle(`${cur.title.replace(/（副本）$/, '')}（副本）`) || '新对话（副本）',
+    title: sanitizeSessionTitle(`${base}${suffix}`) || `${emptyLabel}${suffix}`,
     titleCustom: true,
     createdAt: Date.now(),
     updatedAt: Date.now(),
@@ -139,7 +190,10 @@ function startOfDay(d: Date) {
 }
 
 /** Cursor-style recency buckets for the history rail. */
-export function groupAiSessions(sessions: AiSession[]): AiSessionGroup[] {
+export function groupAiSessions(
+  sessions: AiSession[],
+  labels?: Partial<Record<'today' | 'yesterday' | 'week' | 'month' | 'older', string>>,
+): AiSessionGroup[] {
   const now = new Date()
   const today = startOfDay(now)
   const yesterday = today - 86_400_000
@@ -147,11 +201,11 @@ export function groupAiSessions(sessions: AiSession[]): AiSessionGroup[] {
   const month = today - 30 * 86_400_000
 
   const buckets: { key: string; label: string; sessions: AiSession[] }[] = [
-    { key: 'today', label: '今天', sessions: [] },
-    { key: 'yesterday', label: '昨天', sessions: [] },
-    { key: 'week', label: '近 7 天', sessions: [] },
-    { key: 'month', label: '近 30 天', sessions: [] },
-    { key: 'older', label: '更早', sessions: [] },
+    { key: 'today', label: labels?.today || 'Today', sessions: [] },
+    { key: 'yesterday', label: labels?.yesterday || 'Yesterday', sessions: [] },
+    { key: 'week', label: labels?.week || 'Previous 7 days', sessions: [] },
+    { key: 'month', label: labels?.month || 'Previous 30 days', sessions: [] },
+    { key: 'older', label: labels?.older || 'Older', sessions: [] },
   ]
 
   for (const s of sessions) {

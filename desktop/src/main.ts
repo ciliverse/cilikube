@@ -111,7 +111,7 @@ jwt:
   issuer: cilikube
 preferences:
   ui:
-    default_language: zh
+    default_language: en
     default_theme: paper
 oauth:
   github:

@@ -390,6 +390,58 @@ func (h *AuditHandler) GetSecurityMetrics(c *gin.Context) {
 	})
 }
 
+// GetGeoStats aggregates visitor geography for the audit time window.
+// @Summary Get audit geo stats
+// @Description Country / province / city visitor counts from audit IPs (ip2region)
+// @Tags Audit
+// @Produce json
+// @Security BearerAuth
+// @Param start_time query string true "Start time (RFC3339)"
+// @Param end_time query string true "End time (RFC3339)"
+// @Success 200 {object} service.GeoStats
+// @Router /api/v1/audit/geo [get]
+func (h *AuditHandler) GetGeoStats(c *gin.Context) {
+	startTimeStr := c.Query("start_time")
+	endTimeStr := c.Query("end_time")
+	if startTimeStr == "" || endTimeStr == "" {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"code":    400,
+			"message": "start_time and end_time are required",
+		})
+		return
+	}
+	startTime, err := time.Parse(time.RFC3339, startTimeStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"code":    400,
+			"message": "Invalid start_time format. Use RFC3339 format.",
+		})
+		return
+	}
+	endTime, err := time.Parse(time.RFC3339, endTimeStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"code":    400,
+			"message": "Invalid end_time format. Use RFC3339 format.",
+		})
+		return
+	}
+
+	stats, err := h.auditService.GetGeoStats(startTime, endTime)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"code":    500,
+			"message": "Failed to get geo stats: " + err.Error(),
+		})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{
+		"code":    200,
+		"message": "ok",
+		"data":    stats,
+	})
+}
+
 // DetectThreats detects security threats and anomalous activities
 // @Summary Detect security threats
 // @Description Analyze audit logs to detect potential security threats

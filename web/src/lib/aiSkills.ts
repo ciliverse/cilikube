@@ -27,6 +27,18 @@ export type CustomSkillInput = {
   blurb?: string
 }
 
+type Loc = { en: string; zh: string }
+
+type SkillSeed = {
+  id: string
+  code: string
+  label: Loc
+  blurb: Loc
+  prompt: Loc
+  group: Exclude<AiSkillGroup, 'custom'>
+  toolsHint?: string[]
+}
+
 const CUSTOM_STORAGE_KEY = 'cilikube_ai_custom_skills_v1'
 const MAX_CUSTOM_SKILLS = 30
 const MAX_LABEL = 24
@@ -37,140 +49,239 @@ function uid() {
   return `skill_custom_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 7)}`
 }
 
-export const DEFAULT_AI_AGENT: AiAgentMeta = {
-  id: 'cluster_investigator',
-  name: '集群调查员',
-  blurb: '只读查证 · 问清楚再进控制台',
+export function isZhLang(lang?: string): boolean {
+  return (lang || '').toLowerCase().startsWith('zh')
 }
 
-export const AI_SKILLS: AiSkillDef[] = [
+function pick(lang: string | undefined, v: Loc): string {
+  return isZhLang(lang) ? v.zh : v.en
+}
+
+const AGENT_LOC: { name: Loc; blurb: Loc } = {
+  name: { en: 'Cluster investigator', zh: '集群调查员' },
+  blurb: {
+    en: 'Read-only triage · ask first, then open the console',
+    zh: '只读查证 · 问清楚再进控制台',
+  },
+}
+
+export function defaultAiAgent(lang?: string): AiAgentMeta {
+  return {
+    id: 'cluster_investigator',
+    name: pick(lang, AGENT_LOC.name),
+    blurb: pick(lang, AGENT_LOC.blurb),
+  }
+}
+
+/** @deprecated use defaultAiAgent(lang) */
+export const DEFAULT_AI_AGENT: AiAgentMeta = defaultAiAgent('en')
+
+const REPLY_EN = ' Reply in concise English.'
+const REPLY_ZH = '请用简洁中文回答。'
+
+const SKILL_SEEDS: SkillSeed[] = [
   {
     id: 'skill_inspect_combo',
     code: 'S1',
-    label: '智能点检',
-    blurb: '概览 + 异常 Pod + 近期事件',
-    prompt:
-      '请做一次智能点检：先给集群概览，再列出 Failed 或 Pending 的 Pod，并汇总最近 Warning / Error 事件。用中文简洁结论。',
+    label: { en: 'Smart inspect', zh: '智能点检' },
+    blurb: { en: 'Overview + bad pods + events', zh: '概览 + 异常 Pod + 近期事件' },
+    prompt: {
+      en:
+        'Run a smart inspect: cluster overview, then Failed/Pending pods, then recent Warning/Error events.' +
+        REPLY_EN,
+      zh: '请做一次智能点检：先给集群概览，再列出 Failed 或 Pending 的 Pod，并汇总最近 Warning / Error 事件。' + REPLY_ZH,
+    },
     group: 'combo',
     toolsHint: ['get_cluster_overview', 'list_resources'],
   },
   {
     id: 'skill_triage_combo',
     code: 'S2',
-    label: '快速调查',
-    blurb: '异常 Pod → 抽样日志',
-    prompt:
-      '快速调查：找出 Failed 或 Pending 的 Pod，挑一个有代表性的看最近日志，并告诉我下一步该进控制台看哪里。',
+    label: { en: 'Quick triage', zh: '快速调查' },
+    blurb: { en: 'Bad pods → sample logs', zh: '异常 Pod → 抽样日志' },
+    prompt: {
+      en:
+        'Quick triage: find Failed or Pending pods, sample logs from a representative one, and tell me where to click in the console next.' +
+        REPLY_EN,
+      zh: '快速调查：找出 Failed 或 Pending 的 Pod，挑一个有代表性的看最近日志，并告诉我下一步该进控制台看哪里。' + REPLY_ZH,
+    },
     group: 'combo',
     toolsHint: ['list_resources', 'get_pod_logs'],
   },
   {
     id: 'skill_workload_snap',
     code: 'S3',
-    label: '工作负载快照',
-    blurb: 'Deployments + Services',
-    prompt: '给当前关注范围做工作负载快照：列出 Deployments 和 Services（优先 default 命名空间）。',
+    label: { en: 'Workload snapshot', zh: '工作负载快照' },
+    blurb: { en: 'Deployments + Services', zh: 'Deployments + Services' },
+    prompt: {
+      en:
+        'Take a workload snapshot for the current scope: list Deployments and Services (prefer the default namespace).' +
+        REPLY_EN,
+      zh: '给当前关注范围做工作负载快照：列出 Deployments 和 Services（优先 default 命名空间）。' + REPLY_ZH,
+    },
     group: 'combo',
     toolsHint: ['list_resources'],
   },
   {
     id: 'skill_cluster_pulse',
     code: '01',
-    label: '集群脉诊',
-    blurb: '节点 · 负载健康',
-    prompt: '集群现在怎么样？节点和关键负载健康吗？',
+    label: { en: 'Cluster pulse', zh: '集群脉诊' },
+    blurb: { en: 'Nodes · load health', zh: '节点 · 负载健康' },
+    prompt: {
+      en: 'How is the cluster right now? Are nodes and critical workloads healthy?' + REPLY_EN,
+      zh: '集群现在怎么样？节点和关键负载健康吗？' + REPLY_ZH,
+    },
     group: 'inspect',
     toolsHint: ['get_cluster_overview'],
   },
   {
     id: 'skill_fault_scan',
     code: '02',
-    label: '故障扫描',
-    blurb: 'Failed · Pending',
-    prompt: '有哪些 Failed 或 Pending 的 Pod？',
+    label: { en: 'Fault scan', zh: '故障扫描' },
+    blurb: { en: 'Failed · Pending', zh: 'Failed · Pending' },
+    prompt: {
+      en: 'Which pods are Failed or Pending?' + REPLY_EN,
+      zh: '有哪些 Failed 或 Pending 的 Pod？' + REPLY_ZH,
+    },
     group: 'incident',
     toolsHint: ['list_resources'],
   },
   {
     id: 'skill_deploy_list',
     code: '03',
-    label: '部署盘点',
-    blurb: 'default Deployments',
-    prompt: '列出 default 命名空间的 Deployments',
+    label: { en: 'Deploy inventory', zh: '部署盘点' },
+    blurb: { en: 'default Deployments', zh: 'default Deployments' },
+    prompt: {
+      en: 'List Deployments in the default namespace.' + REPLY_EN,
+      zh: '列出 default 命名空间的 Deployments。' + REPLY_ZH,
+    },
     group: 'navigate',
     toolsHint: ['list_resources'],
   },
   {
     id: 'skill_log_sample',
     code: '04',
-    label: '日志取样',
-    blurb: '抽样最近输出',
-    prompt: '随便挑一个 Pod，看看最近日志',
+    label: { en: 'Log sample', zh: '日志取样' },
+    blurb: { en: 'Sample recent output', zh: '抽样最近输出' },
+    prompt: {
+      en: 'Pick any pod and show its recent logs.' + REPLY_EN,
+      zh: '随便挑一个 Pod，看看最近日志。' + REPLY_ZH,
+    },
     group: 'inspect',
     toolsHint: ['list_resources', 'get_pod_logs'],
   },
   {
     id: 'skill_events',
     code: '05',
-    label: '事件热线',
-    blurb: 'Warning · Error',
-    prompt: '最近有哪些 Warning 或 Error 事件？',
+    label: { en: 'Event hotline', zh: '事件热线' },
+    blurb: { en: 'Warning · Error', zh: 'Warning · Error' },
+    prompt: {
+      en: 'What Warning or Error events happened recently?' + REPLY_EN,
+      zh: '最近有哪些 Warning 或 Error 事件？' + REPLY_ZH,
+    },
     group: 'incident',
     toolsHint: ['list_resources'],
   },
   {
     id: 'skill_crashloop',
     code: '06',
-    label: '崩坏回路',
-    blurb: 'CrashLoop · ImagePull',
-    prompt: '有没有 CrashLoopBackOff 或 ImagePullBackOff 的 Pod？',
+    label: { en: 'Crash loop', zh: '崩坏回路' },
+    blurb: { en: 'CrashLoop · ImagePull', zh: 'CrashLoop · ImagePull' },
+    prompt: {
+      en: 'Are there CrashLoopBackOff or ImagePullBackOff pods?' + REPLY_EN,
+      zh: '有没有 CrashLoopBackOff 或 ImagePullBackOff 的 Pod？' + REPLY_ZH,
+    },
     group: 'incident',
     toolsHint: ['list_resources'],
   },
   {
     id: 'skill_node_pressure',
     code: '07',
-    label: '节点压力',
-    blurb: 'CPU · 内存紧张度',
-    prompt: '哪个节点资源最紧张？帮我看看节点状态',
+    label: { en: 'Node pressure', zh: '节点压力' },
+    blurb: { en: 'CPU · memory pressure', zh: 'CPU · 内存紧张度' },
+    prompt: {
+      en: 'Which node is under the most pressure? Summarize node status.' + REPLY_EN,
+      zh: '哪个节点资源最紧张？帮我看看节点状态。' + REPLY_ZH,
+    },
     group: 'inspect',
     toolsHint: ['list_resources', 'get_cluster_overview'],
   },
   {
     id: 'skill_svc_map',
     code: '08',
-    label: '服务地图',
-    blurb: 'Services 列表',
-    prompt: '列出 default 命名空间里的 Service',
+    label: { en: 'Service map', zh: '服务地图' },
+    blurb: { en: 'Services list', zh: 'Services 列表' },
+    prompt: {
+      en: 'List Services in the default namespace.' + REPLY_EN,
+      zh: '列出 default 命名空间里的 Service。' + REPLY_ZH,
+    },
     group: 'navigate',
     toolsHint: ['list_resources'],
   },
   {
     id: 'skill_restarts',
     code: '09',
-    label: '重启异常',
-    blurb: '高 restartCount',
-    prompt: '有没有重启次数特别高的 Pod？',
+    label: { en: 'Restart spikes', zh: '重启异常' },
+    blurb: { en: 'High restartCount', zh: '高 restartCount' },
+    prompt: {
+      en: 'Are there pods with unusually high restart counts?' + REPLY_EN,
+      zh: '有没有重启次数特别高的 Pod？' + REPLY_ZH,
+    },
     group: 'incident',
     toolsHint: ['list_resources'],
   },
   {
     id: 'skill_namespaces',
     code: '10',
-    label: '命名空间',
-    blurb: 'Namespaces 盘点',
-    prompt: '当前集群有哪些命名空间？各自大概有多少工作负载？',
+    label: { en: 'Namespaces', zh: '命名空间' },
+    blurb: { en: 'Namespace inventory', zh: 'Namespaces 盘点' },
+    prompt: {
+      en: 'What namespaces exist, and roughly how many workloads in each?' + REPLY_EN,
+      zh: '当前集群有哪些命名空间？各自大概有多少工作负载？' + REPLY_ZH,
+    },
     group: 'navigate',
     toolsHint: ['list_resources', 'get_cluster_overview'],
   },
 ]
 
+const GROUP_LABEL: Record<AiSkillGroup, Loc> = {
+  combo: { en: 'Featured', zh: '精选' },
+  inspect: { en: 'Inspect', zh: '巡检' },
+  incident: { en: 'Incidents', zh: '排障' },
+  navigate: { en: 'Navigate', zh: '导航' },
+  custom: { en: 'Custom', zh: '自定义' },
+}
+
+export function skillGroupLabel(group: AiSkillGroup, lang?: string): string {
+  return pick(lang, GROUP_LABEL[group])
+}
+
+/** @deprecated use skillGroupLabel(group, lang) */
 export const AI_SKILL_GROUP_LABEL: Record<AiSkillGroup, string> = {
-  combo: '精选',
-  inspect: '巡检',
-  incident: '排障',
-  navigate: '导航',
-  custom: '自定义',
+  combo: GROUP_LABEL.combo.en,
+  inspect: GROUP_LABEL.inspect.en,
+  incident: GROUP_LABEL.incident.en,
+  navigate: GROUP_LABEL.navigate.en,
+  custom: GROUP_LABEL.custom.en,
+}
+
+function localizeSeed(seed: SkillSeed, lang?: string): AiSkillDef {
+  return {
+    id: seed.id,
+    code: seed.code,
+    label: pick(lang, seed.label),
+    blurb: pick(lang, seed.blurb),
+    prompt: pick(lang, seed.prompt),
+    group: seed.group,
+    toolsHint: seed.toolsHint,
+  }
+}
+
+/** Builtin skills localized for the active UI language. */
+export const AI_SKILLS: AiSkillDef[] = SKILL_SEEDS.map((s) => localizeSeed(s, 'en'))
+
+function customBlurbFallback(lang?: string): string {
+  return isZhLang(lang) ? '自定义 Prompt' : 'Custom prompt'
 }
 
 function readCustomSkills(): AiSkillDef[] {
@@ -185,7 +296,7 @@ function readCustomSkills(): AiSkillDef[] {
         id: s.id,
         code: s.code || `C${i + 1}`,
         label: String(s.label).slice(0, MAX_LABEL),
-        blurb: String(s.blurb || '自定义 Prompt').slice(0, MAX_BLURB),
+        blurb: String(s.blurb || customBlurbFallback('en')).slice(0, MAX_BLURB),
         prompt: String(s.prompt).slice(0, MAX_PROMPT),
         group: 'custom' as const,
         custom: true,
@@ -207,20 +318,26 @@ export function listCustomSkills(): AiSkillDef[] {
   return readCustomSkills()
 }
 
-export function allAiSkills(): AiSkillDef[] {
-  return [...AI_SKILLS, ...listCustomSkills()]
+export function allAiSkills(lang?: string): AiSkillDef[] {
+  return [...SKILL_SEEDS.map((s) => localizeSeed(s, lang)), ...listCustomSkills()]
 }
 
-export function sanitizeCustomSkillInput(input: CustomSkillInput): CustomSkillInput | null {
+export function sanitizeCustomSkillInput(
+  input: CustomSkillInput,
+  lang?: string,
+): CustomSkillInput | null {
   const label = input.label.trim().replace(/\s+/g, ' ').slice(0, MAX_LABEL)
   const prompt = input.prompt.trim().slice(0, MAX_PROMPT)
   const blurb = (input.blurb || '').trim().replace(/\s+/g, ' ').slice(0, MAX_BLURB)
   if (!label || !prompt) return null
-  return { label, prompt, blurb: blurb || '自定义 Prompt' }
+  return { label, prompt, blurb: blurb || customBlurbFallback(lang) }
 }
 
-export function upsertCustomSkill(input: CustomSkillInput & { id?: string }): AiSkillDef | null {
-  const clean = sanitizeCustomSkillInput(input)
+export function upsertCustomSkill(
+  input: CustomSkillInput & { id?: string },
+  lang?: string,
+): AiSkillDef | null {
+  const clean = sanitizeCustomSkillInput(input, lang)
   if (!clean) return null
   const existing = readCustomSkills()
   if (input.id) {
@@ -244,7 +361,7 @@ export function upsertCustomSkill(input: CustomSkillInput & { id?: string }): Ai
     id: uid(),
     code: `C${existing.length + 1}`,
     label: clean.label,
-    blurb: clean.blurb || '自定义 Prompt',
+    blurb: clean.blurb || customBlurbFallback(lang),
     prompt: clean.prompt,
     group: 'custom',
     custom: true,
@@ -257,23 +374,25 @@ export function deleteCustomSkill(id: string): boolean {
   const existing = readCustomSkills()
   const next = existing.filter((s) => s.id !== id)
   if (next.length === existing.length) return false
-  // Re-number codes for stable display
   writeCustomSkills(next.map((s, i) => ({ ...s, code: `C${i + 1}` })))
   return true
 }
 
-export function skillsByGroup(skills: AiSkillDef[] = AI_SKILLS): { group: AiSkillGroup; label: string; skills: AiSkillDef[] }[] {
+export function skillsByGroup(
+  skills: AiSkillDef[] = AI_SKILLS,
+  lang?: string,
+): { group: AiSkillGroup; label: string; skills: AiSkillDef[] }[] {
   const order: AiSkillGroup[] = ['combo', 'inspect', 'incident', 'navigate', 'custom']
   return order
     .map((group) => ({
       group,
-      label: AI_SKILL_GROUP_LABEL[group],
+      label: skillGroupLabel(group, lang),
       skills: skills.filter((s) => s.group === group),
     }))
     .filter((g) => g.group === 'custom' || g.skills.length > 0)
 }
 
-/** Slash token just before the caret, e.g. `/点检` or `/fault`. */
+/** Slash token just before the caret, e.g. `/inspect` or `/fault`. */
 export function parseSlashToken(
   value: string,
   cursor: number,
@@ -286,7 +405,11 @@ export function parseSlashToken(
   return { start, query: token.slice(1) }
 }
 
-export function filterSkillsByQuery(skills: AiSkillDef[], query: string): AiSkillDef[] {
+export function filterSkillsByQuery(
+  skills: AiSkillDef[],
+  query: string,
+  lang?: string,
+): AiSkillDef[] {
   const q = query.trim().toLowerCase()
   if (!q) return skills
   return skills.filter((s) => {
@@ -296,7 +419,7 @@ export function filterSkillsByQuery(skills: AiSkillDef[], query: string): AiSkil
       s.code,
       s.id,
       s.id.replace(/^skill_/, ''),
-      AI_SKILL_GROUP_LABEL[s.group],
+      skillGroupLabel(s.group, lang),
       ...(s.toolsHint || []),
     ]
       .join(' ')

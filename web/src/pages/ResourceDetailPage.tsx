@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { dump as yamlDump, load as yamlLoad } from 'js-yaml'
@@ -63,6 +64,7 @@ export function ResourceDetailPage({
   resource: string
   namespaced?: boolean
 }) {
+  const { t } = useTranslation()
   const { namespace = '', name = '' } = useParams()
   const [searchParams, setSearchParams] = useSearchParams()
   const { clusterId } = useCluster()
@@ -282,10 +284,10 @@ export function ResourceDetailPage({
               <Link
                 to={investigateHref}
                 className="inline-flex items-center gap-1 rounded border border-cyan/35 bg-cyan/10 px-3 py-1.5 text-xs font-semibold text-cyan hover:bg-cyan/18"
-                title="带上当前资源上下文，交给集群调查员只读查证"
+                title={t('ai.investigateHint')}
               >
                 <Bot className="h-3.5 w-3.5" />
-                用 AI 调查
+                {t('ai.investigate')}
               </Link>
             ) : null}
             {resource === 'pods' ? (

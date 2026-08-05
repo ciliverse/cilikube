@@ -118,6 +118,7 @@ func InitializeHandlers(router *gin.RouterGroup, services *service.AppServices, 
 			auditGroup.GET("/logs", auditHandler.GetAuditLogs)
 			auditGroup.GET("/report", auditHandler.GetAuditReport)
 			auditGroup.GET("/metrics", auditHandler.GetSecurityMetrics)
+			auditGroup.GET("/geo", auditHandler.GetGeoStats)
 		}
 	}
 

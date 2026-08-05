@@ -20,17 +20,19 @@ import {
   clearAiSessions,
   createAiSession,
   deleteAiSession,
+  displayChatTitle,
   duplicateAiSession,
   getAiSession,
   groupAiSessions,
   listAiSessions,
+  migrateEmptyChatTitles,
   renameAiSession,
   saveAiSession,
   type AiSession,
 } from '@/lib/aiSessions'
 import {
   allAiSkills,
-  DEFAULT_AI_AGENT,
+  defaultAiAgent,
   deleteCustomSkill,
   upsertCustomSkill,
   type AiSkillDef,
@@ -69,7 +71,9 @@ function useIsDesktopHistory() {
 }
 
 export function AiChatPage() {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
+  const lang = i18n.language
+  const emptyTitle = t('ai.newChat')
   const { clusterId, activeCluster, setClusterId, switchCluster, switching } = useCluster()
   const { namespace, setNamespace } = useNamespace()
   const navigate = useNavigate()
@@ -81,13 +85,23 @@ export function AiChatPage() {
     refetchInterval: 30_000,
   })
 
-  const [sessions, setSessions] = useState<AiSession[]>(() => listAiSessions())
-  const [activeId, setActiveId] = useState<string>(() => listAiSessions()[0]?.id || '')
-  const [messages, setMessages] = useState<AiChatMessage[]>(() => listAiSessions()[0]?.messages || [])
+  const [sessions, setSessions] = useState<AiSession[]>(() => migrateEmptyChatTitles())
+  const [activeId, setActiveId] = useState<string>(() => migrateEmptyChatTitles()[0]?.id || '')
+  const [messages, setMessages] = useState<AiChatMessage[]>(
+    () => migrateEmptyChatTitles()[0]?.messages || [],
+  )
   const [input, setInput] = useState('')
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState('')
-  const [skills, setSkills] = useState<AiSkillDef[]>(() => allAiSkills())
+  const [skills, setSkills] = useState<AiSkillDef[]>(() => allAiSkills(lang))
+
+  useEffect(() => {
+    setSkills(allAiSkills(lang))
+  }, [lang])
+
+  useEffect(() => {
+    setSessions(migrateEmptyChatTitles())
+  }, [lang])
   const isDesktop = useIsDesktopHistory()
   const [historyOpen, setHistoryOpen] = useState(() => {
     try {
@@ -158,22 +172,24 @@ export function AiChatPage() {
     const s = createAiSession({
       clusterId: clusterId || undefined,
       clusterName: activeCluster?.name,
+      emptyTitle,
     })
     hydrateSession(s.id, [])
     refreshSessions()
     return s.id
-  }, [activeId, clusterId, activeCluster?.name, hydrateSession, refreshSessions])
+  }, [activeId, clusterId, activeCluster?.name, emptyTitle, hydrateSession, refreshSessions])
 
   useEffect(() => {
     if (!activeId) {
       const s = createAiSession({
         clusterId: clusterId || undefined,
         clusterName: activeCluster?.name,
+        emptyTitle,
       })
       hydrateSession(s.id, [])
       refreshSessions()
     }
-  }, [activeId, clusterId, activeCluster?.name, hydrateSession, refreshSessions])
+  }, [activeId, clusterId, activeCluster?.name, emptyTitle, hydrateSession, refreshSessions])
 
   // Resource page → /ai?investigate=1&kind=&name=&namespace=
   // Fleet card → /ai?inspect=1&cluster=&name=&focus=
@@ -191,10 +207,10 @@ export function AiChatPage() {
       const focus = parseFleetFocus(searchParams)
       investigateJobRef.current = {
         prompt: focus
-          ? buildFleetFocusPrompt(fleet.clusterName, focus)
-          : buildFleetInspectPrompt(fleet.clusterName),
+          ? buildFleetFocusPrompt(fleet.clusterName, focus, lang)
+          : buildFleetInspectPrompt(fleet.clusterName, lang),
         titleHint: focus
-          ? `${fleet.clusterName} · ${focus === 'unhealthy' ? '异常 Pod' : 'Warning'}`
+          ? `${fleet.clusterName} · ${focus === 'unhealthy' ? t('ai.unhealthyPods') : 'Warning'}`
           : fleet.clusterName,
         auto,
         clusterId: fleet.clusterId,
@@ -213,13 +229,13 @@ export function AiChatPage() {
     if (!target) return
     const auto = searchParams.get('auto') !== '0'
     investigateJobRef.current = {
-      prompt: buildInvestigatePrompt(target),
+      prompt: buildInvestigatePrompt(target, lang),
       namespaceOverride: target.namespace,
       titleHint: resourceRefLabel(target),
       auto,
     }
     navigate('/ai', { replace: true })
-  }, [searchParams, navigate, clusterId, activeCluster?.name, setClusterId])
+  }, [searchParams, navigate, clusterId, activeCluster?.name, setClusterId, lang, t])
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: skipMotion ? 'auto' : 'smooth' })
@@ -268,6 +284,7 @@ export function AiChatPage() {
     const s = createAiSession({
       clusterId: clusterId || undefined,
       clusterName: activeCluster?.name,
+      emptyTitle,
     })
     hydrateSession(s.id, [])
     if (!isDesktop) closeHistory()
@@ -283,12 +300,22 @@ export function AiChatPage() {
     if (!isDesktop) closeHistory()
   }
 
-  const sessionGroups = useMemo(() => groupAiSessions(sessions), [sessions])
+  const sessionGroups = useMemo(
+    () =>
+      groupAiSessions(sessions, {
+        today: t('ai.groupToday'),
+        yesterday: t('ai.groupYesterday'),
+        week: t('ai.groupWeek'),
+        month: t('ai.groupMonth'),
+        older: t('ai.groupOlder'),
+      }),
+    [sessions, t],
+  )
 
   const removeSession = (id: string) => {
     const cur = getAiSession(id)
-    const label = cur?.title || '该对话'
-    if (!window.confirm(`删除「${label}」？此操作不可恢复。`)) return
+    const label = displayChatTitle(cur?.title, t('ai.thisChat'))
+    if (!window.confirm(t('ai.deleteChatConfirm', { title: label }))) return
     stopGeneration()
     deleteAiSession(id)
     const rest = listAiSessions()
@@ -308,7 +335,10 @@ export function AiChatPage() {
   }
 
   const duplicateSession = (id: string) => {
-    const copy = duplicateAiSession(id)
+    const copy = duplicateAiSession(id, {
+      emptyTitle,
+      copySuffix: t('ai.copySuffix'),
+    })
     if (!copy) return
     stopGeneration()
     hydrateSession(copy.id, copy.messages || [])
@@ -318,7 +348,7 @@ export function AiChatPage() {
 
   const clearAllSessions = () => {
     if (!sessions.length) return
-    if (!window.confirm(`清空全部 ${sessions.length} 条对话历史？此操作不可恢复。`)) return
+    if (!window.confirm(t('ai.clearAllConfirm', { count: sessions.length }))) return
     stopGeneration()
     clearAiSessions()
     refreshSessions()
@@ -343,7 +373,7 @@ export function AiChatPage() {
     const content = (text ?? input).trim()
     if (!content) return undefined
     if (busy && !opts?.force) {
-      setErr('正在生成回复，请先点「停止」再发送')
+      setErr(t('ai.stopBeforeSend'))
       return undefined
     }
     if (!ready) {
@@ -385,6 +415,7 @@ export function AiChatPage() {
         {
           namespace: ns,
           skillId,
+          language: lang,
           signal: ac.signal,
         },
         {
@@ -411,13 +442,13 @@ export function AiChatPage() {
             setErr(message)
             patchAssistant((m) => ({
               ...m,
-              content: m.content || `出错了：${message}`,
+              content: m.content || t('ai.errorPrefix', { message }),
             }))
           },
         },
       )
     } catch (e: any) {
-      if (e?.name !== 'AbortError') setErr(e?.message || '请求失败')
+      if (e?.name !== 'AbortError') setErr(e?.message || t('ai.requestFailed'))
       else return undefined
     } finally {
       setBusy(false)
@@ -448,20 +479,20 @@ export function AiChatPage() {
     const s = createAiSession({
       clusterId: clusterId || undefined,
       clusterName: activeCluster?.name,
+      emptyTitle,
     })
     hydrateSession(s.id, [])
-    renameAiSession(s.id, `${job.clusterId ? '巡检' : '调查'} · ${job.titleHint}`)
+    renameAiSession(
+      s.id,
+      `${job.clusterId ? t('ai.inspectLabel') : t('ai.investigateLabel')} · ${job.titleHint}`,
+    )
     refreshSessions()
     if (!isDesktop) closeHistory()
 
     if (job.auto) {
       if (!ready) {
         setInput(job.prompt)
-        setErr(
-          statusQ.isError
-            ? '无法连接 AI 服务，请确认后端已启动'
-            : 'AI 暂不可用，调查 Prompt 已填入输入框，配置好后可直接发送',
-        )
+        setErr(statusQ.isError ? t('ai.connectFailed') : t('ai.unavailable'))
         return
       }
       void send(job.prompt, undefined, {
@@ -508,7 +539,7 @@ export function AiChatPage() {
         const targets = reachable.slice(0, 8).map((c) => ({ id: c.id, name: c.name }))
 
         if (!targets.length) {
-          setErr('没有可达集群可巡检，请先在集群总览确认连通性')
+          setErr(t('ai.noReachableClusters'))
           return
         }
 
@@ -519,24 +550,19 @@ export function AiChatPage() {
         const s = createAiSession({
           clusterId: targets[0].id,
           clusterName: targets[0].name,
+          emptyTitle,
         })
         hydrateSession(s.id, [])
         renameAiSession(
           s.id,
-          `舰队健康 · ${targets.length} 集群${reachable.length > targets.length ? '+' : ''}`,
+          `${t('ai.fleetHealth', { count: targets.length })}${reachable.length > targets.length ? '+' : ''}`,
         )
         refreshSessions()
         if (!isDesktop) closeHistory()
 
         if (!pending.auto || !ready) {
-          setInput(buildFleetTourSummaryPrompt(targets.map((c) => c.name)))
-          setErr(
-            ready
-              ? '舰队巡检未自动开始，可编辑后发送；或返回集群总览再点「舰队巡检」'
-              : statusQ.isError
-                ? '无法连接 AI 服务，请确认后端已启动'
-                : 'AI 暂不可用，汇总 Prompt 已填入输入框',
-          )
+          setInput(buildFleetTourSummaryPrompt(targets.map((c) => c.name), lang))
+          setErr(statusQ.isError ? t('ai.connectFailed') : t('ai.unavailable'))
           return
         }
 
@@ -546,18 +572,22 @@ export function AiChatPage() {
           const c = targets[i]
           await switchCluster(c.id)
           if (fleetTourCancelRef.current) break
-          const next = await send(buildFleetTourStepPrompt(c.name, i + 1, targets.length), undefined, {
-            baseMessages: base,
-            namespaceOverride: '',
-            sessionId: s.id,
-            force: true,
-          })
+          const next = await send(
+            buildFleetTourStepPrompt(c.name, i + 1, targets.length, lang),
+            undefined,
+            {
+              baseMessages: base,
+              namespaceOverride: '',
+              sessionId: s.id,
+              force: true,
+            },
+          )
           if (!next) break
           base = next
         }
 
         if (!fleetTourCancelRef.current && base.length > 0) {
-          await send(buildFleetTourSummaryPrompt(targets.map((c) => c.name)), undefined, {
+          await send(buildFleetTourSummaryPrompt(targets.map((c) => c.name), lang), undefined, {
             baseMessages: base,
             namespaceOverride: '',
             sessionId: s.id,
@@ -566,7 +596,7 @@ export function AiChatPage() {
         }
       } catch (e: any) {
         if (!fleetTourCancelRef.current) {
-          setErr(e?.message || '舰队巡检失败')
+          setErr(e?.message || t('ai.requestFailed'))
         }
       } finally {
         fleetTourRunningRef.current = false
@@ -585,20 +615,20 @@ export function AiChatPage() {
       onStop={stop}
       busy={busy}
       ready={ready}
-      namespaceLabel={namespace === 'all' ? '全部命名空间' : namespace}
+      namespaceLabel={namespace === 'all' ? t('common.allNamespaces') : namespace}
       clusterLabel={clusterLabel}
       err={err}
       evidence={evidence}
       skills={skills}
-      agent={DEFAULT_AI_AGENT}
+      agent={defaultAiAgent(lang)}
       landing={isEmpty}
       onSaveCustomSkill={(input) => {
-        const saved = upsertCustomSkill(input)
-        if (saved) setSkills(allAiSkills())
+        const saved = upsertCustomSkill(input, lang)
+        if (saved) setSkills(allAiSkills(lang))
         return saved
       }}
       onDeleteCustomSkill={(id) => {
-        if (deleteCustomSkill(id)) setSkills(allAiSkills())
+        if (deleteCustomSkill(id)) setSkills(allAiSkills(lang))
       }}
     />
   )
@@ -607,15 +637,21 @@ export function AiChatPage() {
     <div className="ai-ops-rail">
       <div className="ai-ops-rail-head">
         <div>
-          <div className="ai-ops-kicker">History</div>
-          <div className="ai-ops-rail-title">对话</div>
+          <div className="ai-ops-kicker">{t('ai.history')}</div>
+          <div className="ai-ops-rail-title">{t('ai.chats')}</div>
         </div>
         <div className="ai-ops-rail-actions">
-          <button type="button" className="ai-ops-icon-btn" onClick={startNew} title="新对话">
+          <button type="button" className="ai-ops-icon-btn" onClick={startNew} title={t('ai.newChat')}>
             <MessageSquarePlus className="h-4 w-4" />
           </button>
           {onClose ? (
-            <button type="button" className="ai-ops-icon-btn" onClick={onClose} title="关闭历史" aria-label="关闭历史">
+            <button
+              type="button"
+              className="ai-ops-icon-btn"
+              onClick={onClose}
+              title={t('ai.closeHistory')}
+              aria-label={t('ai.closeHistory')}
+            >
               <X className="h-4 w-4" />
             </button>
           ) : null}
@@ -623,12 +659,12 @@ export function AiChatPage() {
       </div>
 
       <button type="button" className="ai-ops-new" onClick={startNew}>
-        新对话
+        {t('ai.newChat')}
       </button>
 
       <div className="ai-ops-session-list">
         {sessions.length === 0 ? (
-          <p className="ai-ops-rail-empty">提问后会出现在这里</p>
+          <p className="ai-ops-rail-empty">{t('ai.historyEmpty')}</p>
         ) : (
           <div className="ai-ops-timeline">
             {sessionGroups.map((group) => (
@@ -653,7 +689,7 @@ export function AiChatPage() {
 
       {sessions.length > 0 ? (
         <button type="button" className="ai-ops-clear-all" onClick={clearAllSessions}>
-          清空历史
+          {t('ai.clearHistory')}
         </button>
       ) : null}
     </div>
@@ -676,7 +712,7 @@ export function AiChatPage() {
             <motion.button
               type="button"
               className="ai-ops-backdrop"
-              aria-label="关闭历史"
+              aria-label={t('ai.closeHistory')}
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
@@ -707,6 +743,8 @@ export function AiChatPage() {
             >
               {historyOpen && isDesktop ? <PanelLeftClose className="h-4 w-4" /> : <History className="h-4 w-4" />}
             </button>
+          </div>
+          <div className="ai-ops-toolbar-center">
             <span className={cn('ai-ops-status', ready ? 'is-on' : 'is-off')}>
               <i />
               {ready ? t('ai.online') : t('ai.offline')}
@@ -715,10 +753,12 @@ export function AiChatPage() {
               {clusterLabel}
             </span>
           </div>
-          <Link to="/overview" className="ai-ops-console-btn">
-            <Terminal className="h-3.5 w-3.5" />
-            {t('ai.console')}
-          </Link>
+          <div className="ai-ops-toolbar-right">
+            <Link to="/overview" className="ai-ops-console-btn">
+              <Terminal className="h-3.5 w-3.5" />
+              {t('ai.console')}
+            </Link>
+          </div>
         </div>
 
         {!ready ? (
@@ -820,6 +860,7 @@ function BrandTitle({ skipMotion }: { skipMotion: boolean }) {
 }
 
 function MessageBlock({ message, pending }: { message: AiChatMessage; pending?: boolean }) {
+  const { t } = useTranslation()
   const user = message.role === 'user'
   return (
     <div className={cn('ai-ops-msg', user ? 'is-user' : 'is-bot')}>
@@ -829,26 +870,26 @@ function MessageBlock({ message, pending }: { message: AiChatMessage; pending?: 
         </div>
       ) : (
         <div className="ai-ops-avatar is-user" aria-hidden>
-          你
+          {t('ai.you')}
         </div>
       )}
       <div className="ai-ops-bubble">
         {message.tools?.length ? (
           <div className="ai-ops-tools">
-            {message.tools.map((t, ti) => (
+            {message.tools.map((tool, ti) => (
               <div key={ti} className="ai-ops-tool">
-                {t.ok === undefined ? (
+                {tool.ok === undefined ? (
                   <Loader2 className="h-3 w-3 animate-spin" />
                 ) : (
-                  <span className={t.ok ? 'ok' : 'err'}>{t.ok ? 'OK' : 'ERR'}</span>
+                  <span className={tool.ok ? 'ok' : 'err'}>{tool.ok ? 'OK' : 'ERR'}</span>
                 )}
-                <code>{t.name}</code>
+                <code>{tool.name}</code>
               </div>
             ))}
           </div>
         ) : null}
         <div className="ai-ops-text">
-          {message.content || (pending ? <span className="ai-ops-typing">正在查看集群…</span> : '')}
+          {message.content || (pending ? <span className="ai-ops-typing">{t('ai.typing')}</span> : '')}
         </div>
         {message.resources?.length ? (
           <div className="ai-ops-cards">

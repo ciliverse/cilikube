@@ -290,9 +290,7 @@ export function AdminSettingsPage() {
           <h2 className="font-display text-lg font-bold tracking-[0.12em]">AI</h2>
           <Badge tone={ai.ready ? 'ok' : 'warn'}>{ai.ready ? 'ready' : 'not ready'}</Badge>
         </div>
-        <p className="text-xs text-text-dim">
-          默认 mock 可直接用。切到 openai 时再填 Base URL、Model、API Key（OpenAI-compatible）。
-        </p>
+        <p className="text-xs text-text-dim">{t('adminPages.aiHint')}</p>
         <label className="flex items-center gap-2 text-sm">
           <input
             type="checkbox"
@@ -355,14 +353,10 @@ export function AdminSettingsPage() {
           <h2 className="font-display text-lg font-bold tracking-[0.12em]">PROMETHEUS</h2>
           <Badge tone={promTone}>{prom.mode || 'off'}</Badge>
         </div>
-        <p className="text-xs text-text-dim">
-          监控页时序图走 Prometheus HTTP API。自建环境勾选启用并填写可达 URL（需含 cAdvisor /
-          kubelet 容器指标）。公网 Showcase 在未配置远程 URL 时自动使用模拟曲线。
-        </p>
+        <p className="text-xs text-text-dim">{t('adminPages.promHint')}</p>
         {prom.showcase && !prom.enabled ? (
           <div className="rounded border border-cyan/30 bg-cyan/10 px-3 py-2 text-xs text-cyan">
-            当前为 Showcase：监控页使用模拟 Prometheus（mode=showcase）。若填入真实 URL
-            并启用，将改为远程查询。
+            {t('adminPages.promShowcaseBanner')}
           </div>
         ) : null}
         <label className="flex items-center gap-2 text-sm">

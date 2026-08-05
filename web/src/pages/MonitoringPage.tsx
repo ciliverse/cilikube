@@ -130,9 +130,7 @@ export function MonitoringPage() {
             </div>
           ) : (
             <div className="mt-3 text-sm text-text-dim">
-              {prom?.mode === 'showcase'
-                ? 'Showcase 模拟时序（非真实 Prometheus）。节点表仍用 metrics-server / 模拟快照。'
-                : 'Time-series charts require a healthy Prometheus. Snapshot node table below uses metrics-server.'}
+              {prom?.mode === 'showcase' ? t('monitoring.showcaseHint') : t('monitoring.promHealthyHint')}
             </div>
           )}
         </Card>

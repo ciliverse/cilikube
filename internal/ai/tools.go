@@ -78,22 +78,26 @@ type toolResult struct {
 	Resources []ResourceRef
 }
 
-func executeTool(ctx context.Context, client *k8s.Client, name string, args map[string]interface{}) (toolResult, error) {
+func executeTool(ctx context.Context, client *k8s.Client, name string, args map[string]interface{}, lang string) (toolResult, error) {
+	zh := isZh(lang)
 	switch name {
 	case "get_cluster_overview":
-		return toolClusterOverview(ctx, client)
+		return toolClusterOverview(ctx, client, zh)
 	case "list_resources":
-		return toolListResources(ctx, client, args)
+		return toolListResources(ctx, client, args, zh)
 	case "get_resource":
-		return toolGetResource(ctx, client, args)
+		return toolGetResource(ctx, client, args, zh)
 	case "get_pod_logs":
-		return toolPodLogs(ctx, client, args)
+		return toolPodLogs(ctx, client, args, zh)
 	default:
+		if zh {
+			return toolResult{}, fmt.Errorf("未知工具 %q", name)
+		}
 		return toolResult{}, fmt.Errorf("unknown tool %q", name)
 	}
 }
 
-func toolClusterOverview(ctx context.Context, client *k8s.Client) (toolResult, error) {
+func toolClusterOverview(ctx context.Context, client *k8s.Client, zh bool) (toolResult, error) {
 	nodes, err := client.Clientset.CoreV1().Nodes().List(ctx, metav1.ListOptions{})
 	if err != nil {
 		return toolResult{}, err
@@ -126,14 +130,22 @@ func toolClusterOverview(ctx context.Context, client *k8s.Client) (toolResult, e
 			}
 		}
 	}
-	text := fmt.Sprintf(
-		"nodes=%d ready=%d namespaces=%d pods=%d phases=%v",
-		len(nodes.Items), readyNodes, len(nss.Items), len(pods.Items), phase,
-	)
+	var text string
+	if zh {
+		text = fmt.Sprintf(
+			"节点=%d 就绪=%d 命名空间=%d Pod=%d 相位=%v",
+			len(nodes.Items), readyNodes, len(nss.Items), len(pods.Items), phase,
+		)
+	} else {
+		text = fmt.Sprintf(
+			"nodes=%d ready=%d namespaces=%d pods=%d phases=%v",
+			len(nodes.Items), readyNodes, len(nss.Items), len(pods.Items), phase,
+		)
+	}
 	return toolResult{Text: text, Resources: bad}, nil
 }
 
-func toolListResources(ctx context.Context, client *k8s.Client, args map[string]interface{}) (toolResult, error) {
+func toolListResources(ctx context.Context, client *k8s.Client, args map[string]interface{}, zh bool) (toolResult, error) {
 	kind := strings.ToLower(strArg(args, "kind"))
 	ns := strArg(args, "namespace")
 	limit := intArg(args, "limit", 30)
@@ -230,20 +242,31 @@ func toolListResources(ctx context.Context, client *k8s.Client, args map[string]
 			n++
 		}
 	default:
+		if zh {
+			return toolResult{}, fmt.Errorf("不支持的 kind %q", kind)
+		}
 		return toolResult{}, fmt.Errorf("unsupported kind %q", kind)
 	}
 
 	if len(lines) == 0 {
 		scope := "cluster-wide"
+		scopeZh := "全集群"
 		if ns != "" {
 			scope = "namespace=" + ns
+			scopeZh = "命名空间=" + ns
 		}
 		filter := ""
+		filterZh := ""
 		if p := strArg(args, "phases"); p != "" {
 			filter = "; phases=" + p
+			filterZh = "；相位=" + p
 		}
 		if t := strArg(args, "event_types"); t != "" {
 			filter += "; event_types=" + t
+			filterZh += "；事件类型=" + t
+		}
+		if zh {
+			return toolResult{Text: fmt.Sprintf("无结果（%s%s）", scopeZh, filterZh)}, nil
 		}
 		return toolResult{Text: fmt.Sprintf("no items (%s%s)", scope, filter)}, nil
 	}
@@ -268,11 +291,14 @@ func parseCSVSet(raw string) map[string]bool {
 	return out
 }
 
-func toolGetResource(ctx context.Context, client *k8s.Client, args map[string]interface{}) (toolResult, error) {
+func toolGetResource(ctx context.Context, client *k8s.Client, args map[string]interface{}, zh bool) (toolResult, error) {
 	kind := strings.ToLower(strArg(args, "kind"))
 	ns := strArg(args, "namespace")
 	name := strArg(args, "name")
 	if name == "" {
+		if zh {
+			return toolResult{}, fmt.Errorf("需要 name")
+		}
 		return toolResult{}, fmt.Errorf("name required")
 	}
 
@@ -322,6 +348,9 @@ func toolGetResource(ctx context.Context, client *k8s.Client, args map[string]in
 		obj, err = client.Clientset.CoreV1().Namespaces().Get(ctx, name, metav1.GetOptions{})
 		refs = []ResourceRef{resourceRef("namespaces", "", name, false, "")}
 	default:
+		if zh {
+			return toolResult{}, fmt.Errorf("不支持的 kind %q", kind)
+		}
 		return toolResult{}, fmt.Errorf("unsupported kind %q", kind)
 	}
 	if err != nil {
@@ -333,12 +362,16 @@ func toolGetResource(ctx context.Context, client *k8s.Client, args map[string]in
 	}
 	text := string(b)
 	if len(text) > 12000 {
-		text = text[:12000] + "\n... truncated ..."
+		if zh {
+			text = text[:12000] + "\n…（已截断）"
+		} else {
+			text = text[:12000] + "\n... truncated ..."
+		}
 	}
 	return toolResult{Text: text, Resources: refs}, nil
 }
 
-func toolPodLogs(ctx context.Context, client *k8s.Client, args map[string]interface{}) (toolResult, error) {
+func toolPodLogs(ctx context.Context, client *k8s.Client, args map[string]interface{}, zh bool) (toolResult, error) {
 	ns := strArg(args, "namespace")
 	name := strArg(args, "name")
 	container := strArg(args, "container")
@@ -361,7 +394,11 @@ func toolPodLogs(ctx context.Context, client *k8s.Client, args map[string]interf
 	}
 	text := string(b)
 	if text == "" {
-		text = "(empty logs)"
+		if zh {
+			text = "（日志为空）"
+		} else {
+			text = "(empty logs)"
+		}
 	}
 	return toolResult{
 		Text: text,

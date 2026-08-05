@@ -55,13 +55,14 @@ function clusterId(): string {
 /** SSE chat — uses fetch so Authorization header works. */
 export async function streamAiChat(
   messages: { role: string; content: string }[],
-  opts: { namespace?: string; skillId?: string; signal?: AbortSignal },
+  opts: { namespace?: string; skillId?: string; language?: string; signal?: AbortSignal },
   handlers: AiStreamHandlers,
 ): Promise<void> {
   const qs = new URLSearchParams()
   const cid = clusterId()
   if (cid) qs.set('clusterId', cid)
   const url = `/api/v1/ai/chat${qs.toString() ? `?${qs}` : ''}`
+  const language = (opts.language || 'en').toLowerCase().startsWith('zh') ? 'zh' : 'en'
 
   const res = await fetch(url, {
     method: 'POST',
@@ -73,6 +74,7 @@ export async function streamAiChat(
       messages,
       namespace: opts.namespace || '',
       skill_id: opts.skillId || '',
+      language,
     }),
     signal: opts.signal,
   })

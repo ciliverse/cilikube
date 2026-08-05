@@ -20,7 +20,7 @@ func TestListPodsPhasesClusterWideIgnoresDefaultTrap(t *testing.T) {
 		"namespace": "default",
 		"phases":    "Pending,Failed,Unknown",
 		"limit":     20,
-	})
+	}, "en")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -32,7 +32,7 @@ func TestListPodsPhasesClusterWideIgnoresDefaultTrap(t *testing.T) {
 		"kind":   "pods",
 		"phases": "Pending,Failed,Unknown",
 		"limit":  20,
-	})
+	}, "en")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -51,7 +51,7 @@ func TestListWarningEventsClusterWide(t *testing.T) {
 		"kind":        "events",
 		"event_types": "Warning,Error",
 		"limit":       30,
-	})
+	}, "en")
 	if err != nil {
 		t.Fatal(err)
 	}

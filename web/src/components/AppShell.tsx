@@ -266,48 +266,47 @@ export function AppShell() {
 
   return (
     <div className="relative flex h-dvh w-full flex-col overflow-hidden pb-[env(safe-area-inset-bottom)] pt-[env(safe-area-inset-top)]">
-      <header className="z-30 flex h-12 w-full shrink-0 items-center gap-1.5 border-b border-line bg-panel-solid/95 px-2 backdrop-blur sm:h-14 sm:gap-3 sm:px-3 md:gap-4 md:px-5">
-        {!aiHome ? (
-          <button
-            type="button"
-            className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded border border-line text-cyan sm:h-10 sm:w-10 md:hidden"
-            aria-label={mobileNavOpen ? 'Close navigation' : 'Open navigation'}
-            aria-expanded={mobileNavOpen}
-            onClick={() => setMobileNavOpen((v) => !v)}
-          >
-            {mobileNavOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-          </button>
-        ) : null}
+      <header className="z-30 grid h-12 w-full shrink-0 grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2 border-b border-line bg-panel-solid/95 px-2 backdrop-blur sm:h-14 sm:gap-3 sm:px-3 md:px-5">
+        <div className="flex min-w-0 items-center justify-start gap-1.5 sm:gap-2">
+          {!aiHome ? (
+            <button
+              type="button"
+              className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded border border-line text-cyan sm:h-10 sm:w-10 md:hidden"
+              aria-label={mobileNavOpen ? 'Close navigation' : 'Open navigation'}
+              aria-expanded={mobileNavOpen}
+              onClick={() => setMobileNavOpen((v) => !v)}
+            >
+              {mobileNavOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+            </button>
+          ) : null}
 
-        <BrandMark
-          to="/ai"
-          className="hidden sm:inline-flex"
-          brandClassName="text-sm md:text-base"
-        />
-        <BrandMark
-          to="/ai"
-          compact
-          className="sm:hidden"
-          brandClassName="text-xs tracking-[0.12em]"
-        />
+          <BrandMark
+            to="/ai"
+            className="hidden sm:inline-flex"
+            brandClassName="text-sm md:text-base"
+          />
+          <BrandMark
+            to="/ai"
+            compact
+            className="sm:hidden"
+            brandClassName="text-xs tracking-[0.12em]"
+          />
 
-        {!aiHome ? (
-          <div className="min-w-0 flex-1">
-            <GlobalSearchPalette />
-          </div>
-        ) : (
-          <div className="min-w-0 flex-1" />
-        )}
+          {!aiHome ? (
+            <div className="hidden min-w-0 flex-1 md:block lg:max-w-xs xl:max-w-md">
+              <GlobalSearchPalette />
+            </div>
+          ) : null}
+        </div>
 
-        <div className="flex shrink-0 items-center gap-1.5 sm:gap-2 md:gap-3">
+        <div className="flex shrink-0 items-center justify-center gap-2 sm:gap-3">
           {aiHome ? (
             <Link
               to="/overview"
               className="inline-flex items-center gap-1.5 rounded border border-cyan/40 bg-cyan/10 px-2.5 py-1.5 text-xs font-medium text-cyan hover:border-cyan sm:px-3"
             >
               <Terminal className="h-3.5 w-3.5" />
-              <span className="hidden sm:inline">{t('nav.console')}</span>
-              <span className="sm:hidden">{t('nav.console')}</span>
+              <span>{t('nav.console')}</span>
             </Link>
           ) : (
             <Link
@@ -320,11 +319,11 @@ export function AppShell() {
             </Link>
           )}
 
-          <label className="hidden items-center gap-2 lg:flex">
+          <label className="hidden items-center gap-2 md:flex">
             <span className="hud-label">{clusterLabel}</span>
             <HudSelect
               aria-label={clusterLabel}
-              className="w-auto min-w-[120px] max-w-[220px]"
+              className="w-auto min-w-[110px] max-w-[200px]"
               value={clusterId}
               onChange={setClusterId}
               disabled={switching || !clusters.length}
@@ -336,18 +335,24 @@ export function AppShell() {
             <span className="hud-label">{nsLabel}</span>
             <HudSelect
               aria-label={nsLabel}
-              className="w-auto min-w-[120px] max-w-[200px]"
+              className="w-auto min-w-[110px] max-w-[180px]"
               value={namespace}
               onChange={setNamespace}
               searchableWhen={0}
               options={nsOptions}
             />
           </label>
+        </div>
 
+        <div className="flex min-w-0 items-center justify-end gap-1.5 sm:gap-2 md:gap-3">
+          {!aiHome ? (
+            <div className="min-w-0 flex-1 md:hidden">
+              <GlobalSearchPalette />
+            </div>
+          ) : null}
           <span className="hidden sm:inline-flex">
             <ConnDot online />
           </span>
-
           <UserMenu primaryRole={primaryRole} isViewerOnly={isViewerOnly} />
         </div>
       </header>

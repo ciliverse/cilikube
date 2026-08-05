@@ -1,4 +1,5 @@
 import { useEffect, useId, useState, type FormEvent } from 'react'
+import { useTranslation } from 'react-i18next'
 import { X } from 'lucide-react'
 import type { AiSkillDef, CustomSkillInput } from '@/lib/aiSkills'
 
@@ -10,6 +11,7 @@ type Props = {
 }
 
 export function AiSkillEditor({ open, initial, onClose, onSave }: Props) {
+  const { t } = useTranslation()
   const titleId = useId()
   const [label, setLabel] = useState('')
   const [blurb, setBlurb] = useState('')
@@ -59,31 +61,36 @@ export function AiSkillEditor({ open, initial, onClose, onSave }: Props) {
           <div>
             <div className="ai-ops-kicker">Skill</div>
             <h2 id={titleId} className="ai-ops-skill-editor-title">
-              {initial?.custom ? '编辑自定义 Skill' : '创建自定义 Skill'}
+              {initial?.custom ? t('ai.editCustomSkill') : t('ai.createCustomSkill')}
             </h2>
           </div>
-          <button type="button" className="ai-ops-icon-btn" onClick={onClose} aria-label="关闭">
+          <button
+            type="button"
+            className="ai-ops-icon-btn"
+            onClick={onClose}
+            aria-label={t('common.close')}
+          >
             <X className="h-4 w-4" />
           </button>
         </div>
 
         <label className="ai-ops-skill-editor-field">
-          <span>名称</span>
+          <span>{t('common.name')}</span>
           <input
             autoFocus
             value={label}
             maxLength={24}
-            placeholder="例如：夜班点检"
+            placeholder={t('ai.skillNamePlaceholder')}
             onChange={(e) => setLabel(e.target.value)}
           />
         </label>
 
         <label className="ai-ops-skill-editor-field">
-          <span>简介（可选）</span>
+          <span>{t('ai.skillBlurbOptional')}</span>
           <input
             value={blurb}
             maxLength={48}
-            placeholder="一句话说明这个 Skill 做什么"
+            placeholder={t('ai.skillBlurbPlaceholder')}
             onChange={(e) => setBlurb(e.target.value)}
           />
         </label>
@@ -94,19 +101,19 @@ export function AiSkillEditor({ open, initial, onClose, onSave }: Props) {
             value={prompt}
             maxLength={2000}
             rows={6}
-            placeholder="写下你希望调查员执行的完整指令…"
+            placeholder={t('ai.skillPromptPlaceholder')}
             onChange={(e) => setPrompt(e.target.value)}
           />
         </label>
 
         <div className="ai-ops-skill-editor-foot">
-          <p className="ai-ops-skill-editor-note">保存在本机浏览器，可随时删除</p>
+          <p className="ai-ops-skill-editor-note">{t('ai.skillEditorNote')}</p>
           <div className="ai-ops-skill-editor-actions">
             <button type="button" className="ai-ops-skill-editor-cancel" onClick={onClose}>
-              取消
+              {t('common.cancel')}
             </button>
             <button type="submit" className="ai-ops-send" disabled={!canSave}>
-              保存
+              {t('common.save')}
             </button>
           </div>
         </div>

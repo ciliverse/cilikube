@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
 import { Bot, Network, RefreshCw, ScrollText, TerminalSquare } from 'lucide-react'
@@ -74,6 +75,7 @@ export function NamespacesPage() {
 }
 
 export function PodsPage() {
+  const { t } = useTranslation()
   const { namespace } = useNamespace()
   const { clusterId } = useCluster()
   const { canExec } = useAuth()
@@ -151,7 +153,7 @@ export function PodsPage() {
                 resource: 'pods',
               })}
               className="inline-flex items-center rounded px-2 py-1 text-cyan hover:bg-cyan/10"
-              title="用 AI 调查"
+              title={t('ai.investigate')}
             >
               <Bot className="h-3.5 w-3.5" />
             </Link>
@@ -222,6 +224,7 @@ export function PodsPage() {
 }
 
 export function DeploymentsPage() {
+  const { t } = useTranslation()
   const { namespace } = useNamespace()
   const { canMutate } = useAuth()
   const [yamlTarget, setYamlTarget] = useState<any | null>(null)
@@ -288,7 +291,7 @@ export function DeploymentsPage() {
                 resource: 'deployments',
               })}
               className="inline-flex items-center rounded px-2 py-1 text-cyan hover:bg-cyan/10"
-              title="用 AI 调查"
+              title={t('ai.investigate')}
             >
               <Bot className="h-3.5 w-3.5" />
             </Link>

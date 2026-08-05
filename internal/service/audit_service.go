@@ -3,11 +3,13 @@ package service
 import (
 	"encoding/json"
 	"fmt"
+	"sort"
 	"strings"
 	"time"
 
 	"github.com/ciliverse/cilikube/configs"
 	"github.com/ciliverse/cilikube/internal/store"
+	"github.com/ciliverse/cilikube/pkg/geoip"
 )
 
 // AuditService provides audit and monitoring functionality
@@ -482,46 +484,38 @@ func (s *AuditService) GetAuditReport(startTime, endTime time.Time, userID *uint
 		UserID:    userID,
 	}
 
-	// Get audit logs for the period
-	var logs []*store.AuditLog
-	var err error
-
-	if userID != nil {
-		logs, _, err = s.store.GetAuditLogsByUserID(*userID, 0, 10000)
-	} else {
-		logs, _, err = s.store.ListAuditLogs(0, 10000)
-	}
-
+	// Inclusive [start, end] — matches /audit/logs SQL filters (was exclusive Before/After and missed 1h windows).
+	logs, _, err := s.store.QueryAuditLogs(store.AuditLogQuery{
+		UserID:    userID,
+		StartTime: &startTime,
+		EndTime:   &endTime,
+		Offset:    0,
+		Limit:     10000,
+	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to get audit logs: %w", err)
 	}
 
-	// Filter by time range and analyze
-	filteredLogs := make([]*store.AuditLog, 0)
 	actionCounts := make(map[string]int)
 	userCounts := make(map[uint]int)
 	ipCounts := make(map[string]int)
 
 	for _, log := range logs {
-		if log.CreatedAt.After(startTime) && log.CreatedAt.Before(endTime) {
-			filteredLogs = append(filteredLogs, log)
-			actionCounts[log.Action]++
-			if log.UserID != nil {
-				userCounts[*log.UserID]++
-			}
-			if log.IPAddress != "" {
-				ipCounts[log.IPAddress]++
-			}
+		actionCounts[log.Action]++
+		if log.UserID != nil {
+			userCounts[*log.UserID]++
+		}
+		if log.IPAddress != "" {
+			ipCounts[log.IPAddress]++
 		}
 	}
 
-	report.TotalEvents = len(filteredLogs)
-	report.Events = filteredLogs
+	report.TotalEvents = len(logs)
+	report.Events = logs
 	report.ActionSummary = actionCounts
 	report.UserActivity = userCounts
 	report.IPActivity = ipCounts
 
-	// Calculate statistics
 	report.LoginAttempts = actionCounts["login"] + actionCounts["login_failed"]
 	report.FailedLogins = actionCounts["login_failed"]
 	report.PermissionDenials = actionCounts["permission_denied"]
@@ -557,25 +551,30 @@ func (s *AuditService) GetSecurityMetrics(period time.Duration) (*SecurityMetric
 
 // GetSecurityMetricsInWindow returns security metrics for an absolute time window.
 func (s *AuditService) GetSecurityMetricsInWindow(start, end time.Time) (*SecurityMetrics, error) {
-	if !end.After(start) {
+	if end.Before(start) {
 		return nil, fmt.Errorf("end_time must be after start_time")
 	}
 
-	logs, _, err := s.store.ListAuditLogs(0, 10000)
+	logs, _, err := s.store.QueryAuditLogs(store.AuditLogQuery{
+		StartTime: &start,
+		EndTime:   &end,
+		Offset:    0,
+		Limit:     10000,
+	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to get audit logs: %w", err)
 	}
 
 	period := end.Sub(start)
+	if period <= 0 {
+		period = time.Hour
+	}
 	metrics := &SecurityMetrics{
 		Period:    period,
 		Timestamp: time.Now(),
 	}
 
 	for _, log := range logs {
-		if log.CreatedAt.Before(start) || !log.CreatedAt.Before(end) {
-			continue
-		}
 		metrics.TotalEvents++
 
 		switch log.Action {
@@ -599,6 +598,238 @@ func (s *AuditService) GetSecurityMetricsInWindow(start, end time.Time) (*Securi
 	}
 
 	return metrics, nil
+}
+
+// GeoBucket is one region aggregation (hits + unique IPs).
+type GeoBucket struct {
+	Country  string `json:"country"`
+	Province string `json:"province,omitempty"`
+	City     string `json:"city,omitempty"`
+	Label    string `json:"label,omitempty"`
+	Hits     int    `json:"hits"`
+	Visitors int    `json:"visitors"`
+}
+
+// GeoIPRow is one client IP with region and hit count.
+type GeoIPRow struct {
+	IP       string    `json:"ip"`
+	Hits     int       `json:"hits"`
+	Region   string    `json:"region,omitempty"`
+	Country  string    `json:"country,omitempty"`
+	Province string    `json:"province,omitempty"`
+	City     string    `json:"city,omitempty"`
+	ISP      string    `json:"isp,omitempty"`
+	LastSeen time.Time `json:"last_seen,omitempty"`
+}
+
+// GeoStats is geography + IP breakdown for the audit window.
+type GeoStats struct {
+	StartTime     time.Time   `json:"start_time"`
+	EndTime       time.Time   `json:"end_time"`
+	TotalHits     int         `json:"total_hits"`
+	TotalVisitors int         `json:"total_visitors"`
+	UnknownHits   int         `json:"unknown_hits"`
+	Countries     []GeoBucket `json:"countries"`
+	Provinces     []GeoBucket `json:"provinces"`
+	Cities        []GeoBucket `json:"cities"`
+	IPs           []GeoIPRow  `json:"ips"`
+}
+
+type geoAgg struct {
+	hits int
+	ips  map[string]struct{}
+}
+
+func (a *geoAgg) add(ip string) {
+	a.hits++
+	if ip == "" {
+		return
+	}
+	if a.ips == nil {
+		a.ips = make(map[string]struct{})
+	}
+	a.ips[ip] = struct{}{}
+}
+
+func (a *geoAgg) visitors() int {
+	if a == nil {
+		return 0
+	}
+	return len(a.ips)
+}
+
+type ipAgg struct {
+	hits     int
+	lastSeen time.Time
+	country  string
+	province string
+	city     string
+	isp      string
+	region   string
+}
+
+// GetGeoStats aggregates audit IPs into country / province / city / IP tables.
+func (s *AuditService) GetGeoStats(startTime, endTime time.Time) (*GeoStats, error) {
+	if endTime.Before(startTime) {
+		return nil, fmt.Errorf("end_time must be after start_time")
+	}
+
+	logs, _, err := s.store.QueryAuditLogs(store.AuditLogQuery{
+		StartTime: &startTime,
+		EndTime:   &endTime,
+		Offset:    0,
+		Limit:     10000,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to get audit logs: %w", err)
+	}
+
+	out := &GeoStats{
+		StartTime: startTime,
+		EndTime:   endTime,
+	}
+
+	countries := map[string]*geoAgg{}
+	provinces := map[string]*geoAgg{}
+	cities := map[string]*geoAgg{}
+	byIP := map[string]*ipAgg{}
+	resolver := geoip.Default()
+
+	for _, log := range logs {
+		out.TotalHits++
+		ip := strings.TrimSpace(log.IPAddress)
+		if ip == "" {
+			out.UnknownHits++
+			continue
+		}
+
+		loc := resolver.Lookup(ip)
+		country, province, city, isp, region := "", "", "", "", ""
+		if loc != nil {
+			country = strings.TrimSpace(loc.Country)
+			province = strings.TrimSpace(loc.Province)
+			city = strings.TrimSpace(loc.City)
+			isp = strings.TrimSpace(loc.ISP)
+			region = strings.TrimSpace(loc.Label)
+		}
+		if country == "" {
+			out.UnknownHits++
+			country = ""
+			region = ""
+		}
+
+		ia := byIP[ip]
+		if ia == nil {
+			ia = &ipAgg{}
+			byIP[ip] = ia
+		}
+		ia.hits++
+		if log.CreatedAt.After(ia.lastSeen) {
+			ia.lastSeen = log.CreatedAt
+		}
+		if ia.country == "" && country != "" {
+			ia.country, ia.province, ia.city, ia.isp, ia.region = country, province, city, isp, region
+		}
+
+		if country == "" {
+			continue
+		}
+		if countries[country] == nil {
+			countries[country] = &geoAgg{}
+		}
+		countries[country].add(ip)
+
+		if province != "" && province != "0" {
+			pk := country + "|" + province
+			if provinces[pk] == nil {
+				provinces[pk] = &geoAgg{}
+			}
+			provinces[pk].add(ip)
+		}
+		if city != "" && city != "0" {
+			ck := country + "|" + province + "|" + city
+			if cities[ck] == nil {
+				cities[ck] = &geoAgg{}
+			}
+			cities[ck].add(ip)
+		}
+	}
+
+	out.TotalVisitors = len(byIP)
+	out.Countries = sortGeoBuckets(countries, func(k string, a *geoAgg) GeoBucket {
+		return GeoBucket{Country: k, Label: k, Hits: a.hits, Visitors: a.visitors()}
+	}, 30)
+	out.Provinces = sortGeoBuckets(provinces, func(k string, a *geoAgg) GeoBucket {
+		parts := strings.SplitN(k, "|", 2)
+		country, province := parts[0], ""
+		if len(parts) > 1 {
+			province = parts[1]
+		}
+		label := province
+		if country != "" && country != "中国" && country != "China" {
+			label = country + " · " + province
+		}
+		return GeoBucket{
+			Country: country, Province: province, Label: label,
+			Hits: a.hits, Visitors: a.visitors(),
+		}
+	}, 40)
+	out.Cities = sortGeoBuckets(cities, func(k string, a *geoAgg) GeoBucket {
+		parts := strings.SplitN(k, "|", 3)
+		country, province, city := parts[0], "", ""
+		if len(parts) > 1 {
+			province = parts[1]
+		}
+		if len(parts) > 2 {
+			city = parts[2]
+		}
+		label := city
+		if province != "" {
+			label = province + " · " + city
+		}
+		return GeoBucket{
+			Country: country, Province: province, City: city, Label: label,
+			Hits: a.hits, Visitors: a.visitors(),
+		}
+	}, 40)
+
+	ips := make([]GeoIPRow, 0, len(byIP))
+	for ip, a := range byIP {
+		ips = append(ips, GeoIPRow{
+			IP: ip, Hits: a.hits, Region: a.region,
+			Country: a.country, Province: a.province, City: a.city, ISP: a.isp,
+			LastSeen: a.lastSeen,
+		})
+	}
+	sort.Slice(ips, func(i, j int) bool {
+		if ips[i].Hits != ips[j].Hits {
+			return ips[i].Hits > ips[j].Hits
+		}
+		return ips[i].LastSeen.After(ips[j].LastSeen)
+	})
+	if len(ips) > 50 {
+		ips = ips[:50]
+	}
+	out.IPs = ips
+
+	return out, nil
+}
+
+func sortGeoBuckets(m map[string]*geoAgg, build func(string, *geoAgg) GeoBucket, limit int) []GeoBucket {
+	out := make([]GeoBucket, 0, len(m))
+	for k, a := range m {
+		out = append(out, build(k, a))
+	}
+	sort.Slice(out, func(i, j int) bool {
+		if out[i].Hits != out[j].Hits {
+			return out[i].Hits > out[j].Hits
+		}
+		return out[i].Visitors > out[j].Visitors
+	})
+	if limit > 0 && len(out) > limit {
+		out = out[:limit]
+	}
+	return out
 }
 
 // SecurityMetrics represents security metrics

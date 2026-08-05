@@ -33,12 +33,11 @@ export function StarSupportRotator({ className }: { className?: string }) {
       target="_blank"
       rel="noreferrer noopener"
       className={cn(
-        'star-support-rotator inline-flex max-w-md items-center gap-2 text-[13px] leading-snug text-cyan transition-opacity duration-300 hover:underline',
+        'star-support-rotator inline-flex max-w-md items-center text-[13px] leading-snug text-cyan transition-opacity duration-300 hover:underline',
         visible ? 'opacity-100' : 'opacity-0',
         className,
       )}
     >
-      <span className="hud-label shrink-0 text-cyan/80">{t('cta.badge')}</span>
       <span>{lines[idx]}</span>
     </a>
   )
@@ -90,10 +89,9 @@ export function StarSupportFloat() {
         'rounded border border-cyan/35 bg-panel-solid/95 px-3.5 py-3 shadow-[0_12px_40px_rgba(0,0,0,0.35)] backdrop-blur-md',
       )}
       role="dialog"
-      aria-label={t('cta.badge')}
+      aria-label={t('cta.starAction')}
     >
-      <div className="mb-1.5 flex items-center justify-between gap-2">
-        <span className="hud-label text-cyan">{t('cta.badge')}</span>
+      <div className="mb-1.5 flex items-center justify-end gap-2">
         <button
           type="button"
           className="text-[10px] tracking-[0.12em] text-text-dim uppercase hover:text-text"

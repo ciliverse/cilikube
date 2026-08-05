@@ -1,7 +1,13 @@
 import { useEffect, useLayoutEffect, useRef, useState, type KeyboardEvent, type MouseEvent } from 'react'
 import { createPortal } from 'react-dom'
+import { useTranslation } from 'react-i18next'
 import { Copy, MoreHorizontal, Pencil, Trash2 } from 'lucide-react'
-import { formatSessionTime, type AiSession } from '@/lib/aiSessions'
+import {
+  displayChatTitle,
+  formatSessionTime,
+  isEmptyChatTitle,
+  type AiSession,
+} from '@/lib/aiSessions'
 import { cn } from '@/lib/utils'
 
 type Props = {
@@ -14,17 +20,19 @@ type Props = {
 }
 
 export function AiSessionRow({ session, active, onSelect, onRename, onDuplicate, onDelete }: Props) {
+  const { t } = useTranslation()
+  const shownTitle = displayChatTitle(session.title, t('ai.newChat'))
   const [menuOpen, setMenuOpen] = useState(false)
   const [renaming, setRenaming] = useState(false)
-  const [draft, setDraft] = useState(session.title)
+  const [draft, setDraft] = useState(shownTitle)
   const [menuPos, setMenuPos] = useState({ top: 0, left: 0 })
   const inputRef = useRef<HTMLInputElement>(null)
   const moreBtnRef = useRef<HTMLButtonElement>(null)
   const menuRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    if (!renaming) setDraft(session.title)
-  }, [session.title, renaming])
+    if (!renaming) setDraft(shownTitle)
+  }, [shownTitle, renaming])
 
   useEffect(() => {
     if (renaming) {
@@ -70,8 +78,8 @@ export function AiSessionRow({ session, active, onSelect, onRename, onDuplicate,
   const commitRename = () => {
     const next = draft.trim()
     setRenaming(false)
-    if (!next || next === session.title) {
-      setDraft(session.title)
+    if (!next || next === shownTitle || (isEmptyChatTitle(session.title) && isEmptyChatTitle(next))) {
+      setDraft(shownTitle)
       return
     }
     onRename(next)
@@ -80,7 +88,7 @@ export function AiSessionRow({ session, active, onSelect, onRename, onDuplicate,
   const startRename = (e?: MouseEvent) => {
     e?.stopPropagation()
     setMenuOpen(false)
-    setDraft(session.title)
+    setDraft(shownTitle)
     setRenaming(true)
   }
 
@@ -119,8 +127,8 @@ export function AiSessionRow({ session, active, onSelect, onRename, onDuplicate,
               ref={moreBtnRef}
               type="button"
               className="ai-ops-session-more"
-              title="更多"
-              aria-label="更多操作"
+              title={t('ai.more')}
+              aria-label={t('ai.moreActions')}
               aria-expanded={menuOpen}
               onClick={(e) => {
                 e.stopPropagation()
@@ -146,7 +154,7 @@ export function AiSessionRow({ session, active, onSelect, onRename, onDuplicate,
                       }}
                     >
                       <Pencil className="h-3.5 w-3.5" />
-                      重命名
+                      {t('ai.rename')}
                     </button>
                     <button
                       type="button"
@@ -158,7 +166,7 @@ export function AiSessionRow({ session, active, onSelect, onRename, onDuplicate,
                       }}
                     >
                       <Copy className="h-3.5 w-3.5" />
-                      创建副本
+                      {t('ai.duplicate')}
                     </button>
                     <button
                       type="button"
@@ -171,7 +179,7 @@ export function AiSessionRow({ session, active, onSelect, onRename, onDuplicate,
                       }}
                     >
                       <Trash2 className="h-3.5 w-3.5" />
-                      删除
+                      {t('ai.delete')}
                     </button>
                   </div>,
                   document.body,
@@ -185,7 +193,7 @@ export function AiSessionRow({ session, active, onSelect, onRename, onDuplicate,
             className="ai-ops-session-rename"
             value={draft}
             maxLength={64}
-            aria-label="重命名对话"
+            aria-label={t('ai.renameChat')}
             onClick={(e) => e.stopPropagation()}
             onChange={(e) => setDraft(e.target.value)}
             onBlur={commitRename}
@@ -197,14 +205,14 @@ export function AiSessionRow({ session, active, onSelect, onRename, onDuplicate,
               }
               if (e.key === 'Escape') {
                 e.preventDefault()
-                setDraft(session.title)
+                setDraft(shownTitle)
                 setRenaming(false)
               }
             }}
           />
         ) : (
-          <div className="ai-ops-session-title" title={session.title || '未命名'}>
-            {session.title || '未命名'}
+          <div className="ai-ops-session-title" title={shownTitle}>
+            {shownTitle}
           </div>
         )}
       </div>

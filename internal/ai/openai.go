@@ -54,7 +54,8 @@ func processOpenAI(ctx context.Context, cfg *configs.Config, client *k8s.Client,
 		model = "gpt-4o-mini"
 	}
 
-	messages := []oaiMsg{{Role: "system", Content: systemPrompt(req.Namespace)}}
+	lang := normalizeLang(req.Language)
+	messages := []oaiMsg{{Role: "system", Content: systemPrompt(req.Namespace, lang)}}
 	for _, m := range req.Messages {
 		role := m.Role
 		if role != "user" && role != "assistant" {
@@ -120,7 +121,11 @@ func processOpenAI(ctx context.Context, cfg *configs.Config, client *k8s.Client,
 		if len(msg.ToolCalls) == 0 {
 			content := strings.TrimSpace(msg.Content)
 			if content == "" {
-				content = "（模型未返回文本）"
+				if isZh(lang) {
+					content = "（模型未返回文本）"
+				} else {
+					content = "(model returned no text)"
+				}
 			}
 			if len(allRefs) > 0 {
 				send(SSEEvent{Event: "resources", Data: map[string]interface{}{"items": allRefs}})
@@ -137,7 +142,7 @@ func processOpenAI(ctx context.Context, cfg *configs.Config, client *k8s.Client,
 			send(SSEEvent{Event: "tool_call", Data: map[string]interface{}{
 				"name": tc.Function.Name, "arguments": args, "id": tc.ID,
 			}})
-			res, err := executeTool(ctx, client, tc.Function.Name, args)
+			res, err := executeTool(ctx, client, tc.Function.Name, args, lang)
 			content := ""
 			ok := true
 			if err != nil {

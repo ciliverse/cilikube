@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { useQuery } from '@tanstack/react-query'
 import { apiGet } from '@/lib/api'
 import { useAuth } from '@/store/auth'
+import { AuditGeoMap, type GeoStats } from '@/components/AuditGeoMap'
 import { Badge, Button, Card, EmptyState, PageHeader, StatCard } from '@/components/ui'
 import { HudTable, HudTableScroll } from '@/components/HudTableScroll'
 import { cn } from '@/lib/utils'
@@ -19,10 +20,17 @@ function defaultRange(hours: number): { start: string; end: string } {
   return { start: toLocalInput(start), end: toLocalInput(end) }
 }
 
-function toRFC3339(localValue: string): string {
+function toRFC3339(localValue: string, role: 'start' | 'end' = 'start'): string {
   if (!localValue) return ''
   const d = new Date(localValue)
   if (Number.isNaN(d.getTime())) return ''
+  // datetime-local is minute-precision; make the end inclusive through that minute
+  // so "1h" / current-minute events are not dropped from report/metrics/geo.
+  if (role === 'end') {
+    d.setSeconds(59, 999)
+  } else {
+    d.setSeconds(0, 0)
+  }
   return d.toISOString()
 }
 
@@ -135,9 +143,9 @@ export function AuditPage() {
   const [startLocal, setStartLocal] = useState(initial.start)
   const [endLocal, setEndLocal] = useState(initial.end)
 
-  const startTime = toRFC3339(startLocal)
-  const endTime = toRFC3339(endLocal)
-  const timesReady = Boolean(startTime && endTime && new Date(endTime) > new Date(startTime))
+  const startTime = toRFC3339(startLocal, 'start')
+  const endTime = toRFC3339(endLocal, 'end')
+  const timesReady = Boolean(startTime && endTime && new Date(endTime) >= new Date(startTime))
 
   const applyPreset = (hours: number) => {
     const range = defaultRange(hours)
@@ -186,6 +194,17 @@ export function AuditPage() {
     queryFn: () =>
       apiGet<any>('/api/v1/audit/metrics', {
         period: periodFromRange(startTime, endTime),
+        start_time: startTime,
+        end_time: endTime,
+      }),
+  })
+
+  const geoQ = useQuery({
+    queryKey: ['audit-geo', startTime, endTime],
+    enabled: isAdmin && timesReady,
+    refetchInterval: 30_000,
+    queryFn: () =>
+      apiGet<GeoStats>('/api/v1/audit/geo', {
         start_time: startTime,
         end_time: endTime,
       }),
@@ -302,6 +321,7 @@ export function AuditPage() {
               if (timesReady) {
                 void reportQ.refetch()
                 void metricsQ.refetch()
+                void geoQ.refetch()
               }
             }}
           >
@@ -321,22 +341,31 @@ export function AuditPage() {
 
       {timesReady ? (
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-          <StatCard label="Total events" value={reportQ.data?.total_events ?? '—'} />
-          <StatCard label="Login attempts" value={reportQ.data?.login_attempts ?? '—'} />
+          <StatCard label={t('audit.totalEvents')} value={reportQ.data?.total_events ?? '—'} />
+          <StatCard label={t('audit.loginAttempts')} value={reportQ.data?.login_attempts ?? '—'} />
           <StatCard
-            label="Failed logins"
+            label={t('audit.failedLogins')}
             value={metricsQ.data?.failed_logins ?? reportQ.data?.failed_logins ?? '—'}
           />
           <StatCard
-            label="Permission denials"
+            label={t('audit.permissionDenials')}
             value={metricsQ.data?.permission_denials ?? reportQ.data?.permission_denials ?? '—'}
           />
         </div>
       ) : null}
 
+      {timesReady ? (
+        <Card className="p-5">
+          <AuditGeoMap stats={geoQ.data} loading={geoQ.isLoading || geoQ.isFetching} />
+          {geoQ.isError ? (
+            <p className="mt-3 text-xs text-warn">{t('audit.geoLoadFailed')}</p>
+          ) : null}
+        </Card>
+      ) : null}
+
       {timesReady && topActions.length ? (
         <Card className="p-5">
-          <div className="hud-label mb-2">Top actions</div>
+          <div className="hud-label mb-2">{t('audit.topActions')}</div>
           <div className="flex flex-wrap gap-2">
             {topActions.map(([name, count]) => (
               <Badge key={name} tone="accent">
@@ -346,8 +375,10 @@ export function AuditPage() {
           </div>
           {metricsQ.data ? (
             <p className="mt-3 text-xs text-text-dim">
-              Metrics · events/h {Number(metricsQ.data.events_per_hour || 0).toFixed(1)} · violations{' '}
-              {metricsQ.data.security_violations ?? 0}
+              {t('audit.metricsLine', {
+                rate: Number(metricsQ.data.events_per_hour || 0).toFixed(1),
+                violations: metricsQ.data.security_violations ?? 0,
+              })}
             </p>
           ) : null}
         </Card>

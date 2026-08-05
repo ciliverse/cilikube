@@ -1,4 +1,5 @@
 import { useMemo } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useQuery } from '@tanstack/react-query'
 import {
   Area,
@@ -46,6 +47,7 @@ export function PromTimeChart({
   unit,
   yFormatter = (v) => v.toFixed(2),
 }: Props) {
+  const { t } = useTranslation()
   const { clusterId } = useCluster()
   const { theme } = useTheme()
   const stroke = color || theme.colors.primary
@@ -76,12 +78,7 @@ export function PromTimeChart({
     return <EmptyState>Checking Prometheus…</EmptyState>
   }
   if (!statusQ.data?.enabled) {
-    return (
-      <EmptyState>
-        Prometheus 未配置。管理员可到 Settings → Prometheus 填写 URL，或开启公网 Showcase
-        模拟时序。
-      </EmptyState>
-    )
+    return <EmptyState>{t('monitoring.promNotConfigured')}</EmptyState>
   }
   if (!statusQ.data?.healthy) {
     return <EmptyState>Prometheus is unreachable: {statusQ.data?.error || 'unhealthy'}</EmptyState>

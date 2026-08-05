@@ -1,13 +1,14 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent, type KeyboardEvent } from 'react'
+import { useTranslation } from 'react-i18next'
 import { ArrowUp, Bot, CornerDownLeft, Plus, Slash, Square, Terminal, Trash2, Zap } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import type { AiResourceRef } from '@/api/ai'
 import { AiSkillEditor } from '@/components/AiSkillEditor'
 import {
-  AI_SKILL_GROUP_LABEL,
-  DEFAULT_AI_AGENT,
+  defaultAiAgent,
   filterSkillsByQuery,
   parseSlashToken,
+  skillGroupLabel,
   skillsByGroup,
   type AiAgentMeta,
   type AiSkillDef,
@@ -47,16 +48,19 @@ export function AiComposer({
   err,
   evidence,
   skills = [],
-  agent = DEFAULT_AI_AGENT,
+  agent,
   landing,
   onSaveCustomSkill,
   onDeleteCustomSkill,
 }: Props) {
+  const { t, i18n } = useTranslation()
+  const lang = i18n.language
+  const resolvedAgent = agent || defaultAiAgent(lang)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const composingRef = useRef(false)
   const menuRef = useRef<HTMLDivElement>(null)
   const maxHeight = landing ? 200 : 180
-  const groups = useMemo(() => skillsByGroup(skills), [skills])
+  const groups = useMemo(() => skillsByGroup(skills, lang), [skills, lang])
   const [activeGroup, setActiveGroup] = useState<AiSkillGroup>('combo')
   const [slashOpen, setSlashOpen] = useState(false)
   const [slashQuery, setSlashQuery] = useState('')
@@ -79,8 +83,8 @@ export function AiComposer({
   }, [groups, activeGroup])
 
   const slashMatches = useMemo(
-    () => filterSkillsByQuery(skills, slashQuery).slice(0, 8),
-    [skills, slashQuery],
+    () => filterSkillsByQuery(skills, slashQuery, lang).slice(0, 8),
+    [skills, slashQuery, lang],
   )
 
   const showSlashMenu = (slashOpen || menuForced) && !busy && skills.length > 0
@@ -231,7 +235,7 @@ export function AiComposer({
       {err ? <div className="ai-ops-err">{err}</div> : null}
       {evidence && evidence.length > 0 ? (
         <div className="ai-ops-evidence-strip">
-          <span className="ai-ops-evidence-label">线索</span>
+          <span className="ai-ops-evidence-label">{t('ai.clues')}</span>
           <div className="ai-ops-evidence-scroll">
             {evidence.map((r) => (
               <Link key={r.href + (r.console || '')} to={r.href} className="ai-ops-card">
@@ -251,7 +255,7 @@ export function AiComposer({
         {landing && skills.length ? (
           <div className="ai-ops-skills">
             <div className="ai-ops-skills-top">
-              <div className="ai-ops-skills-tabs" role="tablist" aria-label="Skill 分类">
+              <div className="ai-ops-skills-tabs" role="tablist" aria-label={t('ai.skillGroups')}>
                 {groups.map((g) => (
                   <button
                     key={g.group}
@@ -275,12 +279,12 @@ export function AiComposer({
                     onClick={() => openCreateEditor(null)}
                   >
                     <Plus className="h-3.5 w-3.5" />
-                    自定义
+                    {t('ai.custom')}
                   </button>
                 ) : null}
-                <span className="ai-ops-agent-pill" title={agent.blurb}>
+                <span className="ai-ops-agent-pill" title={resolvedAgent.blurb}>
                   <Bot className="h-3.5 w-3.5" />
-                  {agent.name}
+                  {resolvedAgent.name}
                 </span>
               </div>
             </div>
@@ -288,11 +292,11 @@ export function AiComposer({
             <div className="ai-ops-skills-panel" role="tabpanel">
               {activeGroup === 'custom' && activeSkills.length === 0 ? (
                 <div className="ai-ops-skills-empty">
-                  <p>还没有自定义 Skill</p>
+                  <p>{t('ai.noCustomSkills')}</p>
                   {canManageCustom ? (
                     <button type="button" className="ai-ops-skill-create is-ghost" onClick={() => openCreateEditor(null)}>
                       <Plus className="h-3.5 w-3.5" />
-                      写一条 Prompt 并保存
+                      {t('ai.writeCustomSkill')}
                     </button>
                   ) : null}
                 </div>
@@ -322,8 +326,8 @@ export function AiComposer({
                         <button
                           type="button"
                           className="ai-ops-skill-del"
-                          title="删除"
-                          aria-label={`删除 ${s.label}`}
+                          title={t('ai.delete')}
+                          aria-label={t('ai.deleteSkill', { label: s.label })}
                           onClick={(e) => {
                             e.preventDefault()
                             e.stopPropagation()
@@ -338,8 +342,8 @@ export function AiComposer({
                 </div>
               )}
               <p className="ai-ops-skills-hint">
-                或在下方输入 <kbd>/</kbd> 搜索 Skill
-                {canManageCustom ? ' · 右键自定义 Skill 可编辑' : null}
+                {t('ai.slashHint')}
+                {canManageCustom ? t('ai.slashHintEdit') : null}
               </p>
             </div>
           </div>
@@ -347,17 +351,17 @@ export function AiComposer({
 
         <div className="ai-ops-composer-main">
           {showSlashMenu ? (
-            <div ref={menuRef} className="ai-ops-slash" role="listbox" aria-label="Skill 列表">
+            <div ref={menuRef} className="ai-ops-slash" role="listbox" aria-label={t('ai.skillList')}>
               <div className="ai-ops-slash-head">
                 <span>
                   Skills
                   {slashQuery ? <em> · /{slashQuery}</em> : null}
                 </span>
-                <span className="ai-ops-slash-keys">↑↓ 选择 · Enter 运行 · Esc 关闭</span>
+                <span className="ai-ops-slash-keys">{t('ai.slashKeys')}</span>
               </div>
               <div className="ai-ops-slash-list">
                 {slashMatches.length === 0 ? (
-                  <div className="ai-ops-slash-empty">无匹配 Skill，换个关键词试试</div>
+                  <div className="ai-ops-slash-empty">{t('ai.noSkillMatch')}</div>
                 ) : (
                   slashMatches.map((s, i) => (
                     <button
@@ -373,7 +377,7 @@ export function AiComposer({
                       <span className="ai-ops-slash-body">
                         <span className="ai-ops-slash-title">
                           {s.label}
-                          <span className="ai-ops-slash-group">{AI_SKILL_GROUP_LABEL[s.group]}</span>
+                          <span className="ai-ops-slash-group">{skillGroupLabel(s.group, lang)}</span>
                         </span>
                         <span className="ai-ops-slash-blurb">{s.blurb}</span>
                       </span>
@@ -385,7 +389,7 @@ export function AiComposer({
               {canManageCustom ? (
                 <button type="button" className="ai-ops-slash-create" onClick={() => openCreateEditor(null)}>
                   <Plus className="h-3.5 w-3.5" />
-                  创建自定义 Skill
+                  {t('ai.createCustomSkill')}
                 </button>
               ) : null}
             </div>
@@ -398,9 +402,9 @@ export function AiComposer({
             placeholder={
               ready
                 ? landing
-                  ? '直接提问，或输入 / 调用 Skill…'
-                  : '继续问，或输入 / 调用 Skill…'
-                : 'AI 暂不可用，仍可先输入草稿…'
+                  ? t('ai.placeholderReady')
+                  : t('ai.placeholderContinue')
+                : t('ai.placeholderOffline')
             }
             value={value}
             onCompositionStart={() => {
@@ -430,16 +434,16 @@ export function AiComposer({
           />
           <div className="ai-ops-composer-bar">
             <div className="ai-ops-composer-meta">
-              <span className="ai-ops-agent-inline" title={agent.blurb}>
+              <span className="ai-ops-agent-inline" title={resolvedAgent.blurb}>
                 <Bot className="h-3 w-3" />
-                {agent.name}
+                {resolvedAgent.name}
               </span>
               <button
                 type="button"
                 className="ai-ops-slash-trigger"
                 disabled={busy || !skills.length}
                 onClick={openSkillMenu}
-                title="打开 Skill 菜单"
+                title={t('ai.openSkillMenu')}
               >
                 <Slash className="h-3 w-3" />
                 Skill
@@ -450,10 +454,10 @@ export function AiComposer({
                   className="ai-ops-slash-trigger is-muted"
                   disabled={busy}
                   onClick={() => openCreateEditor(null)}
-                  title="创建自定义 Skill"
+                  title={t('ai.createCustomSkill')}
                 >
                   <Plus className="h-3 w-3" />
-                  自定义
+                  {t('ai.custom')}
                 </button>
               ) : null}
               <span className="ai-ops-hint">
@@ -465,7 +469,7 @@ export function AiComposer({
             {busy ? (
               <button type="button" className="ai-ops-send is-stop" onClick={onStop}>
                 <Square className="h-3.5 w-3.5" />
-                停止
+                {t('ai.stop')}
               </button>
             ) : (
               <button
@@ -474,7 +478,7 @@ export function AiComposer({
                 disabled={!ready || !value.trim() || (showSlashMenu && slashMatches.length > 0)}
               >
                 <ArrowUp className="h-4 w-4" />
-                <span>发送</span>
+                <span>{t('ai.send')}</span>
               </button>
             )}
           </div>
