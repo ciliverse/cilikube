@@ -70,52 +70,62 @@ Highlights vs earlier releases:
 - **Themes**: tron / paper / matrix / amber / nord / sakura / midnight-violet / solarized
 
 <div align="center">
-  <img src="docs/v1.0/01-ai-landing.png" alt="AI landing" width="100%">
-  <p><strong>AI landing · Skill categories</strong></p>
+  <img src="docs/v1.0.1/01-ai-landing.png" alt="AI landing" width="100%">
+  <p><strong>AI landing · Skills · Ask first then change</strong></p>
 </div>
 
 <div align="center">
-  <img src="docs/v1.0/03-ai-chat-clues.png" alt="AI chat with resource clues" width="100%">
-  <p><strong>AI chat · resource clues into the console</strong></p>
+  <img src="docs/v1.0.1/05-topology.png" alt="Topology Traffic" width="100%">
+  <p><strong>Topology · Traffic mode with RPS flow (Service → Workload → Pod)</strong></p>
 </div>
 
 <div align="center">
-  <img src="docs/v1.0/04-fleet-overview.png" alt="Fleet overview" width="100%">
-  <p><strong>Fleet overview · multi-cluster cards</strong></p>
+  <img src="docs/v1.0.1/06-timeline.png" alt="Timeline" width="100%">
+  <p><strong>Timeline · status scatter + event stream</strong></p>
 </div>
 
 <div align="center">
-  <img src="docs/v1.0/05-monitoring.png" alt="Monitoring" width="100%">
-  <p><strong>Monitoring · CPU / Memory series</strong></p>
+  <img src="docs/v1.0.1/04-fleet-overview.png" alt="Fleet overview" width="100%">
+  <p><strong>Fleet · multi-cluster health cards</strong></p>
 </div>
 
 <details>
-<summary>More screenshots (login · Skill · investigate · themes)</summary>
+<summary>More screenshots (login · chat · monitoring · pods · themes)</summary>
 
 <br>
 
 <div align="center">
-  <img src="docs/v1.0/00-login.png" alt="Login" width="100%">
-  <p><strong>Login</strong></p>
+  <img src="docs/v1.0.1/00-login.png" alt="Login" width="100%">
+  <p><strong>Login · Showcase one-click demo accounts</strong></p>
 </div>
 
 <div align="center">
-  <img src="docs/v1.0/02-ai-skill-slash.png" alt="Skill menu" width="100%">
+  <img src="docs/v1.0.1/02-ai-skill-slash.png" alt="Skill menu" width="100%">
   <p><strong>Type <code>/</code> for Skills</strong></p>
 </div>
 
 <div align="center">
-  <img src="docs/v1.0/07-pods-investigate.png" alt="Investigate with AI" width="100%">
+  <img src="docs/v1.0.1/03-ai-chat-clues.png" alt="AI chat with resource clues" width="100%">
+  <p><strong>AI chat · resource clues into the console</strong></p>
+</div>
+
+<div align="center">
+  <img src="docs/v1.0.1/07-monitoring.png" alt="Monitoring" width="100%">
+  <p><strong>Monitoring · Showcase Prometheus series</strong></p>
+</div>
+
+<div align="center">
+  <img src="docs/v1.0.1/08-pods-investigate.png" alt="Pods list" width="100%">
   <p><strong>Pods list · Investigate with AI</strong></p>
 </div>
 
 <div align="center">
-  <img src="docs/v1.0/08-pod-detail.png" alt="Pod detail" width="100%">
+  <img src="docs/v1.0.1/09-pod-detail.png" alt="Pod detail" width="100%">
   <p><strong>Pod detail</strong></p>
 </div>
 
 <div align="center">
-  <img src="docs/v1.0/09-themes-overview-collage.png" alt="Eight themes" width="100%">
+  <img src="docs/v1.0.1/10-themes-overview-collage.png" alt="Eight themes" width="100%">
   <p><strong>Eight themes</strong></p>
 </div>
 
@@ -124,8 +134,8 @@ Highlights vs earlier releases:
 ## ✨ Key Differentiators
 
 1. **Triage first, deep dive second**: land on AI after login; console in the top bar; resource pages and fleet cards can throw context back to the investigator
-2. **Clear read-only boundary**: default agent is the cluster investigator; writes, approvals, and backups still go through the console and your existing process
-3. **Developer-friendly**: clean React / Go architecture — a solid reference for Kubernetes API integration and modern full-stack panels
+2. **See the path, then the history**: Topology (Traffic) for Service → Workload → Pod flow; Timeline for status segments and event markers
+3. **Clear read-only boundary**: default agent is the cluster investigator; writes, approvals, and backups still go through the console and your existing process
 4. **Browser + desktop**: same UI; desktop reads local kubeconfig without standing up a web stack first
 
 ## 🎯 Target Audience
@@ -257,10 +267,10 @@ go build -o bin/cilikube cmd/server/main.go
 ### Using Official Images
 ```bash
 # Backend
-docker run -d --name cilikube -p 8080:8080 -v ~/.kube:/root/.kube:ro ghcr.io/ciliverse/cilikube:v1.0.0
+docker run -d --name cilikube -p 8080:8080 -v ~/.kube:/root/.kube:ro ghcr.io/ciliverse/cilikube:v1.0.1
 
 # Frontend
-docker run -d --name cilikube-web -p 80:80 ghcr.io/ciliverse/cilikube-web:v1.0.0
+docker run -d --name cilikube-web -p 80:80 ghcr.io/ciliverse/cilikube-web:v1.0.1
 ```
 
 ### Using Docker Compose

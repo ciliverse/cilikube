@@ -70,52 +70,62 @@ CiliKube 是开源的 Kubernetes 多集群管理平台，技术栈为 React + Ty
 - **多主题**：tron / paper / matrix / amber / nord / sakura / midnight-violet / solarized
 
 <div align="center">
-  <img src="docs/v1.0/01-ai-landing.png" alt="AI 落地页" width="100%">
-  <p><strong>AI 落地页 · Skill 分类</strong></p>
+  <img src="docs/v1.0.1/01-ai-landing.png" alt="AI 落地页" width="100%">
+  <p><strong>AI 落地页 · Skills · 先问诊再动手</strong></p>
 </div>
 
 <div align="center">
-  <img src="docs/v1.0/03-ai-chat-clues.png" alt="AI 对话与资源线索" width="100%">
-  <p><strong>AI 对话 · 资源线索进控制台</strong></p>
+  <img src="docs/v1.0.1/05-topology.png" alt="拓扑 Traffic" width="100%">
+  <p><strong>拓扑图 · Traffic 模式 RPS 流动（Service → 工作负载 → Pod）</strong></p>
 </div>
 
 <div align="center">
-  <img src="docs/v1.0/04-fleet-overview.png" alt="集群总览" width="100%">
-  <p><strong>集群总览 · 多集群卡片</strong></p>
+  <img src="docs/v1.0.1/06-timeline.png" alt="时间线" width="100%">
+  <p><strong>时间线 · 状态散点 + 事件流</strong></p>
 </div>
 
 <div align="center">
-  <img src="docs/v1.0/05-monitoring.png" alt="Monitoring" width="100%">
-  <p><strong>Monitoring · CPU / Memory 时序</strong></p>
+  <img src="docs/v1.0.1/04-fleet-overview.png" alt="集群总览" width="100%">
+  <p><strong>集群总览 · 多集群健康卡片</strong></p>
 </div>
 
 <details>
-<summary>更多界面（登录 · Skill · 调查 · 主题）</summary>
+<summary>更多界面（登录 · 对话 · Monitoring · Pods · 主题）</summary>
 
 <br>
 
 <div align="center">
-  <img src="docs/v1.0/00-login.png" alt="登录页" width="100%">
-  <p><strong>登录页</strong></p>
+  <img src="docs/v1.0.1/00-login.png" alt="登录页" width="100%">
+  <p><strong>登录页 · Showcase 一键演示账号</strong></p>
 </div>
 
 <div align="center">
-  <img src="docs/v1.0/02-ai-skill-slash.png" alt="Skill 菜单" width="100%">
+  <img src="docs/v1.0.1/02-ai-skill-slash.png" alt="Skill 菜单" width="100%">
   <p><strong>输入 <code>/</code> 弹出 Skill</strong></p>
 </div>
 
 <div align="center">
-  <img src="docs/v1.0/07-pods-investigate.png" alt="用 AI 调查" width="100%">
+  <img src="docs/v1.0.1/03-ai-chat-clues.png" alt="AI 对话与资源线索" width="100%">
+  <p><strong>AI 对话 · 资源线索进控制台</strong></p>
+</div>
+
+<div align="center">
+  <img src="docs/v1.0.1/07-monitoring.png" alt="Monitoring" width="100%">
+  <p><strong>Monitoring · Showcase Prometheus 时序</strong></p>
+</div>
+
+<div align="center">
+  <img src="docs/v1.0.1/08-pods-investigate.png" alt="Pods 列表" width="100%">
   <p><strong>Pods 列表 ·「用 AI 调查」</strong></p>
 </div>
 
 <div align="center">
-  <img src="docs/v1.0/08-pod-detail.png" alt="Pod 详情" width="100%">
+  <img src="docs/v1.0.1/09-pod-detail.png" alt="Pod 详情" width="100%">
   <p><strong>Pod 详情</strong></p>
 </div>
 
 <div align="center">
-  <img src="docs/v1.0/09-themes-overview-collage.png" alt="八套主题" width="100%">
+  <img src="docs/v1.0.1/10-themes-overview-collage.png" alt="八套主题" width="100%">
   <p><strong>八套主题概览</strong></p>
 </div>
 
@@ -124,8 +134,8 @@ CiliKube 是开源的 Kubernetes 多集群管理平台，技术栈为 React + Ty
 ## ✨ 核心优势
 
 1. **先问诊，再深潜**: 登录先进 AI，控制台在顶栏；资源页与舰队卡都能把上下文扔回调查员
-2. **只读边界清晰**: 默认 Agent 是集群调查员；写操作、审批、备份仍走控制台与既有流程
-3. **开发者友好**: React / Go 清晰架构，适合学习 Kubernetes API 集成与现代全栈面板
+2. **先看路径，再看历史**: Topology（Traffic）看 Service → 工作负载 → Pod 流量；Timeline 看状态色带与事件
+3. **只读边界清晰**: 默认 Agent 是集群调查员；写操作、审批、备份仍走控制台与既有流程
 4. **浏览器 + 桌面**: 同一套界面；桌面双击连本机 kubeconfig，不必先搭 Web
 
 ## 🎯 目标用户
@@ -257,10 +267,10 @@ go build -o bin/cilikube cmd/server/main.go
 ### 使用官方镜像
 ```bash
 # 后端
-docker run -d --name cilikube -p 8080:8080 -v ~/.kube:/root/.kube:ro ghcr.io/ciliverse/cilikube:v1.0.0
+docker run -d --name cilikube -p 8080:8080 -v ~/.kube:/root/.kube:ro ghcr.io/ciliverse/cilikube:v1.0.1
 
 # 前端
-docker run -d --name cilikube-web -p 80:80 ghcr.io/ciliverse/cilikube-web:v1.0.0
+docker run -d --name cilikube-web -p 80:80 ghcr.io/ciliverse/cilikube-web:v1.0.1
 ```
 
 ### 使用 Docker Compose
