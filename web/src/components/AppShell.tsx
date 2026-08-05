@@ -1,39 +1,42 @@
 import { Link, NavLink, Outlet, useLocation } from 'react-router-dom'
 import { AnimatePresence, motion } from 'framer-motion'
 import { useEffect, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { useTranslation } from 'react-i18next'
 import {
   Activity,
   Boxes,
   CalendarClock,
+  ChevronDown,
+  Cloud,
   Database,
+  FileCode2,
   Gauge,
   HardDrive,
+  History,
   KeyRound,
+  Layers,
   LayoutDashboard,
   LayoutGrid,
   Lock,
   Menu,
   Network,
+  ScrollText,
   Server,
   Settings,
   Shield,
-  Layers,
-  UserRound,
-  Workflow,
-  Cloud,
-  FileCode2,
-  ScrollText,
   Sparkles,
   Terminal,
+  UserRound,
+  Waypoints,
+  Workflow,
   X,
 } from 'lucide-react'
 import { shouldSkipEnterAnim } from '@/lib/motionPrefs'
 import { useAuth } from '@/store/auth'
-import { useCluster } from '@/store/cluster'
-import { ALL_NAMESPACES, useNamespace } from '@/store/namespace'
-import { ConnDot, HudSelect } from './ui'
+import { ConnDot } from './ui'
 import { BrandMark } from './BrandMark'
+import { ClusterNamespaceControls } from './ClusterNamespaceControls'
 import { GlobalSearchPalette } from './GlobalSearchPalette'
 import { OAuthAccountBanner } from './OAuthAccountBanner'
 import { StarSupportFloat } from './StarSupportCta'
@@ -147,6 +150,8 @@ const navGroups: NavGroup[] = [
     titleKey: 'nav.observe',
     items: [
       { to: '/monitoring', labelKey: 'nav.monitoring', icon: Activity },
+      { to: '/topology', labelKey: 'nav.topology', icon: Waypoints, namespaced: true },
+      { to: '/timeline', labelKey: 'nav.timeline', icon: History },
       { to: '/audit', labelKey: 'nav.audit', icon: ScrollText },
       { to: '/proxy', labelKey: 'nav.proxy', icon: Terminal },
       { to: '/helm', labelKey: 'nav.helm', icon: Workflow, namespaced: true },
@@ -162,6 +167,12 @@ const navGroups: NavGroup[] = [
   },
 ]
 
+function pathInGroup(pathname: string, group: NavGroup): boolean {
+  return group.items.some(
+    (item) => pathname === item.to || pathname.startsWith(`${item.to}/`),
+  )
+}
+
 function NavBody({
   groups,
   onNavigate,
@@ -170,34 +181,80 @@ function NavBody({
   onNavigate?: () => void
 }) {
   const { t } = useTranslation()
+  const location = useLocation()
+  const activeGroupKey =
+    groups.find((group) => pathInGroup(location.pathname, group))?.titleKey ?? null
+
+  const [openByKey, setOpenByKey] = useState<Record<string, boolean>>(() => {
+    const initial: Record<string, boolean> = {}
+    for (const group of groups) {
+      initial[group.titleKey] = pathInGroup(location.pathname, group)
+    }
+    return initial
+  })
+
+  useEffect(() => {
+    if (!activeGroupKey) return
+    setOpenByKey((prev) =>
+      prev[activeGroupKey] ? prev : { ...prev, [activeGroupKey]: true },
+    )
+  }, [activeGroupKey])
+
+  const toggleGroup = (titleKey: string) => {
+    setOpenByKey((prev) => ({ ...prev, [titleKey]: !prev[titleKey] }))
+  }
+
   return (
-    <nav className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain px-2 py-4">
-      {groups.map((group) => (
-        <div key={group.titleKey}>
-          <div className="hud-label mb-1.5 px-2">{t(group.titleKey)}</div>
-          <div className="flex flex-col gap-0.5">
-            {group.items.map((item) => (
-              <NavLink
-                key={item.to}
-                to={item.to}
-                end={item.to === '/'}
-                onClick={onNavigate}
-                className={({ isActive }) =>
-                  cn(
-                    'flex min-h-11 items-center gap-2.5 rounded px-2.5 py-2.5 text-[13px] font-semibold tracking-wide transition md:min-h-0 md:py-2',
-                    isActive
-                      ? 'border border-cyan/40 bg-cyan/15 text-cyan shadow-[0_0_14px_rgba(53,230,255,0.12)]'
-                      : 'border border-transparent text-text-dim hover:border-line hover:bg-mist hover:text-text',
-                  )
-                }
-              >
-                <item.icon className="h-3.5 w-3.5 shrink-0 opacity-90" />
-                {t(item.labelKey)}
-              </NavLink>
-            ))}
+    <nav className="min-h-0 flex-1 space-y-1 overflow-y-auto overscroll-contain px-2 py-3">
+      {groups.map((group) => {
+        const open = Boolean(openByKey[group.titleKey])
+        const hasActive = group.titleKey === activeGroupKey
+        return (
+          <div key={group.titleKey}>
+            <button
+              type="button"
+              className={cn(
+                'flex w-full items-center gap-1 rounded px-2 py-1.5 text-left transition',
+                'hover:bg-mist/60',
+                hasActive ? 'text-cyan' : 'text-text-dim',
+              )}
+              aria-expanded={open}
+              onClick={() => toggleGroup(group.titleKey)}
+            >
+              <ChevronDown
+                className={cn(
+                  'h-3 w-3 shrink-0 opacity-70 transition-transform duration-150',
+                  open ? 'rotate-0' : '-rotate-90',
+                )}
+              />
+              <span className="hud-label min-w-0 flex-1 truncate">{t(group.titleKey)}</span>
+            </button>
+            {open ? (
+              <div className="mb-2 flex flex-col gap-0.5">
+                {group.items.map((item) => (
+                  <NavLink
+                    key={item.to}
+                    to={item.to}
+                    end={item.to === '/'}
+                    onClick={onNavigate}
+                    className={({ isActive }) =>
+                      cn(
+                        'flex min-h-11 items-center gap-2.5 rounded px-2.5 py-2.5 text-[13px] font-semibold tracking-wide transition md:min-h-0 md:py-2',
+                        isActive
+                          ? 'border border-cyan/40 bg-cyan/15 text-cyan shadow-[0_0_14px_rgba(53,230,255,0.12)]'
+                          : 'border border-transparent text-text-dim hover:border-line hover:bg-mist hover:text-text',
+                      )
+                    }
+                  >
+                    <item.icon className="h-3.5 w-3.5 shrink-0 opacity-90" />
+                    {t(item.labelKey)}
+                  </NavLink>
+                ))}
+              </div>
+            ) : null}
           </div>
-        </div>
-      ))}
+        )
+      })}
     </nav>
   )
 }
@@ -205,8 +262,6 @@ function NavBody({
 export function AppShell() {
   const { t } = useTranslation()
   const { user, roles, checkPermission, isViewerOnly, isAdmin } = useAuth()
-  const { clusters, clusterId, setClusterId, switching } = useCluster()
-  const { namespaces, namespace, setNamespace } = useNamespace()
   const location = useLocation()
   const [mobileNavOpen, setMobileNavOpen] = useState(false)
 
@@ -248,114 +303,130 @@ export function AppShell() {
         ? 'viewer'
         : user?.role || 'user'
 
-  const nsOptions = [
-    { value: ALL_NAMESPACES, label: t('common.allNamespaces') },
-    ...namespaces.map((ns) => ({ value: ns, label: ns })),
-  ]
-
-  const clusterOptions = clusters.map((c) => ({
-    value: String(c.id || c.name),
-    label: String(c.name || c.id),
-  }))
-
   const skipEnterAnim = shouldSkipEnterAnim()
   const aiHome = location.pathname === '/ai' || location.pathname === '/'
 
-  const clusterLabel = t('nav.cluster')
-  const nsLabel = t('common.namespace')
-
   return (
     <div className="relative flex h-dvh w-full flex-col overflow-hidden pb-[env(safe-area-inset-bottom)] pt-[env(safe-area-inset-top)]">
-      <header className="z-30 grid h-12 w-full shrink-0 grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2 border-b border-line bg-panel-solid/95 px-2 backdrop-blur sm:h-14 sm:gap-3 sm:px-3 md:px-5">
-        <div className="flex min-w-0 items-center justify-start gap-1.5 sm:gap-2">
+      <header className="app-topbar">
+        <div className="app-topbar-left">
+          {/* Mobile nav — left of brand, only when sidebar is hidden (< md) */}
           {!aiHome ? (
             <button
               type="button"
-              className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded border border-line text-cyan sm:h-10 sm:w-10 md:hidden"
+              className="app-topbar-nav-toggle md:hidden"
               aria-label={mobileNavOpen ? 'Close navigation' : 'Open navigation'}
               aria-expanded={mobileNavOpen}
               onClick={() => setMobileNavOpen((v) => !v)}
             >
-              {mobileNavOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+              {mobileNavOpen ? <X className="h-3.5 w-3.5" /> : <Menu className="h-3.5 w-3.5" />}
             </button>
           ) : null}
-
           <BrandMark
             to="/ai"
-            className="hidden sm:inline-flex"
+            className="hidden min-w-0 lg:inline-flex"
             brandClassName="text-sm md:text-base"
           />
           <BrandMark
             to="/ai"
             compact
-            className="sm:hidden"
+            className="min-w-0 lg:hidden"
             brandClassName="text-xs tracking-[0.12em]"
           />
 
+          {/* Expanded search only when the bar has real width */}
           {!aiHome ? (
-            <div className="hidden min-w-0 flex-1 md:block lg:max-w-xs xl:max-w-md">
+            <div className="app-topbar-search-expanded hidden min-w-0 flex-1 xl:block">
               <GlobalSearchPalette />
             </div>
           ) : null}
         </div>
 
-        <div className="flex shrink-0 items-center justify-center gap-2 sm:gap-3">
+        <div className="app-topbar-center">
           {aiHome ? (
-            <Link
-              to="/overview"
-              className="inline-flex items-center gap-1.5 rounded border border-cyan/40 bg-cyan/10 px-2.5 py-1.5 text-xs font-medium text-cyan hover:border-cyan sm:px-3"
-            >
+            <Link to="/fleet" className="app-topbar-link is-emphasis">
               <Terminal className="h-3.5 w-3.5" />
-              <span>{t('nav.console')}</span>
+              <span className="hidden sm:inline">{t('nav.console')}</span>
             </Link>
           ) : (
-            <Link
-              to="/ai"
-              className="inline-flex items-center gap-1.5 rounded border border-line px-2.5 py-1.5 text-xs text-cyan hover:border-cyan sm:px-3"
-              title={t('nav.ai')}
-            >
+            <Link to="/ai" className="app-topbar-link" title={t('nav.ai')}>
               <Sparkles className="h-3.5 w-3.5" />
-              <span className="hidden sm:inline">{t('nav.ai')}</span>
+              <span className="hidden xl:inline">{t('nav.ai')}</span>
             </Link>
           )}
 
-          <label className="hidden items-center gap-2 md:flex">
-            <span className="hud-label">{clusterLabel}</span>
-            <HudSelect
-              aria-label={clusterLabel}
-              className="w-auto min-w-[110px] max-w-[200px]"
-              value={clusterId}
-              onChange={setClusterId}
-              disabled={switching || !clusters.length}
-              options={clusterOptions}
-            />
-          </label>
-
-          <label className="hidden items-center gap-2 lg:flex">
-            <span className="hud-label">{nsLabel}</span>
-            <HudSelect
-              aria-label={nsLabel}
-              className="w-auto min-w-[110px] max-w-[180px]"
-              value={namespace}
-              onChange={setNamespace}
-              searchableWhen={0}
-              options={nsOptions}
-            />
-          </label>
+          {/* >= lg: context lives in topbar; < lg: main strip / drawer */}
+          <ClusterNamespaceControls
+            layout="inline"
+            showLabels
+            className="hidden lg:flex"
+          />
         </div>
 
-        <div className="flex min-w-0 items-center justify-end gap-1.5 sm:gap-2 md:gap-3">
+        <div className="app-topbar-right">
           {!aiHome ? (
-            <div className="min-w-0 flex-1 md:hidden">
+            <div className="app-topbar-search-compact shrink-0 xl:hidden">
               <GlobalSearchPalette />
             </div>
           ) : null}
-          <span className="hidden sm:inline-flex">
+          <span className="hidden shrink-0 sm:inline-flex">
             <ConnDot online />
           </span>
-          <UserMenu primaryRole={primaryRole} isViewerOnly={isViewerOnly} />
+          <div className="shrink-0">
+            <UserMenu primaryRole={primaryRole} isViewerOnly={isViewerOnly} />
+          </div>
         </div>
       </header>
+
+      {/* Mobile drawer — portal to body so topbar (z-shell) cannot bury it */}
+      {typeof document !== 'undefined'
+        ? createPortal(
+            <AnimatePresence>
+              {!aiHome && mobileNavOpen ? (
+                <>
+                  <motion.button
+                    type="button"
+                    key="nav-backdrop"
+                    className="fixed inset-0 z-[var(--z-drawer-backdrop)] bg-black/60 md:hidden"
+                    aria-label="Close navigation overlay"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.18 }}
+                    onClick={() => setMobileNavOpen(false)}
+                  />
+                  <motion.aside
+                    key="nav-drawer"
+                    className="fixed inset-y-0 left-0 z-[var(--z-drawer)] flex w-[min(86vw,300px)] flex-col border-r border-line bg-panel-solid pt-[env(safe-area-inset-top)] shadow-[8px_0_32px_rgba(0,0,0,0.45)] md:hidden"
+                    initial={{ x: '-100%' }}
+                    animate={{ x: 0 }}
+                    exit={{ x: '-100%' }}
+                    transition={{ type: 'tween', duration: 0.22, ease: 'easeOut' }}
+                  >
+                    <div className="flex h-14 shrink-0 items-center justify-between border-b border-line px-3">
+                      <BrandMark brandClassName="text-sm" />
+                      <button
+                        type="button"
+                        className="inline-flex h-10 w-10 items-center justify-center rounded border border-line text-cyan"
+                        aria-label="Close navigation"
+                        onClick={() => setMobileNavOpen(false)}
+                      >
+                        <X className="h-5 w-5" />
+                      </button>
+                    </div>
+
+                    <div className="shrink-0 border-b border-line p-3">
+                      <ClusterNamespaceControls layout="stack" showLabels />
+                    </div>
+
+                    <NavBody groups={visibleGroups} onNavigate={() => setMobileNavOpen(false)} />
+                  </motion.aside>
+                </>
+              ) : null}
+            </AnimatePresence>,
+            document.body,
+          )
+        : null}
 
       <div className="relative flex min-h-0 w-full flex-1">
         {/* Desktop sidebar — hidden on AI home (console entry lives in the AI page) */}
@@ -364,72 +435,6 @@ export function AppShell() {
             <NavBody groups={visibleGroups} />
           </aside>
         ) : null}
-
-        {/* Mobile drawer */}
-        <AnimatePresence>
-          {!aiHome && mobileNavOpen ? (
-            <>
-              <motion.button
-                type="button"
-                key="nav-backdrop"
-                className="fixed inset-0 z-40 bg-black/60 md:hidden"
-                aria-label="Close navigation overlay"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.18 }}
-                onClick={() => setMobileNavOpen(false)}
-              />
-              <motion.aside
-                key="nav-drawer"
-                className="fixed inset-y-0 left-0 z-50 flex w-[min(86vw,300px)] flex-col border-r border-line bg-panel-solid pt-[env(safe-area-inset-top)] shadow-[8px_0_32px_rgba(0,0,0,0.45)] md:hidden"
-                initial={{ x: '-100%' }}
-                animate={{ x: 0 }}
-                exit={{ x: '-100%' }}
-                transition={{ type: 'tween', duration: 0.22, ease: 'easeOut' }}
-              >
-                <div className="flex h-14 shrink-0 items-center justify-between border-b border-line px-3">
-                  <BrandMark brandClassName="text-sm" />
-                  <button
-                    type="button"
-                    className="inline-flex h-10 w-10 items-center justify-center rounded border border-line text-cyan"
-                    aria-label="Close navigation"
-                    onClick={() => setMobileNavOpen(false)}
-                  >
-                    <X className="h-5 w-5" />
-                  </button>
-                </div>
-
-                <div className="shrink-0 space-y-3 border-b border-line p-3">
-                  <div>
-                    <div className="hud-label mb-2">{clusterLabel}</div>
-                    <HudSelect
-                      aria-label={clusterLabel}
-                      className="w-full"
-                      value={clusterId}
-                      onChange={setClusterId}
-                      disabled={switching || !clusters.length}
-                      options={clusterOptions}
-                    />
-                  </div>
-                  <div>
-                    <div className="hud-label mb-2">{nsLabel}</div>
-                    <HudSelect
-                      aria-label={nsLabel}
-                      className="w-full"
-                      value={namespace}
-                      onChange={setNamespace}
-                      searchableWhen={0}
-                      options={nsOptions}
-                    />
-                  </div>
-                </div>
-
-                <NavBody groups={visibleGroups} onNavigate={() => setMobileNavOpen(false)} />
-              </motion.aside>
-            </>
-          ) : null}
-        </AnimatePresence>
 
         <main
           className={cn(
@@ -440,30 +445,11 @@ export function AppShell() {
           )}
         >
           {!aiHome ? (
-            <div className="mb-2.5 grid shrink-0 grid-cols-2 gap-2 lg:hidden">
-              <div className="min-w-0">
-                <div className="hud-label mb-1">{clusterLabel}</div>
-                <HudSelect
-                  aria-label={clusterLabel}
-                  className="w-full"
-                  value={clusterId}
-                  onChange={setClusterId}
-                  disabled={switching || !clusters.length}
-                  options={clusterOptions}
-                />
-              </div>
-              <div className="min-w-0">
-                <div className="hud-label mb-1">{nsLabel}</div>
-                <HudSelect
-                  aria-label={nsLabel}
-                  className="w-full"
-                  value={namespace}
-                  onChange={setNamespace}
-                  searchableWhen={0}
-                  options={nsOptions}
-                />
-              </div>
-            </div>
+            <ClusterNamespaceControls
+              layout="grid"
+              showLabels
+              className="mb-2.5 shrink-0 lg:hidden"
+            />
           ) : null}
 
           {!aiHome ? (

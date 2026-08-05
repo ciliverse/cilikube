@@ -38,6 +38,9 @@ func InitializeServices(k8sManager *k8s.ClusterManager, store store.Store, cfg *
 		MonitoringService:  service.NewMonitoringService(store, cfg, auditService),
 		PrometheusService:  service.NewPrometheusService(cfg),
 	}
+	appServices.TopologyService = service.NewTopologyService(appServices.PrometheusService)
+	appServices.TimelineService = service.NewTimelineService(k8sManager, appServices.EventService)
+	appServices.TimelineService.Start()
 	// PodExecService uses per-request rest.Config (multi-cluster safe)
 	appServices.PodExecService = service.NewPodExecService()
 	appServices.PodPortForwardService = service.NewPodPortForwardService()
@@ -108,6 +111,16 @@ func InitializeHandlers(router *gin.RouterGroup, services *service.AppServices, 
 
 	// --- Register monitoring / prometheus / informer routes ---
 	routes.RegisterMonitoringRoutes(router, services.MonitoringService, services.PrometheusService, k8sManager)
+
+	// --- Topology (Radar-style resource + traffic graph) ---
+	if services.TopologyService != nil {
+		routes.RegisterTopologyRoutes(router, handlers.NewTopologyHandler(services.TopologyService, k8sManager))
+	}
+
+	// --- Timeline (status samples + events) ---
+	if services.TimelineService != nil {
+		routes.RegisterTimelineRoutes(router, handlers.NewTimelineHandler(services.TimelineService, k8sManager))
+	}
 
 	// --- Audit log APIs (admin) ---
 	if services.AuditService != nil {

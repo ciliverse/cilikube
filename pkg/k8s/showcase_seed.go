@@ -141,12 +141,17 @@ func deploy(ns, name string, replicas int32) *appsv1.Deployment {
 }
 
 func svc(ns, name string, port int32) *corev1.Service {
+	return svcApp(ns, name, name, port)
+}
+
+// svcApp creates a Service whose selector matches appLabels(app) (e.g. kube-dns → coredns).
+func svcApp(ns, name, app string, port int32) *corev1.Service {
 	return &corev1.Service{
-		ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: ns, Labels: appLabels(name)},
+		ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: ns, Labels: appLabels(app)},
 		Spec: corev1.ServiceSpec{
-			Selector: appLabels(name),
-			Ports:    []corev1.ServicePort{{Port: port, TargetPort: intstr.FromInt32(port), Protocol: corev1.ProtocolTCP}},
-			Type:     corev1.ServiceTypeClusterIP,
+			Selector:  appLabels(app),
+			Ports:     []corev1.ServicePort{{Port: port, TargetPort: intstr.FromInt32(port), Protocol: corev1.ProtocolTCP}},
+			Type:      corev1.ServiceTypeClusterIP,
 			ClusterIP: fmt.Sprintf("10.96.%d.%d", port%200, (len(name)*3)%200),
 		},
 	}
@@ -244,7 +249,7 @@ func ShowcaseSeedObjects() []runtime.Object {
 		deploy("kube-system", "coredns", 2),
 		pod("kube-system", "coredns-xyz01", "coredns", "demo-master-1", "Running"),
 		pod("kube-system", "coredns-xyz02", "coredns", "demo-master-1", "Running"),
-		svc("kube-system", "kube-dns", 53),
+		svcApp("kube-system", "kube-dns", "coredns", 53),
 		&appsv1.DaemonSet{
 			ObjectMeta: metav1.ObjectMeta{Name: "kube-proxy", Namespace: "kube-system", Labels: appLabels("kube-proxy")},
 			Spec: appsv1.DaemonSetSpec{

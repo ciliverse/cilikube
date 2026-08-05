@@ -1,6 +1,6 @@
 import { useEffect, useId, useRef, useState, type KeyboardEvent } from 'react'
 import { createPortal } from 'react-dom'
-import { useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { Search, X } from 'lucide-react'
 import { useGlobalSearchHits } from '@/hooks/useGlobalSearchHits'
@@ -24,6 +24,7 @@ export function GlobalSearchPalette() {
   const panelRef = useRef<HTMLDivElement>(null)
   const listId = useId()
   const navigate = useNavigate()
+  const location = useLocation()
   const { hits, loading, namespace } = useGlobalSearchHits(q, open)
   const nsLabel =
     namespace === ALL_NAMESPACES || !namespace ? t('common.allNamespaces') : namespace
@@ -32,6 +33,11 @@ export function GlobalSearchPalette() {
     setOpen(false)
     setQ('')
     setHighlight(0)
+  }
+
+  const go = (to: string) => {
+    close()
+    navigate(to, { state: { from: `${location.pathname}${location.search}` } })
   }
 
   useEffect(() => {
@@ -70,11 +76,6 @@ export function GlobalSearchPalette() {
     setHighlight(0)
   }, [q, hits.length])
 
-  const go = (to: string) => {
-    close()
-    navigate(to)
-  }
-
   const onListKey = (e: KeyboardEvent) => {
     if (e.key === 'ArrowDown') {
       e.preventDefault()
@@ -92,7 +93,7 @@ export function GlobalSearchPalette() {
   const panel =
     open &&
     createPortal(
-      <div className="fixed inset-0 z-[220] flex items-stretch justify-center bg-black/55 p-0 backdrop-blur-[2px] sm:items-start sm:px-4 sm:pt-[12vh]">
+      <div className="hud-global-search-root fixed inset-0 flex items-stretch justify-center bg-black/55 p-0 backdrop-blur-[2px] sm:items-start sm:px-4 sm:pt-[12vh]">
         <div
           ref={panelRef}
           role="dialog"

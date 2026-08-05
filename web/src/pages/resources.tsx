@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Link } from 'react-router-dom'
+import { Link, useLocation } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
 import { Bot, Network, RefreshCw, ScrollText, TerminalSquare } from 'lucide-react'
 import { Badge, Button } from '@/components/ui'
@@ -32,15 +32,33 @@ function ReadyBadge({ ok, okText = 'Ready', badText = 'NotReady' }: { ok: boolea
   return <Badge tone={ok ? 'ok' : 'danger'}>{ok ? okText : badText}</Badge>
 }
 
-function nameLink(resource: string, item: any, namespaced = true) {
+function NameLink({
+  resource,
+  item,
+  namespaced = true,
+}: {
+  resource: string
+  item: any
+  namespaced?: boolean
+}) {
+  const location = useLocation()
   const name = metaName(item)
   const ns = metaNamespace(item)
   const to = namespaced ? `/${resource}/${ns}/${name}` : `/${resource}/${name}`
   return (
-    <Link className="font-semibold text-cyan hover:underline" to={to} title={name}>
+    <Link
+      className="font-semibold text-cyan hover:underline"
+      to={to}
+      title={name}
+      state={{ from: `${location.pathname}${location.search}` }}
+    >
       {name}
     </Link>
   )
+}
+
+function nameLink(resource: string, item: any, namespaced = true) {
+  return <NameLink resource={resource} item={item} namespaced={namespaced} />
 }
 
 export function NamespacesPage() {
@@ -102,14 +120,7 @@ export function PodsPage() {
           {
             key: 'name',
             header: 'Name',
-            render: (item) => (
-              <Link
-                className="font-semibold text-cyan hover:underline"
-                to={`/pods/${metaNamespace(item)}/${metaName(item)}`}
-              >
-                {metaName(item)}
-              </Link>
-            ),
+            render: (item) => nameLink('pods', item),
           },
           { key: 'ns', header: 'Namespace', render: (item) => metaNamespace(item) },
           {
@@ -245,14 +256,7 @@ export function DeploymentsPage() {
           {
             key: 'name',
             header: 'Name',
-            render: (item) => (
-              <Link
-                className="font-semibold text-cyan hover:underline"
-                to={`/deployments/${metaNamespace(item)}/${metaName(item)}`}
-              >
-                {metaName(item)}
-              </Link>
-            ),
+            render: (item) => nameLink('deployments', item),
           },
           { key: 'ns', header: 'Namespace', render: (item) => metaNamespace(item) },
           {
@@ -422,14 +426,7 @@ export function StatefulSetsPage() {
           {
             key: 'name',
             header: 'Name',
-            render: (item) => (
-              <Link
-                className="font-semibold text-cyan hover:underline"
-                to={`/statefulsets/${metaNamespace(item)}/${metaName(item)}`}
-              >
-                {metaName(item)}
-              </Link>
-            ),
+            render: (item) => nameLink('statefulsets', item),
           },
           { key: 'ns', header: 'Namespace', render: (item) => metaNamespace(item) },
           {

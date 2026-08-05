@@ -1,9 +1,17 @@
 /// <reference types="vite/client" />
 
-interface ImportMetaEnv {
-  readonly VITE_BASE_API: string
-}
-
-interface ImportMeta {
-  readonly env: ImportMetaEnv
+declare module '@dagrejs/dagre' {
+  const dagre: {
+    graphlib: {
+      Graph: new () => {
+        setDefaultEdgeLabel: (fn: () => object) => void
+        setGraph: (attr: Record<string, unknown>) => void
+        setNode: (id: string, label: { width: number; height: number }) => void
+        setEdge: (source: string, target: string) => void
+        node: (id: string) => { x: number; y: number } | undefined
+      }
+    }
+    layout: (g: unknown) => void
+  }
+  export default dagre
 }

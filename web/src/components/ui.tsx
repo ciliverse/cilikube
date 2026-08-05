@@ -1,4 +1,5 @@
 import type { ButtonHTMLAttributes, InputHTMLAttributes, ReactNode } from 'react'
+import { createPortal } from 'react-dom'
 import { cn } from '@/lib/utils'
 
 export { HudSelect, type HudSelectOption } from './HudSelect'
@@ -178,8 +179,10 @@ export function Modal({
   wide?: boolean
 }) {
   if (!open) return null
-  return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center p-0 sm:items-center sm:p-4 md:p-6">
+  // Portal to body: page transitions (framer-motion transform) + shell overflow
+  // otherwise trap position:fixed and clip dialogs.
+  return createPortal(
+    <div className="ui-modal-root fixed inset-0 flex items-end justify-center p-0 sm:items-center sm:p-4 md:p-6">
       <button
         type="button"
         aria-label="Close overlay"
@@ -191,6 +194,9 @@ export function Modal({
           'relative flex max-h-[92dvh] w-full flex-col overflow-hidden rounded-t-xl border border-line bg-panel-solid shadow-[0_0_40px_rgba(53,230,255,0.12)] sm:max-h-[88vh] sm:rounded',
           wide ? 'max-w-6xl' : 'max-w-3xl',
         )}
+        role="dialog"
+        aria-modal="true"
+        aria-label={title}
       >
         <div className="flex items-start justify-between gap-3 border-b border-line px-4 py-3 sm:gap-4 sm:px-5 sm:py-4">
           <div className="min-w-0">
@@ -208,6 +214,7 @@ export function Modal({
           {children}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   )
 }

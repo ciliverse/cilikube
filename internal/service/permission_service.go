@@ -93,6 +93,11 @@ func systemViewerPolicies() []rolePolicy {
 		{"viewer", "/api/v1/clusters/active", "GET"},
 		{"viewer", "/api/v1/clusters/active", "POST"},
 
+		{"viewer", "/api/v1/topology", "GET"},
+		{"viewer", "/api/v1/topology/traffic", "GET"},
+		{"viewer", "/api/v1/timeline", "GET"},
+		{"viewer", "/api/v1/timeline/meta", "GET"},
+
 		{"viewer", "/api/v1/auth/profile", "GET"},
 		{"viewer", "/api/v1/auth/profile", "PUT"},
 		{"viewer", "/api/v1/auth/password", "PUT"},
@@ -171,6 +176,11 @@ func systemEditorPolicies() []rolePolicy {
 		{"editor", "/api/v1/clusters/fleet-summary", "GET"},
 		{"editor", "/api/v1/clusters/active", "GET"},
 		{"editor", "/api/v1/clusters/active", "POST"},
+
+		{"editor", "/api/v1/topology", "GET"},
+		{"editor", "/api/v1/topology/traffic", "GET"},
+		{"editor", "/api/v1/timeline", "GET"},
+		{"editor", "/api/v1/timeline/meta", "GET"},
 
 		{"editor", "/api/v1/ai/status", "GET"},
 		{"editor", "/api/v1/ai/chat", "POST"},

@@ -1,4 +1,5 @@
 import { useEffect, useId, useState, type FormEvent } from 'react'
+import { createPortal } from 'react-dom'
 import { useTranslation } from 'react-i18next'
 import { X } from 'lucide-react'
 import type { AiSkillDef, CustomSkillInput } from '@/lib/aiSkills'
@@ -47,7 +48,7 @@ export function AiSkillEditor({ open, initial, onClose, onSave }: Props) {
 
   const canSave = label.trim().length > 0 && prompt.trim().length > 0
 
-  return (
+  return createPortal(
     <div className="ai-ops-skill-editor-backdrop" role="presentation" onClick={onClose}>
       <form
         className="ai-ops-skill-editor"
@@ -118,6 +119,7 @@ export function AiSkillEditor({ open, initial, onClose, onSave }: Props) {
           </div>
         </div>
       </form>
-    </div>
+    </div>,
+    document.body,
   )
 }

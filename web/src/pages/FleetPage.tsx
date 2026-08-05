@@ -11,16 +11,15 @@ import {
 } from '@/lib/aiInvestigate'
 import { useAuth } from '@/store/auth'
 import { useCluster } from '@/store/cluster'
-import { KubernetesMark } from '@/components/KubernetesMark'
 import { Badge, Button, EmptyState, PageHeader } from '@/components/ui'
 import { cn } from '@/lib/utils'
 
 const ENV_PRESETS = ['production', 'staging', 'development', 'demo'] as const
 
 function statusTone(card: FleetClusterCard): 'ok' | 'warn' | 'danger' | 'neutral' {
+  // Signal lamp follows the fleet probe, not the stale statusCache string.
+  // (Cache may still say "Unavailable: …" / "Initialization failed" while Nodes/Pods list OK.)
   if (!card.reachable) return 'danger'
-  const st = (card.status || '').toLowerCase()
-  if (st.includes('fail') || st.includes('error') || st.includes('unavailable')) return 'danger'
   if (
     (card.not_ready_nodes || 0) > 0 ||
     (card.unhealthy_pods || 0) > 0 ||
@@ -28,10 +27,7 @@ function statusTone(card: FleetClusterCard): 'ok' | 'warn' | 'danger' | 'neutral
   ) {
     return 'warn'
   }
-  if (st.includes('available') || st.includes('active') || st.includes('ok') || st.includes('ready')) {
-    return 'ok'
-  }
-  return 'neutral'
+  return 'ok'
 }
 
 function shortServer(server?: string) {
@@ -92,11 +88,32 @@ function Metric({
   )
 }
 
-function markToneClass(tone: ReturnType<typeof statusTone>) {
-  if (tone === 'ok') return 'text-ok'
-  if (tone === 'warn') return 'text-warn'
-  if (tone === 'danger') return 'text-danger'
-  return 'text-cyan'
+/** Single traffic-light lamp: green ok · yellow warn · red offline · dim unknown */
+function ClusterSignal({
+  tone,
+  label,
+}: {
+  tone: ReturnType<typeof statusTone>
+  label: string
+}) {
+  return (
+    <span
+      className={cn('cluster-signal', `is-${tone}`)}
+      role="img"
+      aria-label={label}
+      title={label}
+    />
+  )
+}
+
+function signalLabel(
+  tone: ReturnType<typeof statusTone>,
+  t: (key: string) => string,
+): string {
+  if (tone === 'ok') return t('fleet.signalOk')
+  if (tone === 'warn') return t('fleet.signalWarn')
+  if (tone === 'danger') return t('fleet.signalOffline')
+  return t('fleet.signalUnknown')
 }
 
 function envTone(env?: string): 'danger' | 'warn' | 'accent' | 'neutral' {
@@ -326,13 +343,8 @@ export function FleetPage() {
               )}
             >
               <div className="flex items-start gap-3">
-                <div
-                  className={cn(
-                    'flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-line/80 bg-mist/30',
-                    markToneClass(tone),
-                  )}
-                >
-                  <KubernetesMark className="h-7 w-7" />
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center">
+                  <ClusterSignal tone={tone} label={signalLabel(tone, t)} />
                 </div>
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2">
@@ -344,7 +356,11 @@ export function FleetPage() {
                       <Badge tone={envTone(card.environment)}>{card.environment}</Badge>
                     ) : null}
                     <Badge tone={tone}>
-                      {card.reachable ? card.status || 'OK' : t('fleet.unreachable')}
+                      {card.reachable
+                        ? tone === 'warn'
+                          ? t('fleet.signalWarn')
+                          : card.status || 'OK'
+                        : t('fleet.unreachable')}
                     </Badge>
                   </div>
                   <div className="mt-1.5 flex flex-wrap items-center gap-1.5">

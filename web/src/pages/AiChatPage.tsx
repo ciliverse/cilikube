@@ -48,6 +48,7 @@ import {
   parseFleetFocus,
   parseFleetInspectSearch,
   parseFleetTourSearch,
+  clusterContextReady,
   parseInvestigateSearch,
   resourceRefLabel,
 } from '@/lib/aiInvestigate'
@@ -215,11 +216,7 @@ export function AiChatPage() {
         auto,
         clusterId: fleet.clusterId,
       }
-      if (
-        fleet.clusterId &&
-        fleet.clusterId !== clusterId &&
-        activeCluster?.name !== fleet.clusterId
-      ) {
+      if (fleet.clusterId && !clusterContextReady(fleet.clusterId, clusterId, activeCluster)) {
         setClusterId(fleet.clusterId)
       }
       navigate('/ai', { replace: true })
@@ -400,7 +397,7 @@ export function AiChatPage() {
     const ns =
       opts?.namespaceOverride !== undefined
         ? opts.namespaceOverride
-        : namespace === 'all'
+        : !namespace || namespace === 'all'
           ? ''
           : namespace
 
@@ -461,14 +458,7 @@ export function AiChatPage() {
     const job = investigateJobRef.current
     if (!job) return
     if (statusQ.isLoading || switching) return
-    if (
-      job.clusterId &&
-      job.clusterId !== clusterId &&
-      activeCluster?.name !== job.clusterId &&
-      activeCluster?.id !== job.clusterId
-    ) {
-      return
-    }
+    if (!clusterContextReady(job.clusterId, clusterId, activeCluster)) return
 
     investigateJobRef.current = null
     if (job.namespaceOverride) setNamespace(job.namespaceOverride)
@@ -754,7 +744,7 @@ export function AiChatPage() {
             </span>
           </div>
           <div className="ai-ops-toolbar-right">
-            <Link to="/overview" className="ai-ops-console-btn">
+            <Link to="/fleet" className="ai-ops-console-btn">
               <Terminal className="h-3.5 w-3.5" />
               {t('ai.console')}
             </Link>
@@ -828,23 +818,12 @@ function BrandTitle({ skipMotion }: { skipMotion: boolean }) {
         </span>
         <motion.span
           className="ai-ops-brand-ai"
-          initial={skipMotion ? false : { opacity: 0, scale: 0.88, filter: 'blur(8px)' }}
-          animate={{ opacity: 1, scale: 1, filter: 'blur(0px)' }}
-          transition={{ delay: skipMotion ? 0 : 0.34, duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+          aria-hidden
+          initial={skipMotion ? false : { opacity: 0, y: 10, filter: 'blur(4px)' }}
+          animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
+          transition={{ delay: skipMotion ? 0 : 0.36, duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
         >
-          <span className="ai-ops-brand-ai-corners" aria-hidden>
-            <i />
-            <i />
-            <i />
-            <i />
-          </span>
-          <span className="ai-ops-brand-ai-grid" aria-hidden />
-          <span className="ai-ops-brand-ai-core">
-            <span className="ai-ops-brand-ai-glyph">A</span>
-            <span className="ai-ops-brand-ai-glyph">I</span>
-          </span>
-          <span className="ai-ops-brand-ai-beam" aria-hidden />
-          <span className="ai-ops-brand-ai-sheen" aria-hidden />
+          AI
         </motion.span>
       </div>
       <motion.div
@@ -905,8 +884,12 @@ function MessageBlock({ message, pending }: { message: AiChatMessage; pending?: 
 
 function ResourceCard({ refItem }: { refItem: AiResourceRef }) {
   const isConsole = Boolean(refItem.console)
+  // Prefer structured path so console=? survives encoding edge cases from model/tool output.
+  const to = refItem.href?.startsWith('/')
+    ? refItem.href
+    : `/${(refItem.kind || 'pods').replace(/^\//, '')}`
   return (
-    <Link to={refItem.href} className="ai-ops-card">
+    <Link to={to} className="ai-ops-card" title={refItem.label || refItem.name}>
       {isConsole ? <Terminal className="h-3.5 w-3.5 shrink-0" /> : <Zap className="h-3.5 w-3.5 shrink-0" />}
       <span className="truncate">{refItem.label || refItem.name}</span>
     </Link>

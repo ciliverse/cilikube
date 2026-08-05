@@ -39,6 +39,8 @@ type AppServices struct {
 	AuditService      *AuditService
 	MonitoringService *MonitoringService
 	PrometheusService *PrometheusService
+	TopologyService   *TopologyService
+	TimelineService   *TimelineService
 
 	// Kubernetes resource services
 	NodeService               ResourceService[*corev1.Node]

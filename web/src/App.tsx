@@ -23,6 +23,12 @@ const EventsPage = lazy(() => import('@/pages/EventsPage').then((m) => ({ defaul
 const MonitoringPage = lazy(() =>
   import('@/pages/MonitoringPage').then((m) => ({ default: m.MonitoringPage })),
 )
+const TopologyPage = lazy(() =>
+  import('@/pages/TopologyPage').then((m) => ({ default: m.TopologyPage })),
+)
+const TimelinePage = lazy(() =>
+  import('@/pages/TimelinePage').then((m) => ({ default: m.TimelinePage })),
+)
 const ResourceDetailPage = lazy(() =>
   import('@/pages/ResourceDetailPage').then((m) => ({ default: m.ResourceDetailPage })),
 )
@@ -184,6 +190,8 @@ export default function App() {
                   <Route index element={<Navigate to="/ai" replace />} />
                   <Route path="fleet" element={<FleetPage />} />
                   <Route path="overview" element={<OverviewPage />} />
+                  <Route path="topology" element={<TopologyPage />} />
+                  <Route path="timeline" element={<TimelinePage />} />
                   <Route path="nodes" element={<NodesPage />} />
                   <Route path="namespaces" element={<NamespacesPage />} />
                   <Route path="events" element={<EventsPage />} />

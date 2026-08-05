@@ -2,6 +2,18 @@
 
 import { isZhLang } from '@/lib/aiSkills'
 
+/** True when the active cluster context has settled on the requested id/name. */
+export function clusterContextReady(
+  targetId: string | undefined,
+  clusterId: string,
+  active?: { id?: string; name?: string } | null,
+): boolean {
+  if (!targetId) return true
+  if (clusterId === targetId) return true
+  if (active?.id === targetId || active?.name === targetId) return true
+  return false
+}
+
 export type AiInvestigateTarget = {
   kind: string
   name: string

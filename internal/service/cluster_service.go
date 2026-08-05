@@ -119,6 +119,9 @@ func (s *ClusterService) probeFleetCluster(base k8s.ClusterInfoResponse) models.
 	card.Nodes = &nNodes
 	card.NotReadyNodes = &notReady
 	card.Reachable = true
+	// Prefer live probe over statusCache (which can linger as Unavailable/Initialization failed).
+	card.Status = "Available"
+	card.Error = ""
 
 	if nsList, nsErr := client.Clientset.CoreV1().Namespaces().List(ctx, metav1.ListOptions{}); nsErr == nil {
 		nNS := len(nsList.Items)

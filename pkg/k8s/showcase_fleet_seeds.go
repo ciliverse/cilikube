@@ -88,7 +88,7 @@ func ShowcaseProdSeedObjects() []runtime.Object {
 		deploy("kube-system", "coredns", 2),
 		pod("kube-system", "coredns-prod01", "coredns", "prod-cp-1", "Running"),
 		pod("kube-system", "coredns-prod02", "coredns", "prod-cp-1", "Running"),
-		svc("kube-system", "kube-dns", 53),
+		svcApp("kube-system", "kube-dns", "coredns", 53),
 
 		&appsv1.DaemonSet{
 			ObjectMeta: metav1.ObjectMeta{Name: "node-exporter", Namespace: "observability", Labels: appLabels("node-exporter")},
@@ -138,7 +138,7 @@ func ShowcaseStagingSeedObjects() []runtime.Object {
 
 		deploy("kube-system", "coredns", 1),
 		pod("kube-system", "coredns-stg01", "coredns", "stg-cp-1", "Running"),
-		svc("kube-system", "kube-dns", 53),
+		svcApp("kube-system", "kube-dns", "coredns", 53),
 	}
 
 	objs = append(objs, ShowcaseStagingEventObjects()...)

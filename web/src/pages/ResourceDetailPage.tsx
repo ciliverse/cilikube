@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
+import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { dump as yamlDump, load as yamlLoad } from 'js-yaml'
 import { ArrowLeft, Bot, Pencil, RefreshCw, Save, Trash2, X } from 'lucide-react'
@@ -66,11 +66,27 @@ export function ResourceDetailPage({
 }) {
   const { t } = useTranslation()
   const { namespace = '', name = '' } = useParams()
+  const location = useLocation()
   const [searchParams, setSearchParams] = useSearchParams()
   const { clusterId } = useCluster()
   const { canMutate, canDelete, checkPermission } = useAuth()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
+  const listHref = `/${resource}`
+  const openConsole = (tab: 'logs' | 'exec') => {
+    // replace — do not push a history entry, or browser Back only dismisses the console
+    setSearchParams({ console: tab }, { replace: true })
+  }
+  const goBack = () => {
+    const from = (location.state as { from?: string } | null)?.from
+    const idx = (window.history.state as { idx?: number } | null)?.idx
+    // Same stack as the browser Back button when we actually navigated here in-app
+    if (typeof idx === 'number' && idx > 0) {
+      navigate(-1)
+      return
+    }
+    navigate(from || listHref)
+  }
   const [tab, setTab] = useState<Tab>('summary')
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState('')
@@ -272,12 +288,12 @@ export function ResourceDetailPage({
               variant="ghost"
               className="px-3 py-1.5 text-xs"
               type="button"
-              onClick={() => navigate(-1)}
+              onClick={goBack}
             >
               <ArrowLeft className="h-3.5 w-3.5" />
               Back
             </Button>
-            <Link to={`/${resource}`} className="text-xs text-cyan hover:underline">
+            <Link to={listHref} className="text-xs text-cyan hover:underline">
               List
             </Link>
             {investigateHref ? (
@@ -296,7 +312,7 @@ export function ResourceDetailPage({
                   variant="outline"
                   className="px-3 py-1.5 text-xs"
                   type="button"
-                  onClick={() => setSearchParams({ console: 'logs' })}
+                  onClick={() => openConsole('logs')}
                 >
                   Logs
                 </Button>
@@ -304,7 +320,7 @@ export function ResourceDetailPage({
                   variant="outline"
                   className="px-3 py-1.5 text-xs"
                   type="button"
-                  onClick={() => setSearchParams({ console: 'exec' })}
+                  onClick={() => openConsole('exec')}
                 >
                   Terminal
                 </Button>

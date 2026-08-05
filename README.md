@@ -5,7 +5,7 @@
 </div>
 
 <div align="center">
-  <img src="https://img.shields.io/badge/Release-v1.0.0-green?style=flat-square" alt="Release v1.0.0">
+  <img src="https://img.shields.io/badge/Release-v1.0.1-green?style=flat-square" alt="Release v1.0.1">
   <img src="https://img.shields.io/badge/Frontend-React%2019-61DAFB?style=flat-square&logo=react" alt="React 19">
   <img src="https://img.shields.io/badge/Frontend-TypeScript%207-blue?style=flat-square&logo=typescript" alt="TypeScript 7">
   <img src="https://img.shields.io/badge/Frontend-Vite%208-blue?style=flat-square&logo=vite" alt="Vite 8">
@@ -51,7 +51,14 @@ In one line:
 
 Ask “how is it now / what’s broken,” follow resource clues into detail, logs, or a terminal — AI stays read-only by default and does not mutate the cluster for you.
 
-### v1.0.0 (current)
+### v1.0.1 (current)
+
+- **Topology** (Observe): Ingress → Service → Workload → Pod graph, Traffic mode with RPS flow (incl. fan-out to pods)
+- **Timeline** (Observe): status segments + live Event markers; Showcase backfills demo history
+- Nav UX: collapsible sidebar groups; reliable detail Back / browser history with Logs console
+- Showcase: kube-dns ↔ coredns wiring so Topology Traffic demos cleanly
+
+### v1.0.0
 
 Highlights vs earlier releases:
 

@@ -216,7 +216,7 @@ export function HudSelect({
         left: pos.left,
         width: pos.width,
         maxHeight: pos.maxHeight,
-        zIndex: 200,
+        zIndex: 'var(--z-select)',
         ...(pos.placement === 'bottom'
           ? { top: pos.top }
           : { bottom: pos.bottom }),

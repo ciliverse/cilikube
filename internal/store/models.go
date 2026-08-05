@@ -237,3 +237,21 @@ type UserSession struct {
 func (UserSession) TableName() string {
 	return "user_sessions"
 }
+
+// TimelineStatusSample is a periodic / change-driven health sample for Timeline.
+type TimelineStatusSample struct {
+	ID        uint      `gorm:"primaryKey" json:"id"`
+	ClusterID string    `gorm:"type:varchar(36);not null;index:idx_tl_cluster_sampled;index:idx_tl_resource_time,priority:1" json:"cluster_id"`
+	Namespace string    `gorm:"type:varchar(253);not null;index:idx_tl_resource_time,priority:2" json:"namespace"`
+	Kind      string    `gorm:"type:varchar(64);not null;index:idx_tl_resource_time,priority:3" json:"kind"`
+	Name      string    `gorm:"type:varchar(253);not null;index:idx_tl_resource_time,priority:4" json:"name"`
+	UID       string    `gorm:"type:varchar(64)" json:"uid"`
+	AppGroup  string    `gorm:"type:varchar(253);index" json:"app_group"`
+	Status    string    `gorm:"type:varchar(32);not null" json:"status"`
+	Reason    string    `gorm:"type:varchar(256)" json:"reason"`
+	SampledAt time.Time `gorm:"not null;index:idx_tl_cluster_sampled;index:idx_tl_resource_time,priority:5" json:"sampled_at"`
+}
+
+func (TimelineStatusSample) TableName() string {
+	return "timeline_status_samples"
+}

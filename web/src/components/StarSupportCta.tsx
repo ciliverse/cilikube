@@ -62,15 +62,21 @@ export function StarSupportFloat() {
       try {
         const info = await fetchShowcaseInfo()
         if (cancelled) return
-        setShowcase(Boolean(info.showcase))
+        // Local / self-hosted: never show the floating star CTA.
+        if (!info.showcase) {
+          setShowcase(false)
+          setShow(false)
+          return
+        }
+        setShowcase(true)
         window.setTimeout(() => {
           if (!cancelled) setShow(true)
-        }, info.showcase ? 1200 : 4000)
+        }, 1200)
       } catch {
+        // Unknown mode — prefer quiet local UX over a surprise promo card.
         if (!cancelled) {
-          window.setTimeout(() => {
-            if (!cancelled) setShow(true)
-          }, 5000)
+          setShowcase(false)
+          setShow(false)
         }
       }
     })()
@@ -79,12 +85,12 @@ export function StarSupportFloat() {
     }
   }, [])
 
-  if (!show) return null
+  if (!show || !showcase) return null
 
   return (
     <div
       className={cn(
-        'star-support-float pointer-events-auto fixed z-40 w-[min(22rem,calc(100vw-1.5rem))]',
+        'star-support-float pointer-events-auto fixed z-[var(--z-float-cta)] w-[min(22rem,calc(100vw-1.5rem))]',
         'bottom-[max(1rem,env(safe-area-inset-bottom))] right-[max(0.75rem,env(safe-area-inset-right))]',
         'rounded border border-cyan/35 bg-panel-solid/95 px-3.5 py-3 shadow-[0_12px_40px_rgba(0,0,0,0.35)] backdrop-blur-md',
       )}

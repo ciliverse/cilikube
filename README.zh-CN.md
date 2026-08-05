@@ -5,7 +5,7 @@
 </div>
 
 <div align="center">
-  <img src="https://img.shields.io/badge/Release-v1.0.0-green?style=flat-square" alt="Release v1.0.0">
+  <img src="https://img.shields.io/badge/Release-v1.0.1-green?style=flat-square" alt="Release v1.0.1">
   <img src="https://img.shields.io/badge/Frontend-React%2019-61DAFB?style=flat-square&logo=react" alt="React 19">
   <img src="https://img.shields.io/badge/Frontend-TypeScript%207-blue?style=flat-square&logo=typescript" alt="TypeScript 7">
   <img src="https://img.shields.io/badge/Frontend-Vite%208-blue?style=flat-square&logo=vite" alt="Vite 8">
@@ -51,7 +51,14 @@ CiliKube 是开源的 Kubernetes 多集群管理平台，技术栈为 React + Ty
 
 问清楚「现在怎么样、哪儿挂了」，再顺着线索进详情、日志或终端动手；AI 默认只读查证，不替你在集群里乱改。
 
-### v1.0.0（当前）
+### v1.0.1（当前）
+
+- **拓扑图**（Observe）：Ingress → Service → 工作负载 → Pod，Traffic 模式 RPS 流动（含分摊到 Pod）
+- **时间线**（Observe）：状态色带 + 实时 Event 标记；Showcase 预置演示历史
+- 导航：侧栏分组可折叠；详情页 Back / 浏览器返回与 Logs 控制台历史更合理
+- Showcase：kube-dns ↔ coredns 连线，拓扑 Traffic 演示更完整
+
+### v1.0.0
 
 相对此前版本的主要变化：
 
