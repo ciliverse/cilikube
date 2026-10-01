@@ -24,6 +24,8 @@ type Config struct {
 	Preferences PreferencesConfig `yaml:"preferences" json:"preferences"`
 	Prometheus  PrometheusConfig  `yaml:"prometheus" json:"prometheus"`
 	AI          AIConfig          `yaml:"ai" json:"ai"`
+	LDAP        LDAPConfig        `yaml:"ldap" json:"ldap"`
+	WebAuthn    WebAuthnConfig    `yaml:"webauthn" json:"webauthn"`
 	Clusters    []ClusterInfo     `yaml:"clusters" json:"clusters"`
 }
 
@@ -34,6 +36,26 @@ type AIConfig struct {
 	BaseURL  string `yaml:"base_url" json:"base_url"`
 	Model    string `yaml:"model" json:"model"`
 	APIKey   string `yaml:"api_key" json:"api_key"`
+}
+
+// LDAPConfig binds directory users. Empty URL disables it.
+type LDAPConfig struct {
+	Enabled      bool   `yaml:"enabled" json:"enabled"`
+	URL          string `yaml:"url" json:"url"`
+	StartTLS     bool   `yaml:"start_tls" json:"start_tls"`
+	InsecureSkip bool   `yaml:"insecure_skip_verify" json:"insecure_skip_verify"`
+	BindDN       string `yaml:"bind_dn" json:"bind_dn"`
+	BindPassword string `yaml:"bind_password" json:"bind_password"`
+	UserBase     string `yaml:"user_base" json:"user_base"`
+	UserFilter   string `yaml:"user_filter" json:"user_filter"`
+	EmailAttr    string `yaml:"email_attr" json:"email_attr"`
+	DisplayAttr  string `yaml:"display_name_attr" json:"display_name_attr"`
+}
+
+// WebAuthnConfig is the passkey relying party. Origins empty means the request Origin is used.
+type WebAuthnConfig struct {
+	RPID    string   `yaml:"rp_id" json:"rp_id"`
+	Origins []string `yaml:"origins" json:"origins"`
 }
 
 // PrometheusConfig configures the external Prometheus query integration.

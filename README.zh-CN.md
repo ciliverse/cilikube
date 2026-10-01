@@ -5,7 +5,7 @@
 </div>
 
 <div align="center">
-  <img src="https://img.shields.io/badge/Release-v1.5.0-green?style=flat-square" alt="Release v1.5.0">
+  <img src="https://img.shields.io/badge/Release-v1.6.0-green?style=flat-square" alt="Release v1.6.0">
   <img src="https://img.shields.io/badge/Frontend-React%2019-61DAFB?style=flat-square&logo=react" alt="React 19">
   <img src="https://img.shields.io/badge/Frontend-TypeScript%207-blue?style=flat-square&logo=typescript" alt="TypeScript 7">
   <img src="https://img.shields.io/badge/Frontend-Vite%208-blue?style=flat-square&logo=vite" alt="Vite 8">
@@ -51,7 +51,14 @@ CiliKube 是开源的 Kubernetes 多集群管理平台，技术栈为 React + Ty
 
 问清楚「现在怎么样、哪儿挂了」，再顺着线索进详情、日志或终端动手；AI 默认只读查证，不替你在集群里乱改。
 
-### v1.5.0（当前）
+### v1.6.0（当前）
+
+- **集群终端**：管理员可在控制台打开本机 `kubectl`（使用已保存的集群凭据），或对某个节点拉起临时特权 Pod 进入主机，断开后删除该 Pod
+- **浏览器打开 Service**：editor / admin 可把 Service 的 HTTP 端口经 API 代理在新标签页打开
+- **身份**：登录可接 TOTP 二次验证、Passkey，以及按配置启用的 LDAP 目录账号（首次登录建成 viewer）
+- **插件**：`plugins/<id>/plugin.json` 会在侧栏增加入口；`resources` 里点名的资源详情页也会链到该插件
+
+### v1.5.0
 
 - **应用市场**：可搜索的 Helm Chart 目录，装之前先看 Chart README 与默认 values，仓库管理和已安装 Release 也在同一处；入口提到顶栏三段切换（AI / Console / Marketplace），不再藏在控制台里
 - **资源覆盖**：新增 15 种资源 —— ReplicaSet、ReplicationController、PodTemplate、Endpoints、EndpointSlice、IngressClass、ServiceCIDR、PriorityClass、RuntimeClass、Lease、Mutating/ValidatingWebhook、VolumeAttachment、CSIDriver、CSINode

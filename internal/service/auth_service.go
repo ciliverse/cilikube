@@ -71,6 +71,7 @@ type AuthService struct {
 	config          *configs.Config
 	securityService *SecurityService
 	auditService    *AuditService
+	syncRoles       func(userID uint) error
 }
 
 // NewAuthService creates a new AuthService instance
@@ -90,17 +91,26 @@ func (s *AuthService) GetSecurityService() *SecurityService {
 	return s.securityService
 }
 
+// SetRoleSync registers the Casbin grouping refresh used after JIT account creation.
+func (s *AuthService) SetRoleSync(fn func(userID uint) error) {
+	s.syncRoles = fn
+}
+
 // Login authenticates a user with username/password and returns JWT token
 func (s *AuthService) Login(req *models.LoginRequest, ipAddress, userAgent string) (*models.LoginResponse, error) {
 	// Get user by username
 	storeUser, err := s.store.GetUserByUsername(req.Username)
 	if err != nil {
-		// Record failed login attempt for unknown user
-		s.securityService.RecordFailedLogin(nil, req.Username, ipAddress, userAgent)
-		s.auditService.LogAuthenticationEvent(AuditEventType("login_failed"), nil, req.Username, ipAddress, userAgent, false, map[string]interface{}{
-			"reason": "user_not_found",
-		})
-		return nil, errors.New("invalid username or password")
+		provisioned, ldapErr := s.provisionLDAPUser(req.Username, req.Password)
+		if ldapErr != nil || provisioned == nil {
+			s.securityService.RecordFailedLogin(nil, req.Username, ipAddress, userAgent)
+			s.auditService.LogAuthenticationEvent(AuditEventType("login_failed"), nil, req.Username, ipAddress, userAgent, false, map[string]interface{}{
+				"reason": "user_not_found",
+			})
+			return nil, errors.New("invalid username or password")
+		}
+		storeUser = provisioned
+		return s.finishLogin(storeUser, ipAddress, userAgent, "ldap")
 	}
 
 	// Check account lockout status
@@ -121,8 +131,16 @@ func (s *AuthService) Login(req *models.LoginRequest, ipAddress, userAgent strin
 		return nil, errors.New("account is disabled")
 	}
 
-	// Verify password
-	if !storeUser.CheckPassword(req.Password) {
+	// Verify password, then directory bind if local password does not match.
+	passwordOK := storeUser.CheckPassword(req.Password)
+	method := "password"
+	if !passwordOK {
+		if s.ldapPasswordOK(storeUser, req.Password) {
+			passwordOK = true
+			method = "ldap"
+		}
+	}
+	if !passwordOK {
 		s.securityService.RecordFailedLogin(&storeUser.ID, req.Username, ipAddress, userAgent)
 		s.auditService.LogAuthenticationEvent(AuditEventType("login_failed"), &storeUser.ID, req.Username, ipAddress, userAgent, false, map[string]interface{}{
 			"reason": "invalid_password",
@@ -130,73 +148,25 @@ func (s *AuthService) Login(req *models.LoginRequest, ipAddress, userAgent strin
 		return nil, errors.New("invalid username or password")
 	}
 
-	// Record successful login
-	if err := s.securityService.RecordSuccessfulLogin(storeUser.ID, ipAddress, userAgent); err != nil {
-		fmt.Printf("Failed to record successful login: %v\n", err)
-	}
-
-	// Update last login time
-	now := time.Now()
-	storeUser.LastLoginAt = &now
-	if err := s.store.UpdateUser(storeUser); err != nil {
-		// Log error but don't fail login
-		fmt.Printf("Failed to update last login time: %v\n", err)
-	}
-
-	// Convert store user to models user for JWT generation
-	user := s.convertStoreUserToModelsUser(storeUser)
-
-	// Get user roles for JWT token
-	roles, err := s.store.GetUserRoles(storeUser.ID)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get user roles: %w", err)
-	}
-
-	// Set primary role (highest privilege — JWT AdminRequired checks this field)
-	if len(roles) > 0 {
-		user.Role = primaryRoleName(roles)
-	} else {
-		user.Role = "viewer" // Default role
-	}
-
-	// Desktop / factory default password: force change in JWT claims (not UI-only).
-	if configs.IsDesktop() && req.Password == "12345678" {
-		user.MustChangePassword = true
-		if !storeUser.MustChangePassword {
-			storeUser.MustChangePassword = true
-			if err := s.store.UpdateUser(storeUser); err != nil {
-				fmt.Printf("Failed to persist must_change_password: %v\n", err)
-			}
+	if storeUser.TOTPEnabled {
+		challenge, err := s.beginMFA(storeUser.ID)
+		if err != nil {
+			return nil, err
 		}
+		user := s.convertStoreUserToModelsUser(storeUser)
+		return &models.LoginResponse{
+			MFARequired: true,
+			MFAToken:    challenge,
+			User:        user.ToResponse(),
+		}, nil
 	}
 
-	// Create session first so JWT can embed session_id for revocation
-	sessionID, err := s.securityService.CreateSession(storeUser.ID, ipAddress, userAgent)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create session: %w", err)
+	if configs.IsDesktop() && req.Password == "12345678" {
+		storeUser.MustChangePassword = true
+		_ = s.store.UpdateUser(storeUser)
 	}
 
-	token, expiresAt, err := auth.GenerateToken(&user, sessionID)
-	if err != nil {
-		_ = s.securityService.InvalidateSession(sessionID)
-		return nil, fmt.Errorf("failed to generate token: %w", err)
-	}
-
-	// Create audit log (always record client IP + registered username)
-	loginDetails, _ := json.Marshal(map[string]interface{}{
-		"username":   storeUser.Username,
-		"ip":         ipAddress,
-		"user_agent": userAgent,
-		"session_id": sessionID,
-		"result":     "success",
-	})
-	s.createAuditLog(&storeUser.ID, "login", "user", fmt.Sprintf("%d", storeUser.ID), ipAddress, userAgent, string(loginDetails))
-
-	return &models.LoginResponse{
-		Token:     token,
-		ExpiresAt: expiresAt,
-		User:      user.ToResponse(),
-	}, nil
+	return s.finishLogin(storeUser, ipAddress, userAgent, method)
 }
 
 // RefreshToken generates a new JWT token from a valid existing token
@@ -560,6 +530,21 @@ func (s *AuthService) UpdateUserStatus(userID uint, isActive bool) error {
 	}
 	s.createAuditLog(nil, "user_status_change", "user", fmt.Sprintf("%d", userID), "", "", fmt.Sprintf("User %s", status))
 
+	return nil
+}
+
+// ResetUserMFA clears an authenticator so a locked-out user can sign in with a password again.
+func (s *AuthService) ResetUserMFA(userID uint) error {
+	storeUser, err := s.store.GetUserByID(userID)
+	if err != nil {
+		return errors.New("user not found")
+	}
+	storeUser.TOTPEnabled = false
+	storeUser.TOTPSecret = ""
+	if err := s.store.UpdateUser(storeUser); err != nil {
+		return err
+	}
+	s.createAuditLog(nil, "mfa_reset", "user", fmt.Sprintf("%d", userID), "", "", "admin cleared totp")
 	return nil
 }
 

@@ -17,6 +17,10 @@ func RegisterAuthRoutes(authGroup *gin.RouterGroup, authService *service.AuthSer
 	// Public routes (no authentication required)
 	authGroup.POST("/login", authHandler.Login)
 	authGroup.POST("/register", authHandler.Register)
+	identityHandler := handlers.NewIdentityHandler(authService)
+	authGroup.POST("/mfa/verify", identityHandler.VerifyMFA)
+	authGroup.POST("/passkey/login/begin", identityHandler.BeginPasskeyLogin)
+	authGroup.POST("/passkey/login/finish", identityHandler.FinishPasskeyLogin)
 
 	// OAuth routes (public)
 	oauth := authGroup.Group("/oauth")
@@ -36,6 +40,13 @@ func RegisterAuthRoutes(authGroup *gin.RouterGroup, authService *service.AuthSer
 		authenticated.POST("/change-password", authHandler.ChangePassword)
 		authenticated.POST("/refresh", authHandler.RefreshToken)
 		authenticated.POST("/logout", authHandler.Logout)
+		authenticated.POST("/mfa/setup", identityHandler.BeginTOTP)
+		authenticated.POST("/mfa/enable", identityHandler.ConfirmTOTP)
+		authenticated.POST("/mfa/disable", identityHandler.DisableTOTP)
+		authenticated.POST("/passkey/register/begin", identityHandler.BeginPasskeyRegister)
+		authenticated.POST("/passkey/register/finish", identityHandler.FinishPasskeyRegister)
+		authenticated.GET("/passkeys", identityHandler.ListPasskeys)
+		authenticated.DELETE("/passkeys/:id", identityHandler.DeletePasskey)
 
 		// OAuth account management (authenticated)
 		authenticated.POST("/oauth/link", oauthHandler.LinkAccount)
@@ -48,6 +59,8 @@ func RegisterAuthRoutes(authGroup *gin.RouterGroup, authService *service.AuthSer
 	{
 		admin.GET("/users", authHandler.GetUserList)
 		admin.PUT("/users/:id/status", authHandler.UpdateUserStatus)
+		admin.POST("/users/:id/reset-mfa", authHandler.ResetUserMFA)
+		admin.POST("/ldap/test", identityHandler.TestLDAP)
 		admin.DELETE("/users/:id", authHandler.DeleteUser)
 	}
 }

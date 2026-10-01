@@ -21,7 +21,7 @@ import {
   metaNamespace,
   updateNamespacedResource,
 } from '@/api/resources'
-import { apiPatch } from '@/lib/api'
+import { apiPatch, getClusterId, getToken } from '@/lib/api'
 import { useNamespace } from '@/store/namespace'
 import { useCluster } from '@/store/cluster'
 import { useAuth } from '@/store/auth'
@@ -795,10 +795,24 @@ export function ServiceAccountsPage() {
 }
 
 export function ServicesPage() {
+  const { t } = useTranslation()
+  const { canEdit } = useAuth()
   const { namespace } = useNamespace()
   const { yamlButton, yamlModal } = useYamlModal('services', true)
+  const openService = (item: any, port: number) => {
+    const ns = metaNamespace(item)
+    const name = metaName(item)
+    const token = getToken() || ''
+    const clusterId = getClusterId()
+    const prefix = `/api/v1/namespaces/${encodeURIComponent(ns)}/services/${encodeURIComponent(name)}/proxy`
+    document.cookie = `cilikube_proxy=${encodeURIComponent(token)}; Path=${prefix}; SameSite=Lax`
+    document.cookie = `cilikube_proxy_cluster=${encodeURIComponent(clusterId)}; Path=${prefix}; SameSite=Lax`
+    document.cookie = `cilikube_proxy_port=${encodeURIComponent(String(port))}; Path=${prefix}; SameSite=Lax`
+    window.open(`${prefix}/?port=${port}`, '_blank', 'noopener')
+  }
   return (
     <>
+    <p className="mb-3 text-xs text-text-dim">{t('shell.openServiceHint')}</p>
     <ResourceListPage
       titleKey="nav.services"
       namespaced
@@ -832,12 +846,55 @@ export function ServicesPage() {
         { key: 'age', headerKey: 'common.age', render: ageCell },
         { key: 'created', headerKey: 'common.created', render: createdCell },
       ]}
-      actions={(item) => yamlButton(item)}
+      actions={(item) => (
+        <div className="flex items-center gap-1">
+          {canEdit ? (
+            <ServiceOpenButton item={item} label={t('shell.openService')} onOpen={openService} />
+          ) : null}
+          {yamlButton(item)}
+        </div>
+      )}
     />
     {yamlModal}
     </>
   )
 
+}
+
+function ServiceOpenButton({
+  item,
+  label,
+  onOpen,
+}: {
+  item: any
+  label: string
+  onOpen: (item: any, port: number) => void
+}) {
+  const ports = (item.spec?.ports || [])
+    .map((p: any) => Number(p.port))
+    .filter((p: number) => Number.isFinite(p) && p > 0)
+  const [port, setPort] = useState(ports[0] || 80)
+  return (
+    <span className="inline-flex items-center gap-1">
+      {ports.length > 1 ? (
+        <select
+          className="hud-field px-1 py-1 text-xs"
+          value={port}
+          aria-label={label}
+          onChange={(e) => setPort(Number(e.target.value))}
+        >
+          {ports.map((p: number) => (
+            <option key={p} value={p}>
+              {p}
+            </option>
+          ))}
+        </select>
+      ) : null}
+      <Button variant="ghost" className="px-2 py-1" type="button" onClick={() => onOpen(item, port)}>
+        {label}
+      </Button>
+    </span>
+  )
 }
 
 export function IngressPage() {

@@ -594,6 +594,19 @@ func (h *AuthHandler) UpdateUserStatus(c *gin.Context) {
 	})
 }
 
+func (h *AuthHandler) ResetUserMFA(c *gin.Context) {
+	userID, err := strconv.ParseUint(c.Param("id"), 10, 32)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"code": 400, "message": "invalid user ID"})
+		return
+	}
+	if err := h.authService.ResetUserMFA(uint(userID)); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"code": 400, "message": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"code": 200, "message": "mfa reset"})
+}
+
 // DeleteUser deletes user (admin)
 // @Summary Delete user
 // @Description Admin deletes user account

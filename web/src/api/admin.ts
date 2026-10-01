@@ -71,6 +71,10 @@ export async function updateAdminUserStatus(id: number, isActive: boolean) {
   return apiPut(`/api/v1/admin/users/${id}/status`, { is_active: isActive })
 }
 
+export async function resetUserMfa(id: number) {
+  return apiPost(`/api/v1/auth/admin/users/${id}/reset-mfa`, {})
+}
+
 export async function deleteAdminUser(id: number) {
   return apiDelete(`/api/v1/admin/users/${id}`)
 }

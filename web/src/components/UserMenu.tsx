@@ -252,6 +252,13 @@ export function UserMenu({
                   />
                 ))}
               </div>
+              <Link
+                to="/themes"
+                className="mx-2 mb-2 block rounded px-2 py-1.5 text-left text-[12px] text-cyan hover:bg-mist"
+                onClick={() => setOpen(false)}
+              >
+                {t('themeStudio.open')}
+              </Link>
 
               <div className="my-1 border-t border-line" />
               <div className="flex items-center gap-2 px-3 pt-2 text-[10px] tracking-[0.14em] text-text-dim uppercase">

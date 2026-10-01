@@ -154,6 +154,9 @@ func InitializeHandlers(router *gin.RouterGroup, services *service.AppServices, 
 		routes.RegisterTopologyRoutes(router, handlers.NewTopologyHandler(services.TopologyService, k8sManager))
 	}
 
+	pluginHandler := handlers.NewPluginHandler("plugins")
+	router.GET("/plugins", pluginHandler.List)
+
 	// --- Timeline (status samples + events) ---
 	if services.TimelineService != nil {
 		routes.RegisterTimelineRoutes(router, handlers.NewTimelineHandler(services.TimelineService, k8sManager))
@@ -205,6 +208,9 @@ func InitializeHandlers(router *gin.RouterGroup, services *service.AppServices, 
 	podLogsHandler := handlers.NewPodLogsHandler(services.PodLogsService, k8sManager)
 	podExecHandler := handlers.NewPodExecHandler(services.PodExecService, k8sManager)
 	podPortForwardHandler := handlers.NewPodPortForwardHandler(services.PodPortForwardService, k8sManager)
+	nodeShellHandler := handlers.NewNodeShellHandler(services.PodExecService, k8sManager, services.AuditService)
+	kubectlShellHandler := handlers.NewKubectlShellHandler(k8sManager, services.AuditService)
+	serviceProxyHandler := handlers.NewServiceProxyHandler(k8sManager)
 	hpaHandler := handlers.NewResourceHandler(services.HPAService, k8sManager, "horizontalpodautoscalers")
 	pdbHandler := handlers.NewResourceHandler(services.PDBService, k8sManager, "poddisruptionbudgets")
 	resourceQuotaHandler := handlers.NewResourceHandler(services.ResourceQuotaService, k8sManager, "resourcequotas")
@@ -240,6 +246,7 @@ func InitializeHandlers(router *gin.RouterGroup, services *service.AppServices, 
 			nodeMemberRoutes.PUT("", nodesHandler.Update)
 			nodeMemberRoutes.DELETE("", nodesHandler.Delete)
 			nodeMemberRoutes.GET("/watch", nodesHandler.Watch)
+			nodeMemberRoutes.GET("/shell", nodeShellHandler.Shell)
 			// Register metrics sub-routes for individual node
 			nodeMemberRoutes.GET("/metrics", nodeMetricsHandler.GetNodeMetrics)
 			// Node lifecycle operations
@@ -327,6 +334,8 @@ func InitializeHandlers(router *gin.RouterGroup, services *service.AppServices, 
 		helmRoutes.GET("/chart", helmHandler.GetChart)
 	}
 
+	router.GET("/shell/kubectl", kubectlShellHandler.Shell)
+
 	// b. Namespace resources themselves, and all resources nested under them
 	namespacesRoutes := router.Group("/namespaces")
 	{
@@ -377,6 +386,11 @@ func InitializeHandlers(router *gin.RouterGroup, services *service.AppServices, 
 				podsMemberRoutes.GET("/attach", podExecHandler.AttachPod)
 				podsMemberRoutes.GET("/portforward", podPortForwardHandler.PortForward)
 			}
+			serviceProxy := nsMemberRoutes.Group("/services/:name/proxy")
+			{
+				serviceProxy.Any("", serviceProxyHandler.Proxy)
+				serviceProxy.Any("/*filepath", serviceProxyHandler.Proxy)
+			}
 		}
 	}
 }
@@ -401,7 +415,7 @@ func registerNamespacedResourceClusterList[T runtime.Object](router *gin.RouterG
 	if handler == nil {
 		return
 	}
-	router.Group("/" + resourceName).GET("", handler.List)
+	router.Group("/"+resourceName).GET("", handler.List)
 }
 
 func registerResourceInNamespace[T runtime.Object](nsRouter *gin.RouterGroup, resourceName string, handler *handlers.ResourceHandler[T]) {
@@ -461,6 +475,7 @@ func SetupRouter(cfg *configs.Config, services *service.AppServices, k8sManager 
 	// Public operational endpoints
 	router.GET("/health", handlers.HealthCheck)
 	router.GET("/ready", handlers.ReadinessCheck)
+	router.GET("/plugin-assets/:id/*filepath", handlers.NewPluginHandler("plugins").Asset)
 	router.GET("/live", handlers.LivenessCheck)
 	router.GET("/metrics", metrics.PromHandler())
 	router.GET("/version", handlers.GetVersion)
@@ -475,6 +490,8 @@ func SetupRouter(cfg *configs.Config, services *service.AppServices, k8sManager 
 	apiV1.Use(auth.JWTAuthUnless(
 		"/api/v1/auth/login",
 		"/api/v1/auth/register",
+		"/api/v1/auth/mfa/verify",
+		"/api/v1/auth/passkey/login/",
 		"/api/v1/auth/oauth/",
 		"/api/v1/system/healthz",
 		"/api/v1/showcase/info",
@@ -492,6 +509,8 @@ func SetupRouter(cfg *configs.Config, services *service.AppServices, k8sManager 
 		apiV1.Use(auth.NewCasbinBuilder().
 			IgnorePath("/api/v1/auth/login").
 			IgnorePath("/api/v1/auth/register").
+			IgnorePath("/api/v1/auth/mfa/verify").
+			IgnorePath("/api/v1/auth/passkey/login/*").
 			IgnorePath("/api/v1/auth/oauth/*").
 			IgnorePath("/api/v1/system/healthz").
 			IgnorePath("/api/v1/showcase/info").

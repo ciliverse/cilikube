@@ -15,7 +15,7 @@ import {
   updateNamespacedResource,
 } from '@/api/resources'
 import { getObjectEvents } from '@/api/cluster'
-import { apiPatch } from '@/lib/api'
+import { apiGet, apiPatch } from '@/lib/api'
 import { useAuth } from '@/store/auth'
 import { useCluster } from '@/store/cluster'
 import { Badge, Button, Card, EmptyState, PageHeader } from '@/components/ui'
@@ -29,6 +29,7 @@ import { ScaleDialog } from '@/components/ScaleDialog'
 import { PodWorkbench } from '@/components/PodWorkbench'
 import { NodeOpsControls } from '@/components/NodeOpsControls'
 import { buildInvestigateHref, kindFromResource } from '@/lib/aiInvestigate'
+import type { PluginManifest } from '@/pages/PluginFramePage'
 
 type Tab = 'summary' | 'events' | 'yaml' | 'metrics' | 'related'
 
@@ -86,6 +87,15 @@ export function ResourceDetailPage({
   const location = useLocation()
   const [searchParams, setSearchParams] = useSearchParams()
   const { clusterId } = useCluster()
+  const pluginsQ = useQuery({
+    queryKey: ['plugins'],
+    queryFn: () => apiGet<PluginManifest[]>('/api/v1/plugins'),
+    staleTime: 60_000,
+  })
+  const pluginLinks = (pluginsQ.data || []).filter((plugin) =>
+    (plugin.resources || []).includes(resource),
+  )
+  const [pluginFrame, setPluginFrame] = useState('')
   const { canMutate, canDelete, checkPermission } = useAuth()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
@@ -379,6 +389,34 @@ export function ResourceDetailPage({
           </div>
         }
       />
+
+      {pluginLinks.length ? (
+        <div className="space-y-2">
+          <div className="flex flex-wrap gap-2 text-xs">
+            {pluginLinks.map((plugin) => (
+              <button
+                key={plugin.id}
+                type="button"
+                className={
+                  pluginFrame === plugin.id
+                    ? 'rounded border border-cyan/40 bg-cyan/15 px-2 py-1 text-cyan'
+                    : 'rounded border border-line px-2 py-1 text-text-dim'
+                }
+                onClick={() => setPluginFrame((cur) => (cur === plugin.id ? '' : plugin.id))}
+              >
+                {plugin.title || plugin.name}
+              </button>
+            ))}
+          </div>
+          {pluginFrame ? (
+            <iframe
+              title={pluginFrame}
+              className="h-80 w-full rounded border border-line bg-panel"
+              src={`/plugin-assets/${encodeURIComponent(pluginFrame)}/index.html?clusterId=${encodeURIComponent(clusterId)}&namespace=${encodeURIComponent(namespace)}&name=${encodeURIComponent(name)}&resource=${encodeURIComponent(resource)}`}
+            />
+          ) : null}
+        </div>
+      ) : null}
 
       <div className="-mx-0.5 flex gap-1.5 overflow-x-auto overscroll-x-contain border-b border-line pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:flex-wrap sm:gap-2">
         {tabs.map((t) => (

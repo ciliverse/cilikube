@@ -125,6 +125,9 @@ func New(configPath string) (*Application, error) {
 
 	// Initialize permission service
 	services.PermissionService = service.NewPermissionService(mainStore, e)
+	if services.AuthService != nil {
+		services.AuthService.SetRoleSync(services.PermissionService.SyncUserRoles)
+	}
 
 	// Set permission service reference in role service for synchronization
 	services.RoleService.SetPermissionService(services.PermissionService)

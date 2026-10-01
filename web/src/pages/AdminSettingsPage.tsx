@@ -1,23 +1,22 @@
 import { useEffect, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { apiGet, apiPut } from '@/lib/api'
+import { apiGet, apiPost, apiPut } from '@/lib/api'
 import { useAuth } from '@/store/auth'
 import { Badge, Button, Card, PageHeader } from '@/components/ui'
-import { BUILTIN_THEMES } from '@/theme/themes'
+import { useTheme } from '@/theme/useTheme'
 import { FONT_PACKS, getStoredFontId, setFontId } from '@/theme/fonts'
 import { switchTheme } from '@/theme/switchTheme'
-import { useTheme } from '@/theme/useTheme'
 import { APP_VERSION, formatAppVersion } from '@/lib/version'
 import { useTranslation } from 'react-i18next'
 
 export function AdminSettingsPage() {
   const { t } = useTranslation()
   const { isAdmin } = useAuth()
-  const { themeId } = useTheme()
+  const { themeId, themes } = useTheme()
   const [msg, setMsg] = useState('')
   const [err, setErr] = useState('')
   const [busy, setBusy] = useState(false)
-  const [fontPref, setFontPref] = useState(getStoredFontId)
+  const [ldapUser, setLdapUser] = useState('')
 
   const [oauth, setOauth] = useState({
     allow_registration: false,
@@ -288,6 +287,31 @@ export function AdminSettingsPage() {
             })}
           </p>
         ) : null}
+      </Card>
+
+      <Card className="space-y-3 p-5">
+        <h2 className="font-display text-lg font-bold tracking-[0.12em]">{t('adminSettings.ldapTitle')}</h2>
+        <p className="text-xs text-text-dim">{t('adminSettings.ldapHint')}</p>
+        <label className="block space-y-1">
+          <span className="hud-label">{t('adminSettings.ldapUser')}</span>
+          <input className="hud-field" value={ldapUser} onChange={(e) => setLdapUser(e.target.value)} />
+        </label>
+        <Button
+          type="button"
+          variant="outline"
+          disabled={busy}
+          onClick={() => {
+            setBusy(true)
+            setErr('')
+            setMsg('')
+            apiPost<{ message: string }>('/api/v1/auth/admin/ldap/test', { username: ldapUser })
+              .then((data) => setMsg(data.message))
+              .catch((e: any) => setErr(e?.message || t('login.requestFailed')))
+              .finally(() => setBusy(false))
+          }}
+        >
+          {t('adminSettings.ldapTest')}
+        </Button>
       </Card>
 
       <Card className="space-y-3 p-5">
@@ -614,7 +638,7 @@ export function AdminSettingsPage() {
                   switchTheme(id)
                 }}
               >
-                {BUILTIN_THEMES.map((theme) => (
+                {themes.map((theme) => (
                   <option key={theme.id} value={theme.id}>
                     {theme.name} ({theme.mode})
                   </option>

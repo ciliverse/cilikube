@@ -35,6 +35,8 @@ import {
 export type NavItem = {
   to: string
   labelKey: string
+  /** Shown as-is when set, so plugin titles do not need an i18n key. */
+  label?: string
   icon: typeof Server
   /** Page narrows its data by the active namespace, so it needs the namespace picker. */
   namespaced?: boolean
@@ -243,6 +245,7 @@ export const consoleNavGroups: NavGroup[] = [
       { to: '/timeline', labelKey: 'nav.timeline', icon: History, namespaced: true },
       { to: '/audit', labelKey: 'nav.audit', icon: ScrollText, clusterScoped: false },
       { to: '/proxy', labelKey: 'nav.proxy', icon: Terminal },
+      { to: '/shell', labelKey: 'nav.shell', icon: Terminal },
     ],
   },
   {
@@ -292,6 +295,7 @@ export type ContextScope = { cluster: boolean; namespace: boolean }
 /** Routes reachable without a sidebar entry, where the default would be wrong. */
 const OFF_NAV_SCOPES: Record<string, ContextScope> = {
   '/profile': { cluster: false, namespace: false },
+  '/themes': { cluster: false, namespace: false },
   '/search': { cluster: true, namespace: true },
 }
 

@@ -1,13 +1,14 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { Navigate, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { fetchOAuthProviders, register, type OAuthProviderInfo } from '@/api/auth'
+import { fetchOAuthProviders, login as loginApi, register, verifyMfa, type OAuthProviderInfo } from '@/api/auth'
 import { fetchShowcaseInfo, type ShowcaseInfo } from '@/api/showcase'
 import { useAuth } from '@/store/auth'
 import { BrandMark } from '@/components/BrandMark'
 import { ParticleField } from '@/components/ParticleField'
 import { StarSupportRotator } from '@/components/StarSupportCta'
 import { Button, Input } from '@/components/ui'
+import { apiPost } from '@/lib/api'
 import { APP_REPO_URL, APP_VERSION, formatAppVersion } from '@/lib/version'
 
 function GitHubMark({ className }: { className?: string }) {
@@ -20,7 +21,7 @@ function GitHubMark({ className }: { className?: string }) {
 
 export function LoginPage() {
   const { t } = useTranslation()
-  const { login, isAuthenticated } = useAuth()
+  const { applySession, isAuthenticated } = useAuth()
   const navigate = useNavigate()
   const [mode, setMode] = useState<'login' | 'register'>('login')
   const [username, setUsername] = useState('')
@@ -35,6 +36,8 @@ export function LoginPage() {
   )
   const [oauthHint, setOauthHint] = useState('')
   const [showcase, setShowcase] = useState<ShowcaseInfo | null>(null)
+  const [mfaToken, setMfaToken] = useState('')
+  const [mfaCode, setMfaCode] = useState('')
 
   useEffect(() => {
     let cancelled = false
@@ -88,13 +91,44 @@ export function LoginPage() {
     try {
       if (mode === 'register') {
         await register(username.trim(), email.trim(), password)
-        await login(username.trim(), password)
+        applySession(await loginApi(username.trim(), password))
+        navigate('/ai')
       } else {
-        await login(username, password)
+        const result = await loginApi(username, password)
+        if (result.mfa_required && result.mfa_token) {
+          setMfaToken(result.mfa_token)
+          return
+        }
+        applySession(result)
+        navigate('/ai')
       }
-      navigate('/ai')
     } catch (err: any) {
       setError(err?.response?.data?.message || err?.message || t('login.requestFailed'))
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const passkeyLogin = async () => {
+    setLoading(true)
+    setError('')
+    try {
+      const begin = await apiPost<{ session_id: string; options: { publicKey: PublicKeyCredentialRequestOptions } }>(
+        '/api/v1/auth/passkey/login/begin',
+        {},
+      )
+      const cred = (await navigator.credentials.get({
+        publicKey: PublicKeyCredential.parseRequestOptionsFromJSON(begin.options.publicKey),
+      })) as PublicKeyCredential | null
+      if (!cred) throw new Error(t('login.passkeyCancelled'))
+      const data = await apiPost<{ token: string; user: { username: string } }>(
+        `/api/v1/auth/passkey/login/finish?session_id=${encodeURIComponent(begin.session_id)}`,
+        cred.toJSON(),
+      )
+      if (data.token) applySession(data)
+      navigate('/ai')
+    } catch (err: any) {
+      setError(err?.message || t('login.requestFailed'))
     } finally {
       setLoading(false)
     }
@@ -229,6 +263,20 @@ export function LoginPage() {
               />
             </label>
 
+            {mfaToken ? (
+              <label className="block space-y-1">
+                <span className="hud-label">{t('login.mfaCode')}</span>
+                <Input
+                  className="h-11 text-base sm:h-10 sm:text-sm"
+                  inputMode="numeric"
+                  autoComplete="one-time-code"
+                  value={mfaCode}
+                  onChange={(e) => setMfaCode(e.target.value)}
+                  required
+                />
+              </label>
+            ) : null}
+
             {error ? (
               <div className="rounded border border-danger/40 bg-danger/10 px-3 py-2 text-sm text-danger">
                 {error}
@@ -245,6 +293,37 @@ export function LoginPage() {
                 : mode === 'login'
                   ? t('login.enter')
                   : t('login.createAccount')}
+            </Button>
+
+            {mfaToken ? (
+              <Button
+                type="button"
+                variant="outline"
+                className="h-11 w-full sm:h-10"
+                disabled={loading || !mfaCode}
+                onClick={() => {
+                  setLoading(true)
+                  setError('')
+                  verifyMfa(mfaToken, mfaCode)
+                    .then((result) => {
+                      applySession(result)
+                      navigate('/ai')
+                    })
+                    .catch((err: any) => setError(err?.message || t('login.requestFailed')))
+                    .finally(() => setLoading(false))
+                }}
+              >
+                {t('login.verifyMfa')}
+              </Button>
+            ) : null}
+            <Button
+              type="button"
+              variant="ghost"
+              className="h-11 w-full sm:h-10"
+              disabled={loading}
+              onClick={() => void passkeyLogin()}
+            >
+              {t('login.passkey')}
             </Button>
 
             {allowRegistration ? (

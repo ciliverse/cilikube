@@ -286,8 +286,11 @@ export function hexToRgba(hex: string, alpha: number): string {
   return `rgba(${r}, ${g}, ${b}, ${alpha})`
 }
 
+import { findCustomTheme, listCustomThemes } from './customThemes'
+
 export function resolveTheme(id?: string | null): Theme {
   return (
+    findCustomTheme(id || '') ||
     BUILTIN_THEMES.find((t) => t.id === id) ||
     BUILTIN_THEMES.find((t) => t.id === DEFAULT_THEME_ID) ||
     BUILTIN_THEMES[0]
@@ -387,6 +390,10 @@ export function setThemeId(id: string): void {
 export function subscribeTheme(listener: () => void): () => void {
   listeners.add(listener)
   return () => listeners.delete(listener)
+}
+
+export function notifyThemeListeners(): void {
+  listeners.forEach((l) => l())
 }
 
 export function initTheme(): Theme {

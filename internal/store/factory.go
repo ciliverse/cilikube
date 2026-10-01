@@ -62,6 +62,7 @@ func (s *DatabaseStore) Initialize() error {
 		&Environment{},
 		&AccessGrant{},
 		&RoleNavPolicy{},
+		&WebAuthnCredential{},
 	); err != nil {
 		return fmt.Errorf("failed to migrate database: %w", err)
 	}
