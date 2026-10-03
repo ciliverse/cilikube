@@ -57,6 +57,8 @@ Ask “how is it now / what’s broken,” follow resource clues into detail, lo
 - **Open Service in browser**: editors and admins can open a Service HTTP port through the API proxy
 - **Identity**: TOTP as a second factor, passkeys, and optional LDAP directory login (first sign-in creates a viewer)
 - **Plugins**: each `plugins/<id>/plugin.json` adds a sidebar entry, and named resources link to it from the detail page
+- **Theme studio**: save a custom palette in the browser, on top of the built-in themes
+- **Public exhibit**: the demo fleet stays simulated. kubectl and node shells answer a small read-only set and never run on the API host; opening a Service shows an exhibit page; a directory account signs in without contacting an external directory
 
 ### v1.5.0
 

@@ -1,7 +1,14 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { Navigate, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { fetchOAuthProviders, login as loginApi, register, verifyMfa, type OAuthProviderInfo } from '@/api/auth'
+import {
+  fetchOAuthProviders,
+  login as loginApi,
+  register,
+  verifyMfa,
+  type LoginResult,
+  type OAuthProviderInfo,
+} from '@/api/auth'
 import { fetchShowcaseInfo, type ShowcaseInfo } from '@/api/showcase'
 import { useAuth } from '@/store/auth'
 import { BrandMark } from '@/components/BrandMark'
@@ -113,15 +120,15 @@ export function LoginPage() {
     setLoading(true)
     setError('')
     try {
-      const begin = await apiPost<{ session_id: string; options: { publicKey: PublicKeyCredentialRequestOptions } }>(
-        '/api/v1/auth/passkey/login/begin',
-        {},
-      )
+      const begin = await apiPost<{
+        session_id: string
+        options: { publicKey: PublicKeyCredentialRequestOptionsJSON }
+      }>('/api/v1/auth/passkey/login/begin', {})
       const cred = (await navigator.credentials.get({
         publicKey: PublicKeyCredential.parseRequestOptionsFromJSON(begin.options.publicKey),
       })) as PublicKeyCredential | null
       if (!cred) throw new Error(t('login.passkeyCancelled'))
-      const data = await apiPost<{ token: string; user: { username: string } }>(
+      const data = await apiPost<LoginResult>(
         `/api/v1/auth/passkey/login/finish?session_id=${encodeURIComponent(begin.session_id)}`,
         cred.toJSON(),
       )
@@ -219,6 +226,9 @@ export function LoginPage() {
                           {a.role}
                         </span>
                       </div>
+                      {a.username === 'directory' ? (
+                        <div className="mt-0.5 text-[10px] text-text-dim">{t('login.directoryNote')}</div>
+                      ) : null}
                       <div className="mt-0.5 break-all font-mono text-[11px] leading-snug text-text-dim">
                         {a.password}
                       </div>

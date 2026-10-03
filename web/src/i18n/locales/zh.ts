@@ -164,6 +164,7 @@ const zh = {
     continueGithub: '使用 GitHub 继续',
     accounts: '账号',
     clickToFill: '点击填入',
+    directoryNote: '模拟目录登录，不会连接外部目录。',
     or: '或',
     pitch: '先问清楚，再动手改。登录后先进 AI 工作台，控制台仍是真相源。',
     pitchBullet1: 'Skill 查集群，线索一点进控制台',
@@ -437,6 +438,7 @@ const zh = {
   shell: {
     title: '集群终端',
     subtitle: 'kubectl 使用本机已安装的命令和集群凭据。节点终端会在该节点上拉起一个临时特权 Pod，断开后删除。',
+    subtitleShowcase: '公网演示里的 kubectl 和节点终端是模拟会话，不会在这台主机上执行，也不会创建 Pod。',
     hint: '管理员可连接 kubectl，或填写节点名后进入该节点。',
     adminRequired: '集群终端只对 admin 开放。它使用的是集群接入凭据，不是当前用户自己的 kubeconfig。',
     node: '节点',

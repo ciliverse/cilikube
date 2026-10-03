@@ -140,6 +140,9 @@ func (s *AuthService) Login(req *models.LoginRequest, ipAddress, userAgent strin
 			method = "ldap"
 		}
 	}
+	if passwordOK && k8s.IsShowcase() && storeUser.Username == k8s.ShowcaseDirectoryUser {
+		method = "ldap"
+	}
 	if !passwordOK {
 		s.securityService.RecordFailedLogin(&storeUser.ID, req.Username, ipAddress, userAgent)
 		s.auditService.LogAuthenticationEvent(AuditEventType("login_failed"), &storeUser.ID, req.Username, ipAddress, userAgent, false, map[string]interface{}{

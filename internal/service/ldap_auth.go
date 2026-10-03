@@ -9,6 +9,7 @@ import (
 
 	"github.com/ciliverse/cilikube/configs"
 	"github.com/ciliverse/cilikube/internal/store"
+	"github.com/ciliverse/cilikube/pkg/k8s"
 	ldap "github.com/go-ldap/ldap/v3"
 )
 
@@ -23,6 +24,12 @@ func (s *AuthService) ldapConfig() *configs.LDAPConfig {
 func (s *AuthService) TestLDAP(username string) (string, error) {
 	cfg := s.ldapConfig()
 	if cfg == nil {
+		if k8s.IsShowcase() {
+			if strings.TrimSpace(username) == "" || username == k8s.ShowcaseDirectoryUser {
+				return "simulated directory: bind ok, 1 entries", nil
+			}
+			return "simulated directory: bind ok, 0 entries", nil
+		}
 		return "", errors.New("ldap is disabled")
 	}
 	conn, err := s.ldapConn()

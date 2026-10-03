@@ -7,6 +7,9 @@ const (
 	ShowcaseAdminPass = "CiliKubeDemoAdmin2026!"
 	ShowcaseGuestUser = "guest"
 	ShowcaseGuestPass = "CiliKubeGuest2026!"
+	// ShowcaseDirectoryUser is a simulated directory account. No external directory is contacted.
+	ShowcaseDirectoryUser = "directory"
+	ShowcaseDirectoryPass = "CiliKubeDirectory2026!"
 )
 
 // ShowcaseAccount is returned by the public showcase info endpoint.
@@ -45,6 +48,12 @@ func PublicShowcaseInfo() ShowcasePublicInfo {
 				Username: ShowcaseGuestUser,
 				Password: ShowcaseGuestPass,
 				Role:     "viewer",
+			},
+			{
+				Username: ShowcaseDirectoryUser,
+				Password: ShowcaseDirectoryPass,
+				Role:     "viewer",
+				Note:     "simulated directory login",
 			},
 		},
 	}
