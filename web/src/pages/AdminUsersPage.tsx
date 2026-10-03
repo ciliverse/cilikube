@@ -8,6 +8,7 @@ import {
   listAdminUsers,
   updateAdminUser,
   updateAdminUserStatus,
+  resetUserMfa,
   type AdminUser,
 } from '@/api/admin'
 import { listClusters } from '@/api/cluster'
@@ -41,6 +42,7 @@ export function AdminUsersPage() {
   const [creating, setCreating] = useState(false)
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState('')
+  const [note, setNote] = useState('')
 
   const [form, setForm] = useState({
     username: '',
@@ -231,6 +233,9 @@ export function AdminUsersPage() {
       {err ? (
         <div className="shrink-0 rounded border border-danger/30 bg-danger/10 px-4 py-2 text-sm text-danger">{err}</div>
       ) : null}
+      {note ? (
+        <div className="shrink-0 rounded border border-cyan/30 bg-cyan/10 px-4 py-2 text-sm text-cyan">{note}</div>
+      ) : null}
       <HudTablePanel>
           <HudTable>
             <thead>
@@ -276,6 +281,22 @@ export function AdminUsersPage() {
                         }}
                       >
                         {t('adminPages.grants')}
+                      </Button>
+                      <Button
+                        variant="outline"
+                        className="px-2 py-1 text-xs"
+                        type="button"
+                        disabled={busy}
+                        onClick={() => {
+                          setBusy(true)
+                          setErr('')
+                          resetUserMfa(u.id)
+                            .then(() => setNote(t('adminPages.mfaReset', { username: u.username })))
+                            .catch((e: any) => setErr(e?.message || t('login.requestFailed')))
+                            .finally(() => setBusy(false))
+                        }}
+                      >
+                        {t('adminPages.resetMfa')}
                       </Button>
                       <Button
                         variant="outline"

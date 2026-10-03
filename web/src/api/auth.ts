@@ -15,6 +15,8 @@ export type LoginResult = {
   user: UserInfo
   expires_at?: string
   is_new_user?: boolean
+  mfa_required?: boolean
+  mfa_token?: string
 }
 
 export type OAuthProviderInfo = {
@@ -66,7 +68,13 @@ export function clearOAuthNotice() {
 
 export async function login(username: string, password: string) {
   const data = await apiPost<LoginResult>('/api/v1/auth/login', { username, password })
-  setToken(data.token)
+  if (!data.mfa_required && data.token) setToken(data.token)
+  return data
+}
+
+export async function verifyMfa(mfaToken: string, code: string) {
+  const data = await apiPost<LoginResult>('/api/v1/auth/mfa/verify', { mfa_token: mfaToken, code })
+  if (data.token) setToken(data.token)
   return data
 }
 

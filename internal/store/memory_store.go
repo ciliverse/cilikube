@@ -27,6 +27,7 @@ type MemoryStore struct {
 	environments   map[string]*Environment
 	accessGrants   map[uint]*AccessGrant
 	navPolicies    map[string]*RoleNavPolicy // key: role name
+	webauthnCreds  map[uint][]*WebAuthnCredential
 
 	// ID generators
 	nextUserID     uint
@@ -52,6 +53,7 @@ func NewMemoryStore() Store {
 		environments:   make(map[string]*Environment),
 		accessGrants:   make(map[uint]*AccessGrant),
 		navPolicies:    make(map[string]*RoleNavPolicy),
+		webauthnCreds:  make(map[uint][]*WebAuthnCredential),
 		nextUserID:     1,
 		nextRoleID:     1,
 		nextAuditLogID: 1,

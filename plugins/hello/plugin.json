@@ -1,0 +1,8 @@
+{
+  "id": "hello",
+  "name": "Hello",
+  "title": "Hello plugin",
+  "titleZh": "示例插件",
+  "entry": "index.html",
+  "resources": ["pods"]
+}

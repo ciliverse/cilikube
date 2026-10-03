@@ -145,6 +145,9 @@ func extractBearerToken(c *gin.Context) (string, string) {
 	if token := strings.TrimSpace(c.Query("token")); token != "" {
 		return token, ""
 	}
+	if token, err := c.Cookie("cilikube_proxy"); err == nil && strings.TrimSpace(token) != "" {
+		return strings.TrimSpace(token), ""
+	}
 	if token := strings.TrimSpace(c.Query("access_token")); token != "" {
 		return token, ""
 	}

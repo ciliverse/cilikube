@@ -76,9 +76,12 @@ type UserResponse struct {
 }
 
 type LoginResponse struct {
-	Token     string       `json:"token"`
-	ExpiresAt time.Time    `json:"expires_at"`
+	Token     string       `json:"token,omitempty"`
+	ExpiresAt time.Time    `json:"expires_at,omitempty"`
 	User      UserResponse `json:"user"`
+	// MFARequired means the password was accepted and a second factor is still required.
+	MFARequired bool `json:"mfa_required,omitempty"`
+	MFAToken    string `json:"mfa_token,omitempty"`
 	// IsNewUser is true when this login created a new account (e.g. first OAuth sign-in).
 	IsNewUser bool `json:"is_new_user,omitempty"`
 }

@@ -15,7 +15,7 @@ import { useAuth } from '@/store/auth'
 
 export function NodesPage() {
   const { t } = useTranslation()
-  const { canMutate } = useAuth()
+  const { canMutate, isAdmin } = useAuth()
   const { clusterId } = useCluster()
   const { data = [], isLoading } = useQuery({
     queryKey: ['nodes', clusterId],
@@ -57,6 +57,11 @@ export function NodesPage() {
                       <Link className="font-semibold text-cyan hover:underline" to={`/nodes/${name}`}>
                         {name}
                       </Link>
+                      {isAdmin ? (
+                        <Link className="ml-2 text-xs text-text-dim hover:text-cyan" to={`/shell?node=${encodeURIComponent(name)}`}>
+                          {t('shell.connectNode')}
+                        </Link>
+                      ) : null}
                     </td>
                     <td>
                       <div className="flex flex-wrap items-center gap-1">

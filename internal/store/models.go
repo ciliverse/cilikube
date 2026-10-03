@@ -84,6 +84,13 @@ type User struct {
 	EmailVerified bool       `gorm:"default:false" json:"email_verified"`
 	// MustChangePassword forces the client to show a change-password gate after login.
 	MustChangePassword bool       `gorm:"default:false" json:"must_change_password"`
+	// TOTPSecret is the base32 authenticator secret. Empty means MFA is not enrolled.
+	TOTPSecret string `gorm:"type:text" json:"-"`
+	TOTPEnabled bool `gorm:"default:false" json:"totp_enabled"`
+	// LDAPDN is set when the account is authenticated against a directory.
+	LDAPDN string `gorm:"type:text" json:"-"`
+	// WebAuthnID is the stable user handle for passkeys.
+	WebAuthnID string `gorm:"type:varchar(64)" json:"-"`
 	LastLoginAt        *time.Time `gorm:"column:last_login" json:"last_login_at"`
 	CreatedAt          time.Time  `json:"created_at"`
 	UpdatedAt          time.Time  `json:"updated_at"`
@@ -294,3 +301,14 @@ type RoleNavPolicy struct {
 }
 
 func (RoleNavPolicy) TableName() string { return "role_nav_policies" }
+
+// WebAuthnCredential is one passkey registered to a user.
+type WebAuthnCredential struct {
+	ID             uint      `gorm:"primaryKey" json:"id"`
+	UserID         uint      `gorm:"not null;index" json:"user_id"`
+	CredentialID   []byte    `gorm:"uniqueIndex;not null" json:"-"`
+	CredentialJSON string    `gorm:"type:text;not null" json:"-"`
+	CreatedAt      time.Time `json:"created_at"`
+}
+
+func (WebAuthnCredential) TableName() string { return "webauthn_credentials" }

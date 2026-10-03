@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useSearchParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import {
@@ -8,7 +8,7 @@ import {
   unlinkOAuthAccount,
   type LinkedOAuthProvider,
 } from '@/api/auth'
-import { apiGet, apiPut } from '@/lib/api'
+import { apiDelete, apiGet, apiPost, apiPut } from '@/lib/api'
 import { Badge, Button, Card, PageHeader } from '@/components/ui'
 
 type Profile = {
@@ -35,7 +35,14 @@ export function ProfilePage() {
   const [confirmPassword, setConfirmPassword] = useState('')
   const [msg, setMsg] = useState('')
   const [err, setErr] = useState('')
-  const [busy, setBusy] = useState(false)
+  const passkeys = useQuery({
+    queryKey: ['passkeys'],
+    queryFn: () => apiGet<Array<{ id: number; created_at: string }>>('/api/v1/auth/passkeys'),
+  })
+  const queryClient = useQueryClient()
+  const [totpSecret, setTotpSecret] = useState('')
+  const [totpUrl, setTotpUrl] = useState('')
+  const [totpCode, setTotpCode] = useState('')
 
   const q = useQuery({
     queryKey: ['profile'],
@@ -258,6 +265,111 @@ export function ProfilePage() {
         <Button type="button" disabled={busy} onClick={() => void changePassword()}>
           {t('profilePage.updatePassword')}
         </Button>
+      </Card>
+      <Card className="space-y-3 p-4">
+        <h2 className="text-sm font-semibold">{t('profilePage.security')}</h2>
+        <p className="text-xs text-text-dim">{t('profilePage.securityHint')}</p>
+        {totpUrl ? <p className="break-all font-mono text-xs">{totpUrl}</p> : null}
+        {totpSecret ? <p className="font-mono text-xs">{totpSecret}</p> : null}
+        <div className="flex flex-wrap gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            disabled={busy}
+            onClick={() => {
+              setBusy(true)
+              apiPost<{ secret: string; url: string }>('/api/v1/auth/mfa/setup', {})
+                .then((data) => {
+                  setTotpSecret(data.secret)
+                  setTotpUrl(data.url)
+                })
+                .catch((e: any) => setErr(e?.message || t('login.requestFailed')))
+                .finally(() => setBusy(false))
+            }}
+          >
+            {t('profilePage.setupMfa')}
+          </Button>
+          <input className="hud-field w-32" value={totpCode} onChange={(e) => setTotpCode(e.target.value)} placeholder="123456" />
+          <Button
+            type="button"
+            disabled={busy || !totpCode}
+            onClick={() => {
+              setBusy(true)
+              apiPost('/api/v1/auth/mfa/enable', { code: totpCode })
+                .then(() => setMsg(t('profilePage.mfaOn')))
+                .catch((e: any) => setErr(e?.message || t('login.requestFailed')))
+                .finally(() => setBusy(false))
+            }}
+          >
+            {t('profilePage.enableMfa')}
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            disabled={busy || !totpCode}
+            onClick={() => {
+              setBusy(true)
+              apiPost('/api/v1/auth/mfa/disable', { code: totpCode })
+                .then(() => setMsg(t('profilePage.mfaOff')))
+                .catch((e: any) => setErr(e?.message || t('login.requestFailed')))
+                .finally(() => setBusy(false))
+            }}
+          >
+            {t('profilePage.disableMfa')}
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            disabled={busy}
+            onClick={() => {
+              setBusy(true)
+              apiPost<{ session_id: string; options: { publicKey: PublicKeyCredentialCreationOptions } }>(
+                '/api/v1/auth/passkey/register/begin',
+                {},
+              )
+                .then(async (begin) => {
+                  const cred = (await navigator.credentials.create({
+                    publicKey: PublicKeyCredential.parseCreationOptionsFromJSON(begin.options.publicKey),
+                  })) as PublicKeyCredential | null
+                  if (!cred) throw new Error(t('login.passkeyCancelled'))
+                  await apiPost(`/api/v1/auth/passkey/register/finish?session_id=${encodeURIComponent(begin.session_id)}`, cred.toJSON())
+                  setMsg(t('profilePage.passkeyAdded'))
+                  void queryClient.invalidateQueries({ queryKey: ['passkeys'] })
+                })
+                .catch((e: any) => setErr(e?.message || t('login.requestFailed')))
+                .finally(() => setBusy(false))
+            }}
+          >
+            {t('profilePage.addPasskey')}
+          </Button>
+        </div>
+        <div className="space-y-1 text-xs">
+          <div className="hud-label">{t('profilePage.passkeys')}</div>
+          {(passkeys.data || []).length === 0 ? (
+            <p className="text-text-dim">{t('profilePage.noPasskeys')}</p>
+          ) : (
+            (passkeys.data || []).map((item) => (
+              <div key={item.id} className="flex items-center justify-between gap-2">
+                <span className="font-mono">#{item.id}</span>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  className="px-2 py-1 text-xs"
+                  disabled={busy}
+                  onClick={() => {
+                    setBusy(true)
+                    apiDelete(`/api/v1/auth/passkeys/${item.id}`)
+                      .then(() => queryClient.invalidateQueries({ queryKey: ['passkeys'] }))
+                      .catch((e: any) => setErr(e?.message || t('login.requestFailed')))
+                      .finally(() => setBusy(false))
+                  }}
+                >
+                  {t('profilePage.removePasskey')}
+                </Button>
+              </div>
+            ))
+          )}
+        </div>
       </Card>
     </div>
   )

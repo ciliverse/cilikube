@@ -118,6 +118,14 @@ type RoleNavPolicyStore interface {
 	UpsertRoleNavPolicy(p *RoleNavPolicy) error
 }
 
+// WebAuthnStore persists passkey credentials.
+type WebAuthnStore interface {
+	SaveWebAuthnCredential(c *WebAuthnCredential) error
+	ListWebAuthnCredentials(userID uint) ([]WebAuthnCredential, error)
+	FindWebAuthnByCredentialID(credentialID []byte) (*WebAuthnCredential, error)
+	DeleteWebAuthnCredential(userID uint, credentialID []byte) error
+}
+
 // Store is the main interface that combines all storage interfaces
 type Store interface {
 	ClusterStore
@@ -131,6 +139,7 @@ type Store interface {
 	EnvironmentStore
 	AccessGrantStore
 	RoleNavPolicyStore
+	WebAuthnStore
 
 	// Initialize initializes the storage (creates tables, default data, etc.)
 	Initialize() error

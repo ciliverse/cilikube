@@ -68,6 +68,15 @@ const ChartDetailPage = lazy(() =>
 const ProxyConsolePage = lazy(() =>
   import('@/pages/ProxyConsolePage').then((m) => ({ default: m.ProxyConsolePage })),
 )
+const ClusterShellPage = lazy(() =>
+  import('@/pages/ClusterShellPage').then((m) => ({ default: m.ClusterShellPage })),
+)
+const PluginFramePage = lazy(() =>
+  import('@/pages/PluginFramePage').then((m) => ({ default: m.PluginFramePage })),
+)
+const ThemeStudioPage = lazy(() =>
+  import('@/pages/ThemeStudioPage').then((m) => ({ default: m.ThemeStudioPage })),
+)
 const AiChatPage = lazy(() => import('@/pages/AiChatPage').then((m) => ({ default: m.AiChatPage })))
 const ProfilePage = lazy(() =>
   import('@/pages/ProfilePage').then((m) => ({ default: m.ProfilePage })),
@@ -443,6 +452,9 @@ export default function App() {
                   {/* Helm moved into the marketplace's Installed tab. */}
                   <Route path="helm" element={<Navigate to="/marketplace/installed" replace />} />
                   <Route path="proxy" element={<ProxyConsolePage />} />
+                  <Route path="shell" element={<ClusterShellPage />} />
+                  <Route path="plugins/:id" element={<PluginFramePage />} />
+                  <Route path="themes" element={<ThemeStudioPage />} />
                   <Route path="ai" element={<AiChatPage />} />
                   {/* Inside the shell so a dead link keeps its nav instead of vanishing. */}
                   <Route path="*" element={<NotFoundPage />} />

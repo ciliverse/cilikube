@@ -103,5 +103,19 @@ ai:
     base_url: ""
     model: mock
     api_key: ""
+ldap:
+    enabled: false
+    url: ""
+    start_tls: false
+    insecure_skip_verify: false
+    bind_dn: ""
+    bind_password: ""
+    user_base: ""
+    user_filter: "(uid=%s)"
+    email_attr: mail
+    display_name_attr: cn
+webauthn:
+    rp_id: ""
+    origins: []
 # clusters: (deprecated) — add via UI or import from kubernetes.kubeconfig
 clusters: []

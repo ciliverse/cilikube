@@ -1,10 +1,14 @@
 import { useQuery } from '@tanstack/react-query'
+import { Puzzle } from 'lucide-react'
+import { apiGet } from '@/lib/api'
+import type { PluginManifest } from '@/pages/PluginFramePage'
 import { EMPTY_NAV_POLICY, getMyNavPolicy, type NavPolicy } from '@/api/nav'
 import { useAuth } from '@/store/auth'
 import {
   allNavGroups,
   navGroupsForSection,
   type NavGroup,
+  type NavItem,
   type NavSectionId,
 } from './definitions'
 import { applyNavPrefs, useNavPrefs, type NavPrefs } from './prefs'
@@ -48,6 +52,25 @@ export function useNavModel(section: NavSectionId): NavModel {
   })
   const policy = policyQ.data ?? EMPTY_NAV_POLICY
 
+  const pluginsQ = useQuery({
+    queryKey: ['plugins'],
+    queryFn: () => apiGet<PluginManifest[]>('/api/v1/plugins'),
+    enabled: isAuthenticated,
+    staleTime: 60_000,
+  })
+  const pluginGroup: NavGroup = {
+    titleKey: 'nav.plugins',
+    icon: Puzzle,
+    items: (pluginsQ.data || []).map(
+      (plugin): NavItem => ({
+        to: `/plugins/${plugin.id}`,
+        labelKey: plugin.title || plugin.name || plugin.id,
+        label: plugin.title || plugin.name || plugin.id,
+        icon: Puzzle,
+      }),
+    ),
+  }
+
   const permitted = (groups: NavGroup[]): NavGroup[] =>
     groups
       .map((group) => ({
@@ -62,10 +85,12 @@ export function useNavModel(section: NavSectionId): NavModel {
       .filter((group) => group.items.length > 0)
 
   const authorize = (groups: NavGroup[]): NavGroup[] => applyPolicy(permitted(groups), policy)
+  const withPlugins = (groups: NavGroup[], sectionId: NavSectionId) =>
+    sectionId === 'console' && pluginGroup.items.length ? [...groups, pluginGroup] : groups
 
   return {
-    authorized: authorize(allNavGroups),
-    visible: applyNavPrefs(authorize(navGroupsForSection(section)), prefs),
+    authorized: withPlugins(authorize(allNavGroups), 'console'),
+    visible: applyNavPrefs(withPlugins(authorize(navGroupsForSection(section)), section), prefs),
     prefs,
     policy,
   }

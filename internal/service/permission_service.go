@@ -122,6 +122,7 @@ func systemViewerPolicies() []rolePolicy {
 
 		{"viewer", "/api/v1/ai/status", "GET"},
 		{"viewer", "/api/v1/ai/chat", "POST"},
+		{"viewer", "/api/v1/plugins", "GET"},
 	}
 
 	readResources := []string{
@@ -147,6 +148,8 @@ func systemEditorPolicies() []rolePolicy {
 		{"editor", "/api/v1/namespaces/:ns/pods/:name/exec", "*"},
 		{"editor", "/api/v1/namespaces/:ns/pods/:name/attach", "*"},
 		{"editor", "/api/v1/namespaces/:ns/pods/:name/portforward", "*"},
+		{"editor", "/api/v1/namespaces/:ns/services/:name/proxy", "*"},
+		{"editor", "/api/v1/namespaces/:ns/services/:name/proxy/*", "*"},
 
 		{"editor", "/api/v1/nodes", "GET"},
 		{"editor", "/api/v1/nodes/:name", "GET"},
@@ -202,6 +205,7 @@ func systemEditorPolicies() []rolePolicy {
 
 		{"editor", "/api/v1/ai/status", "GET"},
 		{"editor", "/api/v1/ai/chat", "POST"},
+		{"editor", "/api/v1/plugins", "GET"},
 
 		{"editor", "/api/v1/auth/profile", "GET"},
 		{"editor", "/api/v1/auth/profile", "PUT"},

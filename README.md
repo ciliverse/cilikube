@@ -5,7 +5,7 @@
 </div>
 
 <div align="center">
-  <img src="https://img.shields.io/badge/Release-v1.5.0-green?style=flat-square" alt="Release v1.5.0">
+  <img src="https://img.shields.io/badge/Release-v1.6.0-green?style=flat-square" alt="Release v1.6.0">
   <img src="https://img.shields.io/badge/Frontend-React%2019-61DAFB?style=flat-square&logo=react" alt="React 19">
   <img src="https://img.shields.io/badge/Frontend-TypeScript%207-blue?style=flat-square&logo=typescript" alt="TypeScript 7">
   <img src="https://img.shields.io/badge/Frontend-Vite%208-blue?style=flat-square&logo=vite" alt="Vite 8">
@@ -51,7 +51,14 @@ In one line:
 
 Ask “how is it now / what’s broken,” follow resource clues into detail, logs, or a terminal — AI stays read-only by default and does not mutate the cluster for you.
 
-### v1.5.0 (current)
+### v1.6.0 (current)
+
+- **Cluster shell**: admins can open a local `kubectl` (stored cluster credential) or a temporary privileged pod on a node; the pod is deleted on disconnect
+- **Open Service in browser**: editors and admins can open a Service HTTP port through the API proxy
+- **Identity**: TOTP as a second factor, passkeys, and optional LDAP directory login (first sign-in creates a viewer)
+- **Plugins**: each `plugins/<id>/plugin.json` adds a sidebar entry, and named resources link to it from the detail page
+
+### v1.5.0
 
 - **Marketplace**: a Helm chart catalog you can search, read (chart README and default values), and install from — promoted to a three-way top switcher (AI / Console / Marketplace) rather than buried in the console; repositories and installed releases are managed in the same place
 - **Resource coverage**: 15 more kinds — ReplicaSets, ReplicationControllers, PodTemplates, Endpoints, EndpointSlices, IngressClasses, ServiceCIDRs, PriorityClasses, RuntimeClasses, Leases, Mutating/ValidatingWebhooks, VolumeAttachments, CSIDrivers, CSINodes

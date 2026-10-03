@@ -79,8 +79,8 @@ function NavBody({
                     className={({ isActive }) => cn('app-nav-item', isActive && 'is-active')}
                   >
                     <item.icon className="app-nav-icon" />
-                    <span className="app-nav-label" title={t(item.labelKey)}>
-                      {t(item.labelKey)}
+                    <span className="app-nav-label" title={item.label || t(item.labelKey)}>
+                      {item.label || t(item.labelKey)}
                     </span>
                   </NavLink>
                 ))}
