@@ -85,6 +85,13 @@ func (h *ServiceProxyHandler) Proxy(c *gin.Context) {
 		c.String(http.StatusBadRequest, "port must be numeric")
 		return
 	}
+	if k8s.IsShowcaseConfig(client.Config) {
+		prefix := "/api/v1/namespaces/" + url.PathEscape(namespace) + "/services/" + url.PathEscape(name) + "/proxy"
+		page := showcaseServiceHTML(namespace, name, port)
+		page = injectBase(rewriteRootPaths(page, prefix), prefix)
+		c.Data(http.StatusOK, "text/html; charset=utf-8", []byte(page))
+		return
+	}
 	restPath := strings.TrimPrefix(c.Param("filepath"), "/")
 	if strings.Contains(restPath, "..") {
 		c.String(http.StatusBadRequest, "invalid path")
@@ -156,4 +163,25 @@ func (h *ServiceProxyHandler) Proxy(c *gin.Context) {
 		return
 	}
 	_, _ = io.Copy(c.Writer, resp.Body)
+}
+
+// showcaseServiceHTML is a static page for the public exhibit. Root-relative
+// links go through the same rewrite as a real Service response.
+func showcaseServiceHTML(namespace, name, port string) string {
+	return `<!doctype html>
+<html>
+<head><title>` + htmlEscape(name) + `</title></head>
+<body style="font-family: sans-serif; margin: 2rem; line-height: 1.5">
+  <p style="letter-spacing: .12em; font-size: 12px">SHOWCASE SERVICE</p>
+  <h1>` + htmlEscape(name) + `</h1>
+  <p>Namespace ` + htmlEscape(namespace) + `, port ` + htmlEscape(port) + `.</p>
+  <p>This page is served by the exhibit. It is not a live workload.</p>
+  <p><a href="/health">Health</a></p>
+</body>
+</html>`
+}
+
+func htmlEscape(s string) string {
+	r := strings.NewReplacer("&", "&amp;", "<", "&lt;", ">", "&gt;", `"`, "&quot;")
+	return r.Replace(s)
 }

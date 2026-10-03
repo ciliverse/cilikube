@@ -1,6 +1,19 @@
 <!doctype html>
 <html>
-  <body style="font-family: sans-serif; background: transparent; color: inherit">
-    <p>This page is loaded from <code>plugins/hello</code>. Drop another folder with <code>plugin.json</code> to add a sidebar entry.</p>
+  <body style="font-family: sans-serif; background: transparent; color: inherit; line-height: 1.5">
+    <p>Hello plugin. This page is loaded from <code>plugins/hello</code>.</p>
+    <p id="ctx"></p>
+    <script>
+      const q = new URLSearchParams(location.search)
+      const bits = ['clusterId', 'namespace', 'name', 'resource']
+        .map((key) => {
+          const value = q.get(key)
+          return value ? key + '=' + value : ''
+        })
+        .filter(Boolean)
+      document.getElementById('ctx').textContent = bits.length
+        ? bits.join(' · ')
+        : 'Open a Pod to see this plugin with the resource name filled in.'
+    </script>
   </body>
 </html>

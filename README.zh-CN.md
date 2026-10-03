@@ -57,6 +57,8 @@ CiliKube 是开源的 Kubernetes 多集群管理平台，技术栈为 React + Ty
 - **浏览器打开 Service**：editor / admin 可把 Service 的 HTTP 端口经 API 代理在新标签页打开
 - **身份**：登录可接 TOTP 二次验证、Passkey，以及按配置启用的 LDAP 目录账号（首次登录建成 viewer）
 - **插件**：`plugins/<id>/plugin.json` 会在侧栏增加入口；`resources` 里点名的资源详情页也会链到该插件
+- **主题工作室**：在内置主题之外，把一套自定义配色保存在浏览器里
+- **公网演示**：舰队仍是模拟数据。kubectl 和节点终端只回答一小段只读命令，不会在 API 主机上执行；在浏览器里打开 Service 看到的是演示页；目录账号登录不会去连外部目录
 
 ### v1.5.0
 
@@ -295,10 +297,10 @@ go build -o bin/cilikube cmd/server/main.go
 ### 使用官方镜像
 ```bash
 # 后端
-docker run -d --name cilikube -p 8080:8080 -v ~/.kube:/root/.kube:ro ghcr.io/ciliverse/cilikube:v1.5.0
+docker run -d --name cilikube -p 8080:8080 -v ~/.kube:/root/.kube:ro ghcr.io/ciliverse/cilikube:v1.6.0
 
 # 前端
-docker run -d --name cilikube-web -p 80:80 ghcr.io/ciliverse/cilikube-web:v1.5.0
+docker run -d --name cilikube-web -p 80:80 ghcr.io/ciliverse/cilikube-web:v1.6.0
 ```
 
 ### 使用 Docker Compose

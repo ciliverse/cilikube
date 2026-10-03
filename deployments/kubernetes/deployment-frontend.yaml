@@ -20,7 +20,7 @@ spec:
     spec:
       containers:
         - name: frontend
-          image: cilliantech/cilikube-web:latest
+          image: ghcr.io/ciliverse/cilikube-web:v1.6.0
           imagePullPolicy: IfNotPresent
           ports:
             - name: http

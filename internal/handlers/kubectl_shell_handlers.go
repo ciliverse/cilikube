@@ -54,6 +54,11 @@ func (h *KubectlShellHandler) Shell(c *gin.Context) {
 		_ = ws.WriteMessage(websocket.TextMessage, []byte("failed to get Kubernetes client\r\n"))
 		return
 	}
+	if k8s.IsShowcaseConfig(client.Config) {
+		logShell(h.audit, c, "kubectl", "showcase")
+		service.RunShowcaseTerminal(ws, service.ShowcaseKubectlBanner(), "demo:~$ ", service.ShowcaseKubectl)
+		return
+	}
 	if _, err := exec.LookPath("kubectl"); err != nil {
 		_ = ws.WriteMessage(websocket.TextMessage, []byte("kubectl is not installed on the CiliKube server\r\n"))
 		return

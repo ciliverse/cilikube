@@ -4,6 +4,7 @@ import { Terminal } from 'xterm'
 import { FitAddon } from 'xterm-addon-fit'
 import 'xterm/css/xterm.css'
 import { useTranslation } from 'react-i18next'
+import { fetchShowcaseInfo } from '@/api/showcase'
 import { getClusterId, getToken } from '@/lib/api'
 import { Button, PageHeader } from '@/components/ui'
 import { useAuth } from '@/store/auth'
@@ -31,6 +32,12 @@ export function ClusterShellPage() {
   const initialNode = params.get('node') || ''
   const [nodeName, setNodeName] = useState(initialNode)
   const [status, setStatus] = useState<'idle' | 'connecting' | 'open' | 'closed' | 'error'>('idle')
+  const [showcase, setShowcase] = useState(false)
+  useEffect(() => {
+    void fetchShowcaseInfo()
+      .then((info) => setShowcase(Boolean(info.showcase)))
+      .catch(() => setShowcase(false))
+  }, [])
   const hostRef = useRef<HTMLDivElement>(null)
   const termRef = useRef<Terminal | null>(null)
   const fitRef = useRef<FitAddon | null>(null)
@@ -120,7 +127,10 @@ export function ClusterShellPage() {
 
   return (
     <div className="flex h-full min-h-0 flex-col gap-3">
-      <PageHeader title={t('shell.title')} subtitle={t('shell.subtitle')} />
+      <PageHeader
+        title={t('shell.title')}
+        subtitle={showcase ? t('shell.subtitleShowcase') : t('shell.subtitle')}
+      />
       {!isAdmin ? (
         <p className="text-sm text-amber-300">{t('shell.adminRequired')}</p>
       ) : (

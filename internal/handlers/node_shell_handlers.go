@@ -51,6 +51,13 @@ func (h *NodeShellHandler) Shell(c *gin.Context) {
 		return
 	}
 	nodeName := c.Param("name")
+	if k8s.IsShowcaseConfig(client.Config) {
+		logShell(h.audit, c, "node", nodeName)
+		service.RunShowcaseTerminal(ws, service.ShowcaseNodeBanner(nodeName), service.ShowcaseNodePrompt(nodeName), func(line string) (string, bool) {
+			return service.ShowcaseNodeShell(nodeName, line)
+		})
+		return
+	}
 	pod, err := service.StartNodeShell(c.Request.Context(), client.Clientset, nodeName, c.Query("image"))
 	if err != nil {
 		_ = ws.WriteMessage(websocket.TextMessage, []byte(fmt.Sprintf("node shell: %v\r\n", err)))

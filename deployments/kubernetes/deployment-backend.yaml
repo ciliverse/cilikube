@@ -21,7 +21,7 @@ spec:
       serviceAccountName: cilikube
       containers:
         - name: backend
-          image: cilliantech/cilikube:latest
+          image: ghcr.io/ciliverse/cilikube:v1.6.0
           imagePullPolicy: IfNotPresent
           args: ["--config", "/app/configs/config.yaml"]
           ports:

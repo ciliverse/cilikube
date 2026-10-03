@@ -286,7 +286,7 @@ export function hexToRgba(hex: string, alpha: number): string {
   return `rgba(${r}, ${g}, ${b}, ${alpha})`
 }
 
-import { findCustomTheme, listCustomThemes } from './customThemes'
+import { findCustomTheme } from './customThemes'
 
 export function resolveTheme(id?: string | null): Theme {
   return (

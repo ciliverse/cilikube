@@ -16,6 +16,7 @@ export function AdminSettingsPage() {
   const [msg, setMsg] = useState('')
   const [err, setErr] = useState('')
   const [busy, setBusy] = useState(false)
+  const [fontPref, setFontPref] = useState(getStoredFontId)
   const [ldapUser, setLdapUser] = useState('')
 
   const [oauth, setOauth] = useState({

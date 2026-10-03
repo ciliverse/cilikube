@@ -164,6 +164,7 @@ const en = {
     continueGithub: 'Continue with GitHub',
     accounts: 'Accounts',
     clickToFill: 'Click to fill',
+    directoryNote: 'Simulated directory login. No external directory is contacted.',
     or: 'or',
     pitch:
       'Ask first, then change. After login you land on the AI workspace; the console remains the source of truth.',
@@ -443,6 +444,7 @@ const en = {
   shell: {
     title: 'Cluster shell',
     subtitle: 'kubectl runs the binary on this API host with the stored cluster credential. A node shell starts a short-lived privileged pod and deletes it on disconnect.',
+    subtitleShowcase: 'Public demo: kubectl and node shells are simulated. They do not run on this host and do not create pods.',
     hint: 'Admins can open kubectl, or type a node name to shell into that node.',
     adminRequired: 'The cluster shell is admin-only. It uses the cluster credential, not the signed-in user kubeconfig.',
     node: 'Node',

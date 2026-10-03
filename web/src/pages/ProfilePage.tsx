@@ -35,6 +35,7 @@ export function ProfilePage() {
   const [confirmPassword, setConfirmPassword] = useState('')
   const [msg, setMsg] = useState('')
   const [err, setErr] = useState('')
+  const [busy, setBusy] = useState(false)
   const passkeys = useQuery({
     queryKey: ['passkeys'],
     queryFn: () => apiGet<Array<{ id: number; created_at: string }>>('/api/v1/auth/passkeys'),
@@ -323,7 +324,10 @@ export function ProfilePage() {
             disabled={busy}
             onClick={() => {
               setBusy(true)
-              apiPost<{ session_id: string; options: { publicKey: PublicKeyCredentialCreationOptions } }>(
+              apiPost<{
+                session_id: string
+                options: { publicKey: PublicKeyCredentialCreationOptionsJSON }
+              }>(
                 '/api/v1/auth/passkey/register/begin',
                 {},
               )

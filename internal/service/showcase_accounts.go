@@ -26,9 +26,13 @@ func EnsureShowcaseAccounts(mainStore store.Store) error {
 	if err := upsertShowcaseUser(mainStore, k8s.ShowcaseGuestUser, "demo-guest@cilikube.local", k8s.ShowcaseGuestPass, "viewer"); err != nil {
 		return err
 	}
+	if err := upsertShowcaseUser(mainStore, k8s.ShowcaseDirectoryUser, "directory@example.com", k8s.ShowcaseDirectoryPass, "viewer"); err != nil {
+		return err
+	}
 	slog.Info("showcase demo accounts ensured",
 		"admin", k8s.ShowcaseAdminUser,
 		"guest", k8s.ShowcaseGuestUser,
+		"directory", k8s.ShowcaseDirectoryUser,
 	)
 	return nil
 }
@@ -68,12 +72,19 @@ func upsertShowcaseUser(mainStore store.Store, username, email, password, roleNa
 		if err != nil {
 			return fmt.Errorf("reload user %s: %w", username, err)
 		}
+		if user.MustChangePassword {
+			user.MustChangePassword = false
+			if err := mainStore.UpdateUser(user); err != nil {
+				return fmt.Errorf("clear password gate for %s: %w", username, err)
+			}
+		}
 	} else {
 		if err := user.HashPassword(password); err != nil {
 			return fmt.Errorf("hash password for %s: %w", username, err)
 		}
 		user.IsActive = true
 		user.Email = email
+		user.MustChangePassword = false
 		if err := mainStore.UpdateUser(user); err != nil {
 			return fmt.Errorf("update user %s: %w", username, err)
 		}
@@ -109,7 +120,7 @@ func SyncShowcaseAccountPermissions(mainStore store.Store, permissionService *Pe
 	if !k8s.IsShowcase() || mainStore == nil || permissionService == nil {
 		return nil
 	}
-	for _, username := range []string{k8s.ShowcaseAdminUser, k8s.ShowcaseGuestUser} {
+	for _, username := range []string{k8s.ShowcaseAdminUser, k8s.ShowcaseGuestUser, k8s.ShowcaseDirectoryUser} {
 		user, err := mainStore.GetUserByUsername(username)
 		if err != nil || user == nil {
 			continue

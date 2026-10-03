@@ -26,3 +26,15 @@ func TestRewriteRootPaths(t *testing.T) {
 		t.Fatalf("base %s", html)
 	}
 }
+
+func TestShowcaseServicePageRewritesRootLink(t *testing.T) {
+	page := showcaseServiceHTML("default", "web-frontend", "80")
+	prefix := "/api/v1/namespaces/default/services/web-frontend/proxy"
+	got := injectBase(rewriteRootPaths(page, prefix), prefix)
+	if !strings.Contains(got, "web-frontend") || !strings.Contains(got, prefix+"/health") {
+		t.Fatalf("page %s", got)
+	}
+	if strings.Contains(got, "http://") {
+		t.Fatalf("page should not embed an absolute host: %s", got)
+	}
+}

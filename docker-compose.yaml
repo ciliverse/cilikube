@@ -3,7 +3,7 @@ version: '3.8'
 services:
   # Backend service
   backend:
-    image: cilliantech/cilikube:latest
+    image: ghcr.io/ciliverse/cilikube:v1.6.0
     container_name: cilikube-backend
     restart: unless-stopped
     ports:
@@ -30,7 +30,7 @@ services:
 
   # Frontend service
   frontend:
-    image: cilliantech/cilikube-web:latest
+    image: ghcr.io/ciliverse/cilikube-web:v1.6.0
     container_name: cilikube-frontend
     restart: unless-stopped
     ports:

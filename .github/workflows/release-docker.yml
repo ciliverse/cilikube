@@ -47,16 +47,16 @@ jobs:
             echo "ghcr.io/${OWNER}/cilikube:${TAG}"
             echo "ghcr.io/${OWNER}/cilikube:latest"
             if [ -n "${DOCKERHUB_USERNAME}" ]; then
-              echo "cilliantech/cilikube:${TAG}"
-              echo "cilliantech/cilikube:latest"
+              echo "${DOCKERHUB_USERNAME}/cilikube:${TAG}"
+              echo "${DOCKERHUB_USERNAME}/cilikube:latest"
             fi
             echo "EOF"
             echo "frontend_tags<<EOF"
             echo "ghcr.io/${OWNER}/cilikube-web:${TAG}"
             echo "ghcr.io/${OWNER}/cilikube-web:latest"
             if [ -n "${DOCKERHUB_USERNAME}" ]; then
-              echo "cilliantech/cilikube-web:${TAG}"
-              echo "cilliantech/cilikube-web:latest"
+              echo "${DOCKERHUB_USERNAME}/cilikube-web:${TAG}"
+              echo "${DOCKERHUB_USERNAME}/cilikube-web:latest"
             fi
             echo "EOF"
           } >> "$GITHUB_OUTPUT"

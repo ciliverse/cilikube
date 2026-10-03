@@ -26,7 +26,7 @@ Preferred: **Nginx static frontend + Go binary (systemd)**. Personal runbook liv
 docker-compose up -d
 
 # Using Docker directly
-docker run -d --name cilikube -p 8080:8080 cilliantech/cilikube:latest
+docker run -d --name cilikube -p 8080:8080 ghcr.io/ciliverse/cilikube:v1.6.0
 ```
 
 **Features:**
