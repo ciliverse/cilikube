@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { APP_VERSION, formatAppVersion } from '@/lib/version'
 
 const STEPS = [
-  'cilikube bootloader v1.5.0',
+  `cilikube bootloader ${formatAppVersion(APP_VERSION)}`,
   'initializing control-plane UI',
   'loading casbin policy cache',
   'probing cluster contexts',
