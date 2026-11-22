@@ -1,0 +1,27 @@
+name: Make images public
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  publish:
+    name: Set GHCR packages public
+    runs-on: ubuntu-latest
+    steps:
+      - name: Make container packages public
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -eu
+          owner="${GITHUB_REPOSITORY_OWNER}"
+          for pkg in cilikube cilikube-web; do
+            echo "setting ${owner}/${pkg} public"
+            gh api --method PATCH \
+              -H "Accept: application/vnd.github+json" \
+              "/orgs/${owner}/packages/container/${pkg}" \
+              -f visibility=public
+          done
