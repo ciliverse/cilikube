@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/ciliverse/cilikube/configs"
+	"github.com/ciliverse/cilikube/internal/service"
 	"github.com/ciliverse/cilikube/pkg/k8s"
 )
 
@@ -41,7 +42,7 @@ type oaiTool struct {
 	} `json:"function"`
 }
 
-func processOpenAI(ctx context.Context, cfg *configs.Config, client *k8s.Client, req *ChatRequest, send sendFn) error {
+func processOpenAI(ctx context.Context, cfg *configs.Config, client *k8s.Client, prom *service.PrometheusService, req *ChatRequest, send sendFn) error {
 	if cfg.AI.APIKey == "" {
 		return fmt.Errorf("AI API key not configured")
 	}
@@ -142,7 +143,7 @@ func processOpenAI(ctx context.Context, cfg *configs.Config, client *k8s.Client,
 			send(SSEEvent{Event: "tool_call", Data: map[string]interface{}{
 				"name": tc.Function.Name, "arguments": args, "id": tc.ID,
 			}})
-			res, err := executeTool(ctx, client, tc.Function.Name, args, lang)
+			res, err := executeTool(ctx, client, prom, tc.Function.Name, args, lang)
 			content := ""
 			ok := true
 			if err != nil {

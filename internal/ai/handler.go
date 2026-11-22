@@ -7,6 +7,7 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"github.com/ciliverse/cilikube/configs"
+	"github.com/ciliverse/cilikube/internal/service"
 	"github.com/ciliverse/cilikube/pkg/k8s"
 	"github.com/ciliverse/cilikube/pkg/utils"
 )
@@ -14,10 +15,11 @@ import (
 type Handler struct {
 	cfg     *configs.Config
 	manager *k8s.ClusterManager
+	prom    *service.PrometheusService
 }
 
-func NewHandler(cfg *configs.Config, manager *k8s.ClusterManager) *Handler {
-	return &Handler{cfg: cfg, manager: manager}
+func NewHandler(cfg *configs.Config, manager *k8s.ClusterManager, prom *service.PrometheusService) *Handler {
+	return &Handler{cfg: cfg, manager: manager, prom: prom}
 }
 
 func (h *Handler) Status(c *gin.Context) {
@@ -29,11 +31,17 @@ func (h *Handler) Status(c *gin.Context) {
 	if cfg != nil && cfg.AI.Provider != "" {
 		provider = cfg.AI.Provider
 	}
+	names := make([]string, 0, len(toolDefinitions()))
+	for _, t := range toolDefinitions() {
+		names = append(names, t.Name)
+	}
 	utils.ApiSuccess(c, gin.H{
 		"enabled":  cfg != nil && cfg.AI.Enabled,
 		"ready":    Ready(cfg),
 		"provider": provider,
 		"model":    cfg.AI.Model,
+		"mcp":      "/api/v1/ai/mcp",
+		"tools":    names,
 	}, "ok")
 }
 
@@ -82,5 +90,5 @@ func (h *Handler) Chat(c *gin.Context) {
 		flusher.Flush()
 	}
 
-	ProcessChat(c.Request.Context(), cfg, client, &req, send)
+	ProcessChat(c.Request.Context(), cfg, client, h.prom, &req, send)
 }

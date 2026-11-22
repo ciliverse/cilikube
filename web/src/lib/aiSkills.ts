@@ -87,12 +87,12 @@ const SKILL_SEEDS: SkillSeed[] = [
     blurb: { en: 'See if the cluster is healthy', zh: '先看集群是否健康' },
     prompt: {
       en:
-        'Run a smart inspect: cluster overview, then Failed/Pending pods, then recent Warning/Error events.' +
+        'Run a smart inspect: call scan_health first, then cluster overview, Failed/Pending pods, and recent Warning events.' +
         REPLY_EN,
-      zh: '请做一次智能点检：先给集群概览，再列出 Failed 或 Pending 的 Pod，并汇总最近 Warning / Error 事件。' + REPLY_ZH,
+      zh: '请做一次智能点检：先调用 scan_health，再给集群概览，列出 Failed 或 Pending 的 Pod，并汇总最近 Warning 事件。' + REPLY_ZH,
     },
     group: 'combo',
-    toolsHint: ['get_cluster_overview', 'list_resources'],
+    toolsHint: ['scan_health', 'get_cluster_overview', 'list_resources'],
   },
   {
     id: 'skill_triage_combo',
@@ -101,12 +101,12 @@ const SKILL_SEEDS: SkillSeed[] = [
     blurb: { en: 'Sample logs from a bad pod', zh: '从异常 Pod 抽日志定位' },
     prompt: {
       en:
-        'Quick triage: find Failed or Pending pods, sample logs from a representative one, and tell me where to click in the console next.' +
+        'Quick triage: call scan_health, sample logs from a representative failing pod, and tell me where to click in the console next.' +
         REPLY_EN,
-      zh: '快速调查：找出 Failed 或 Pending 的 Pod，挑一个有代表性的看最近日志，并告诉我下一步该进控制台看哪里。' + REPLY_ZH,
+      zh: '快速调查：先调用 scan_health，挑一个有代表性的异常 Pod 看最近日志，并告诉我下一步该进控制台看哪里。' + REPLY_ZH,
     },
     group: 'combo',
-    toolsHint: ['list_resources', 'get_pod_logs'],
+    toolsHint: ['scan_health', 'get_pod_logs'],
   },
   {
     id: 'skill_workload_snap',
@@ -188,11 +188,11 @@ const SKILL_SEEDS: SkillSeed[] = [
     label: { en: 'Crash loop', zh: '崩坏回路' },
     blurb: { en: 'CrashLoop · ImagePull', zh: 'CrashLoop · ImagePull' },
     prompt: {
-      en: 'Are there CrashLoopBackOff or ImagePullBackOff pods?' + REPLY_EN,
-      zh: '有没有 CrashLoopBackOff 或 ImagePullBackOff 的 Pod？' + REPLY_ZH,
+      en: 'Call scan_health. Are there CrashLoopBackOff or ImagePullBackOff pods?' + REPLY_EN,
+      zh: '先调用 scan_health。有没有 CrashLoopBackOff 或 ImagePullBackOff 的 Pod？' + REPLY_ZH,
     },
     group: 'incident',
-    toolsHint: ['list_resources'],
+    toolsHint: ['scan_health', 'get_pod_logs'],
   },
   {
     id: 'skill_node_pressure',
@@ -200,11 +200,11 @@ const SKILL_SEEDS: SkillSeed[] = [
     label: { en: 'Node pressure', zh: '节点压力' },
     blurb: { en: 'CPU · memory pressure', zh: 'CPU · 内存紧张度' },
     prompt: {
-      en: 'Which node is under the most pressure? Summarize node status.' + REPLY_EN,
-      zh: '哪个节点资源最紧张？帮我看看节点状态。' + REPLY_ZH,
+      en: 'Call get_metrics for nodes and scan_health. Which node is under the most pressure?' + REPLY_EN,
+      zh: '调用 get_metrics 看节点，并做 scan_health。哪个节点资源最紧张？' + REPLY_ZH,
     },
     group: 'inspect',
-    toolsHint: ['list_resources', 'get_cluster_overview'],
+    toolsHint: ['get_metrics', 'scan_health'],
   },
   {
     id: 'skill_svc_map',

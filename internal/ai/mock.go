@@ -5,11 +5,12 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/ciliverse/cilikube/internal/service"
 	"github.com/ciliverse/cilikube/pkg/k8s"
 )
 
 // processMock runs a lightweight heuristic agent so local UI works without an API key.
-func processMock(ctx context.Context, client *k8s.Client, req *ChatRequest, send sendFn) {
+func processMock(ctx context.Context, client *k8s.Client, prom *service.PrometheusService, req *ChatRequest, send sendFn) {
 	raw := lastUserText(req.Messages)
 	q := strings.ToLower(raw)
 	ns := req.Namespace
@@ -21,7 +22,7 @@ func processMock(ctx context.Context, client *k8s.Client, req *ChatRequest, send
 
 	call := func(name string, args map[string]interface{}) {
 		send(SSEEvent{Event: "tool_call", Data: map[string]interface{}{"name": name, "arguments": args}})
-		res, err := executeTool(ctx, client, name, args, lang)
+		res, err := executeTool(ctx, client, prom, name, args, lang)
 		if err != nil {
 			send(SSEEvent{Event: "tool_result", Data: map[string]interface{}{
 				"name": name, "ok": false, "content": err.Error(),
@@ -94,6 +95,19 @@ func processMock(ctx context.Context, client *k8s.Client, req *ChatRequest, send
 		skill == "skill_events"
 	wantNS := strings.Contains(q, "namespace") || strings.Contains(q, "命名空间") ||
 		skill == "skill_namespaces"
+	wantHealth := comboInspect || comboTriage ||
+		skill == "skill_fault_scan" || skill == "skill_crashloop" || skill == "skill_restarts" || skill == "skill_events" ||
+		strings.Contains(q, "crash") || strings.Contains(q, "imagepull") ||
+		strings.Contains(q, "故障") || strings.Contains(q, "健康") ||
+		strings.Contains(q, "unhealthy") || strings.Contains(q, "fault") ||
+		strings.Contains(q, "怎么样") || strings.Contains(q, "how is the cluster") ||
+		strings.Contains(q, "what's wrong") || strings.Contains(q, "what is wrong") ||
+		strings.Contains(q, "scan_health")
+	wantMetrics := skill == "skill_node_pressure" ||
+		strings.Contains(q, "pressure") || strings.Contains(q, "压力") ||
+		strings.Contains(q, "metrics") || strings.Contains(q, "cpu") ||
+		strings.Contains(q, "内存") || strings.Contains(q, "memory")
+	wantProm := strings.Contains(q, "promql") || strings.Contains(q, "prometheus")
 
 	clusterWidePods := comboInspect || comboTriage ||
 		strings.Contains(q, "failed") || strings.Contains(raw, "Failed") ||
@@ -148,6 +162,28 @@ func processMock(ctx context.Context, client *k8s.Client, req *ChatRequest, send
 	}
 	if wantNS {
 		listKind("namespaces", 40, "*", nil)
+	}
+	if wantHealth {
+		args := map[string]interface{}{}
+		if ns != "" && !clusterWidePods && !comboInspect {
+			args["namespace"] = ns
+		}
+		call("scan_health", args)
+	}
+	if wantMetrics {
+		args := map[string]interface{}{"scope": "node"}
+		if strings.Contains(q, "pod") && !strings.Contains(q, "node") && !strings.Contains(raw, "节点") {
+			args["scope"] = "pod"
+			if ns != "" {
+				args["namespace"] = ns
+			}
+		}
+		call("get_metrics", args)
+	}
+	if wantProm {
+		call("query_prometheus", map[string]interface{}{
+			"query": "sum(rate(container_cpu_usage_seconds_total[5m]))",
+		})
 	}
 
 	if wantLogs {

@@ -4,6 +4,8 @@ import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'reac
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { dump as yamlDump, load as yamlLoad } from 'js-yaml'
 import { ArrowLeft, Bot, Pencil, RefreshCw, Save, Trash2, X } from 'lucide-react'
+import { PodReasonNote } from '@/components/PodReasonNote'
+import { podProblem } from '@/lib/podReason'
 import {
   deleteClusterScopedResource,
   deleteNamespacedResource,
@@ -473,6 +475,7 @@ export function ResourceDetailPage({
                         obj?.status?.conditions?.[0]?.type ||
                         '-'}
                     </Badge>
+                    {resource === 'pods' ? <PodReasonNote pod={obj} verbose /> : null}
                   </div>
                 </div>
               ) : null}
@@ -703,7 +706,9 @@ export function ResourceDetailPage({
                   </tr>
                 </thead>
                 <tbody>
-                  {(relatedQ.data || []).map((p: any) => (
+                  {(relatedQ.data || []).map((p: any) => {
+                    const problem = podProblem(p).reason
+                    return (
                     <tr key={`pod-row-${metaName(p)}`}>
                       <td>Pod</td>
                       <td>
@@ -714,9 +719,13 @@ export function ResourceDetailPage({
                           {metaName(p)}
                         </Link>
                       </td>
-                      <td>{p.status?.phase || '-'}</td>
+                      <td>
+                        {p.status?.phase || '-'}
+                        {problem ? ` · ${problem}` : ''}
+                      </td>
                     </tr>
-                  ))}
+                    )
+                  })}
                   {!relatedQ.isLoading && !(relatedQ.data || []).length ? (
                     <tr>
                       <td colSpan={3}>

@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/ciliverse/cilikube/configs"
+	"github.com/ciliverse/cilikube/internal/service"
 	"github.com/ciliverse/cilikube/pkg/k8s"
 )
 
@@ -22,7 +23,7 @@ func Ready(cfg *configs.Config) bool {
 	return cfg.AI.APIKey != ""
 }
 
-func ProcessChat(ctx context.Context, cfg *configs.Config, client *k8s.Client, req *ChatRequest, send sendFn) {
+func ProcessChat(ctx context.Context, cfg *configs.Config, client *k8s.Client, prom *service.PrometheusService, req *ChatRequest, send sendFn) {
 	if cfg == nil || client == nil {
 		send(SSEEvent{Event: "error", Data: map[string]string{"message": "AI or cluster unavailable"}})
 		return
@@ -40,9 +41,9 @@ func ProcessChat(ctx context.Context, cfg *configs.Config, client *k8s.Client, r
 	}
 	switch provider {
 	case "mock":
-		processMock(ctx, client, req, send)
+		processMock(ctx, client, prom, req, send)
 	case "openai":
-		if err := processOpenAI(ctx, cfg, client, req, send); err != nil {
+		if err := processOpenAI(ctx, cfg, client, prom, req, send); err != nil {
 			send(SSEEvent{Event: "error", Data: map[string]string{"message": err.Error()}})
 		}
 	default:
@@ -67,8 +68,10 @@ func systemPrompt(namespace, lang string) string {
 - Pod / Deployment / Service / Node 名称必须原样写出，方便前端生成可点击卡片。
 - 不能变更集群（禁止 create/update/delete/scale/exec）。若用户要求改动，拒绝并提示进控制台操作。
 - 落地页 Skills（智能点检 / 快速调查 / 工作负载快照等）按多步工具计划执行。
+- 问「哪里不正常」时先调用 scan_health，再按需补日志或 YAML。
+- 问用量、CPU、内存、节点压力时调用 get_metrics。用户给出 PromQL 或点名 Prometheus 时才调用 query_prometheus。
 范围提示：` + nsHintZh + `
-工具：get_cluster_overview、list_resources、get_resource、get_pod_logs。
+工具：get_cluster_overview、list_resources、get_resource、get_pod_logs、scan_health、get_metrics、query_prometheus。
 `)
 	}
 	return strings.TrimSpace(`
@@ -80,8 +83,10 @@ Rules:
 - Keep pod/deployment/service/node names exact so the UI can render clickable resource cards.
 - You cannot mutate the cluster (no create/update/delete/scale/exec). If asked to change something, refuse and suggest the console path.
 - Landing-page skills (Smart inspect / Quick triage / Workload snapshot, etc.) are multi-step tool playbooks.
+- When the user asks what is wrong, call scan_health before other tools, then logs or YAML only if needed.
+- For usage, CPU, memory, or node pressure, call get_metrics. Call query_prometheus only when the user supplies PromQL or names Prometheus.
 Scope hint: ` + nsHint + `
-Tools: get_cluster_overview, list_resources, get_resource, get_pod_logs.
+Tools: get_cluster_overview, list_resources, get_resource, get_pod_logs, scan_health, get_metrics, query_prometheus.
 `)
 }
 

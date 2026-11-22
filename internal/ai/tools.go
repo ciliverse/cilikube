@@ -11,6 +11,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/yaml"
 
+	"github.com/ciliverse/cilikube/internal/service"
 	"github.com/ciliverse/cilikube/pkg/k8s"
 )
 
@@ -70,6 +71,40 @@ func toolDefinitions() []toolDef {
 				"required": []string{"namespace", "name"},
 			},
 		},
+		{
+			Name:        "scan_health",
+			Description: "Deterministic read-only health scan: pods stuck in CrashLoopBackOff, ImagePullBackOff, config errors, Pending, or Failed; deployments with unavailable replicas; nodes that are NotReady or under pressure; recent Warning events. Call this before guessing what is wrong.",
+			Parameters: map[string]interface{}{
+				"type": "object",
+				"properties": map[string]interface{}{
+					"namespace": map[string]interface{}{"type": "string", "description": "Limit pods, deployments, and events to this namespace. Nodes stay cluster-wide. Omit for the whole cluster."},
+				},
+			},
+		},
+		{
+			Name:        "get_metrics",
+			Description: "Read metrics-server usage. scope=node returns CPU and memory per node. scope=pod returns pod usage versus requests and limits. Read-only. Fails soft when metrics-server is missing.",
+			Parameters: map[string]interface{}{
+				"type": "object",
+				"properties": map[string]interface{}{
+					"scope":     map[string]interface{}{"type": "string", "enum": []string{"pod", "node"}},
+					"namespace": map[string]interface{}{"type": "string"},
+					"name":      map[string]interface{}{"type": "string", "description": "Optional pod or node name."},
+				},
+				"required": []string{"scope"},
+			},
+		},
+		{
+			Name:        "query_prometheus",
+			Description: "Run one instant PromQL query against the configured Prometheus. Read-only, single line, 800 characters max. Returns a clear skip message when Prometheus is not configured.",
+			Parameters: map[string]interface{}{
+				"type": "object",
+				"properties": map[string]interface{}{
+					"query": map[string]interface{}{"type": "string"},
+				},
+				"required": []string{"query"},
+			},
+		},
 	}
 }
 
@@ -78,7 +113,7 @@ type toolResult struct {
 	Resources []ResourceRef
 }
 
-func executeTool(ctx context.Context, client *k8s.Client, name string, args map[string]interface{}, lang string) (toolResult, error) {
+func executeTool(ctx context.Context, client *k8s.Client, prom *service.PrometheusService, name string, args map[string]interface{}, lang string) (toolResult, error) {
 	zh := isZh(lang)
 	switch name {
 	case "get_cluster_overview":
@@ -89,6 +124,12 @@ func executeTool(ctx context.Context, client *k8s.Client, name string, args map[
 		return toolGetResource(ctx, client, args, zh)
 	case "get_pod_logs":
 		return toolPodLogs(ctx, client, args, zh)
+	case "scan_health":
+		return toolScanHealth(ctx, client, args, zh)
+	case "get_metrics":
+		return toolGetMetrics(client, args, zh)
+	case "query_prometheus":
+		return toolQueryPrometheus(ctx, prom, args, zh)
 	default:
 		if zh {
 			return toolResult{}, fmt.Errorf("未知工具 %q", name)

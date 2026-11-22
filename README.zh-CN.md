@@ -5,7 +5,7 @@
 </div>
 
 <div align="center">
-  <img src="https://img.shields.io/badge/Release-v1.6.0-green?style=flat-square" alt="Release v1.6.0">
+  <img src="https://img.shields.io/badge/Release-v1.7.0-green?style=flat-square" alt="Release v1.7.0">
   <img src="https://img.shields.io/badge/Frontend-React%2019-61DAFB?style=flat-square&logo=react" alt="React 19">
   <img src="https://img.shields.io/badge/Frontend-TypeScript%207-blue?style=flat-square&logo=typescript" alt="TypeScript 7">
   <img src="https://img.shields.io/badge/Frontend-Vite%208-blue?style=flat-square&logo=vite" alt="Vite 8">
@@ -51,7 +51,24 @@ CiliKube 是开源的 Kubernetes 多集群管理平台，技术栈为 React + Ty
 
 问清楚「现在怎么样、哪儿挂了」，再顺着线索进详情、日志或终端动手；AI 默认只读查证，不替你在集群里乱改。
 
-### v1.6.0（当前）
+### v1.7.0（当前）
+
+- **健康扫描**：调查员先调用 `scan_health`。覆盖等待原因（CrashLoop、ImagePull、配置缺失）、Pending / Failed Pod、副本没就绪的 Deployment、NotReady 或有压力的节点，以及最近的 Warning 事件。Pod 列表和详情页会在这些原因旁边给一行说明。
+- **对话里看指标**：`get_metrics` 读 metrics-server 的 Pod 或节点用量。配了 Prometheus 时，`query_prometheus` 跑一条即时 PromQL；公网演示用模拟曲线回答。
+- **只读 MCP**：`POST /api/v1/ai/mcp` 走 MCP streamable HTTP，Cursor 可以列出并调用同一套工具。这套工具不能改集群。用登录后的 Bearer token，并用 `clusterId` 选集群。
+
+```json
+{
+  "mcpServers": {
+    "cilikube": {
+      "url": "https://<host>/api/v1/ai/mcp?clusterId=<id>",
+      "headers": { "Authorization": "Bearer <token>" }
+    }
+  }
+}
+```
+
+### v1.6.0
 
 - **集群终端**：管理员可在控制台打开本机 `kubectl`（使用已保存的集群凭据），或对某个节点拉起临时特权 Pod 进入主机，断开后删除该 Pod
 - **浏览器打开 Service**：editor / admin 可把 Service 的 HTTP 端口经 API 代理在新标签页打开
@@ -297,10 +314,10 @@ go build -o bin/cilikube cmd/server/main.go
 ### 使用官方镜像
 ```bash
 # 后端
-docker run -d --name cilikube -p 8080:8080 -v ~/.kube:/root/.kube:ro ghcr.io/ciliverse/cilikube:v1.6.0
+docker run -d --name cilikube -p 8080:8080 -v ~/.kube:/root/.kube:ro ghcr.io/ciliverse/cilikube:v1.7.0
 
 # 前端
-docker run -d --name cilikube-web -p 80:80 ghcr.io/ciliverse/cilikube-web:v1.6.0
+docker run -d --name cilikube-web -p 80:80 ghcr.io/ciliverse/cilikube-web:v1.7.0
 ```
 
 ### 使用 Docker Compose

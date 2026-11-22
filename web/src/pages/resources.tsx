@@ -27,6 +27,7 @@ import { useCluster } from '@/store/cluster'
 import { useAuth } from '@/store/auth'
 import { useYamlModal } from '@/hooks/useYamlModal'
 import { buildInvestigateHref } from '@/lib/aiInvestigate'
+import { PodReasonNote } from '@/components/PodReasonNote'
 import { ServiceTypeControl } from '@/components/ServiceTypeControl'
 
 function ReadyBadge({ ok, okText = 'Ready', badText = 'NotReady' }: { ok: boolean; okText?: string; badText?: string }) {
@@ -137,7 +138,12 @@ export function PodsPage() {
                     : phase === 'Failed'
                       ? 'danger'
                       : 'neutral'
-              return <Badge tone={tone}>{phase}</Badge>
+              return (
+                <div>
+                  <Badge tone={tone}>{phase}</Badge>
+                  <PodReasonNote pod={item} />
+                </div>
+              )
             },
           },
           ...podMetricColumns(

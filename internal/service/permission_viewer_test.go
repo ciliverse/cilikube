@@ -55,6 +55,10 @@ func TestViewerAllowsReadDeniesDangerous(t *testing.T) {
 		{"/api/v1/nodes", "GET"},
 		{"/api/v1/clusters", "GET"},
 		{"/api/v1/configmaps", "GET"},
+		{"/api/v1/ai/status", "GET"},
+		{"/api/v1/ai/chat", "POST"},
+		{"/api/v1/ai/mcp", "GET"},
+		{"/api/v1/ai/mcp", "POST"},
 	}
 	for _, tc := range allow {
 		ok, err := e.Enforce(sub, tc.obj, tc.act)

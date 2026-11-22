@@ -123,7 +123,7 @@ func InitializeHandlers(router *gin.RouterGroup, services *service.AppServices, 
 		routes.RegisterNavPolicyRoutes(router, adminGroup, services.NavPolicyService, services.RoleService)
 	}
 	routes.RegisterSystemSettingsRoutes(router, cfg)
-	routes.RegisterAIRoutes(router, cfg, k8sManager)
+	routes.RegisterAIRoutes(router, cfg, k8sManager, services.PrometheusService)
 	routes.RegisterClusterRoutes(router, handlers.NewClusterHandler(services.ClusterService, services.AccessService))
 	if services.EnvironmentService != nil && services.AccessService != nil {
 		routes.RegisterEnvironmentRoutes(router, handlers.NewEnvironmentHandler(services.EnvironmentService, services.AccessService))
@@ -456,7 +456,7 @@ func SetupRouter(cfg *configs.Config, services *service.AppServices, k8sManager 
 	router.Use(func(c *gin.Context) {
 		c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
 		c.Writer.Header().Set("Access-Control-Allow-Credentials", "true")
-		c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization, accept, origin, Cache-Control, X-Requested-With")
+		c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization, accept, origin, Cache-Control, X-Requested-With, Mcp-Session-Id, Mcp-Protocol-Version")
 		c.Writer.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS, GET, PUT, DELETE, PATCH")
 
 		if c.Request.Method == "OPTIONS" {

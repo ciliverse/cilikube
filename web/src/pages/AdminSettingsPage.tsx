@@ -323,6 +323,10 @@ export function AdminSettingsPage() {
           </Badge>
         </div>
         <p className="text-xs text-text-dim">{t('adminPages.aiHint')}</p>
+        <p className="text-xs leading-relaxed text-text-dim">{t('adminSettings.mcpHint')}</p>
+        <code className="block overflow-x-auto rounded border border-line bg-mist px-3 py-2 font-mono text-[11px] text-text">
+          {'POST /api/v1/ai/mcp?clusterId=<id>'}
+        </code>
         <label className="flex items-center gap-2 text-sm">
           <input
             type="checkbox"

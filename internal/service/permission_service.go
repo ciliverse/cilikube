@@ -122,6 +122,8 @@ func systemViewerPolicies() []rolePolicy {
 
 		{"viewer", "/api/v1/ai/status", "GET"},
 		{"viewer", "/api/v1/ai/chat", "POST"},
+		{"viewer", "/api/v1/ai/mcp", "GET"},
+		{"viewer", "/api/v1/ai/mcp", "POST"},
 		{"viewer", "/api/v1/plugins", "GET"},
 	}
 
@@ -205,6 +207,8 @@ func systemEditorPolicies() []rolePolicy {
 
 		{"editor", "/api/v1/ai/status", "GET"},
 		{"editor", "/api/v1/ai/chat", "POST"},
+		{"editor", "/api/v1/ai/mcp", "GET"},
+		{"editor", "/api/v1/ai/mcp", "POST"},
 		{"editor", "/api/v1/plugins", "GET"},
 
 		{"editor", "/api/v1/auth/profile", "GET"},

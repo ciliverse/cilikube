@@ -22,6 +22,7 @@ import {
 import { useAuth } from '@/store/auth'
 import { useCluster } from '@/store/cluster'
 import { Badge, Button, Modal } from '@/components/ui'
+import { PodReasonNote } from '@/components/PodReasonNote'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { PodLogs } from '@/components/PodLogs'
 import { PodTerminal } from '@/components/PodTerminal'
@@ -177,7 +178,10 @@ export function PodWorkbench({ pod, open, initialTab = 'logs', onClose, onDelete
               </button>
             ))}
           <div className="ml-auto flex items-center gap-2">
-            <Badge tone="accent">{livePod?.status?.phase || '-'}</Badge>
+            <div className="text-right">
+              <Badge tone="accent">{livePod?.status?.phase || '-'}</Badge>
+              <PodReasonNote pod={livePod} />
+            </div>
             {canExec ? (
               <Button
                 variant="outline"

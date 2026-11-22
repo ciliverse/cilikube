@@ -5,7 +5,7 @@
 </div>
 
 <div align="center">
-  <img src="https://img.shields.io/badge/Release-v1.6.0-green?style=flat-square" alt="Release v1.6.0">
+  <img src="https://img.shields.io/badge/Release-v1.7.0-green?style=flat-square" alt="Release v1.7.0">
   <img src="https://img.shields.io/badge/Frontend-React%2019-61DAFB?style=flat-square&logo=react" alt="React 19">
   <img src="https://img.shields.io/badge/Frontend-TypeScript%207-blue?style=flat-square&logo=typescript" alt="TypeScript 7">
   <img src="https://img.shields.io/badge/Frontend-Vite%208-blue?style=flat-square&logo=vite" alt="Vite 8">
@@ -51,7 +51,24 @@ In one line:
 
 Ask “how is it now / what’s broken,” follow resource clues into detail, logs, or a terminal — AI stays read-only by default and does not mutate the cluster for you.
 
-### v1.6.0 (current)
+### v1.7.0 (current)
+
+- **Health scan**: the investigator calls `scan_health` first — waiting reasons (CrashLoop, ImagePull, missing config), Pending and Failed pods, deployments with unavailable replicas, NotReady or pressured nodes, and recent Warning events. Pod lists and the detail page show a one-line cause next to those reasons.
+- **Metrics in the conversation**: `get_metrics` reads metrics-server for a pod or a node. `query_prometheus` runs one instant PromQL query when Prometheus is configured; the public exhibit answers with its simulated series.
+- **Read-only MCP**: `POST /api/v1/ai/mcp` speaks MCP streamable HTTP, so Cursor can list and call the same tools. Nothing in that set can change the cluster. Use the logged-in Bearer token and `clusterId`.
+
+```json
+{
+  "mcpServers": {
+    "cilikube": {
+      "url": "https://<host>/api/v1/ai/mcp?clusterId=<id>",
+      "headers": { "Authorization": "Bearer <token>" }
+    }
+  }
+}
+```
+
+### v1.6.0
 
 - **Cluster shell**: admins can open a local `kubectl` (stored cluster credential) or a temporary privileged pod on a node; the pod is deleted on disconnect
 - **Open Service in browser**: editors and admins can open a Service HTTP port through the API proxy
@@ -297,10 +314,10 @@ go build -o bin/cilikube cmd/server/main.go
 ### Using Official Images
 ```bash
 # Backend
-docker run -d --name cilikube -p 8080:8080 -v ~/.kube:/root/.kube:ro ghcr.io/ciliverse/cilikube:v1.6.0
+docker run -d --name cilikube -p 8080:8080 -v ~/.kube:/root/.kube:ro ghcr.io/ciliverse/cilikube:v1.7.0
 
 # Frontend
-docker run -d --name cilikube-web -p 80:80 ghcr.io/ciliverse/cilikube-web:v1.6.0
+docker run -d --name cilikube-web -p 80:80 ghcr.io/ciliverse/cilikube-web:v1.7.0
 ```
 
 ### Using Docker Compose

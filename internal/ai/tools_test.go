@@ -15,7 +15,7 @@ func TestListPodsPhasesClusterWideIgnoresDefaultTrap(t *testing.T) {
 		k8s.ShowcaseStagingSeedObjects()...,
 	)
 	// Same trap as the bad screenshot: UI namespace=default while Pending lives in preview.
-	res, err := executeTool(context.Background(), client, "list_resources", map[string]interface{}{
+	res, err := executeTool(context.Background(), client, nil, "list_resources", map[string]interface{}{
 		"kind":      "pods",
 		"namespace": "default",
 		"phases":    "Pending,Failed,Unknown",
@@ -28,7 +28,7 @@ func TestListPodsPhasesClusterWideIgnoresDefaultTrap(t *testing.T) {
 		t.Fatalf("expected empty in default ns, got %q", res.Text)
 	}
 
-	res, err = executeTool(context.Background(), client, "list_resources", map[string]interface{}{
+	res, err = executeTool(context.Background(), client, nil, "list_resources", map[string]interface{}{
 		"kind":   "pods",
 		"phases": "Pending,Failed,Unknown",
 		"limit":  20,
@@ -47,7 +47,7 @@ func TestListWarningEventsClusterWide(t *testing.T) {
 		k8s.ShowcaseStagingVersion,
 		k8s.ShowcaseStagingSeedObjects()...,
 	)
-	res, err := executeTool(context.Background(), client, "list_resources", map[string]interface{}{
+	res, err := executeTool(context.Background(), client, nil, "list_resources", map[string]interface{}{
 		"kind":        "events",
 		"event_types": "Warning,Error",
 		"limit":       30,
